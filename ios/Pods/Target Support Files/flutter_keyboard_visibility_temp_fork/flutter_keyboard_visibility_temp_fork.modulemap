@@ -1,0 +1,6 @@
+framework module flutter_keyboard_visibility_temp_fork {
+  umbrella header "flutter_keyboard_visibility_temp_fork-umbrella.h"
+
+  export *
+  module * { export * }
+}

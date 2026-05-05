@@ -1,0 +1,1 @@
+ /Users/apple/Documents/vigil/vigil_parents_app/.dart_tool/flutter_build/2d8f8dd9ea4c89fbb496213c85603e0c/native_assets.json: 
