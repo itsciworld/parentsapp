@@ -3,32 +3,28 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
-import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
-import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
-import 'package:vigil_parents_app/features/auth/presentation/view_model/auth_viewmodel.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 
-class LoginView extends ConsumerStatefulWidget {
-  const LoginView({super.key});
+class SignupView extends ConsumerStatefulWidget {
+  const SignupView({super.key});
 
   @override
-  ConsumerState<LoginView> createState() => _LoginViewState();
+  ConsumerState<SignupView> createState() => _SignupViewState();
 }
 
-class _LoginViewState extends ConsumerState<LoginView> {
+class _SignupViewState extends ConsumerState<SignupView> {
   final _formKey = GlobalKey<FormState>();
+
+  final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _rememberMe = false;
 
-  // Brand colours (matching the screenshot)
+  // Brand colours
   static const Color _darkNavy = Color(0xFF1A237E);
-  static const Color _brandGreen = Color(0xFF2E7D32);
   static const Color _accentGreen = Color(0xFF15BEB5);
   static const Color _accentBlue = Color(0xFF2BA0CC);
 
-  // Shared FlexiFormTheme for all fields
   FlexiFormTheme get _fieldTheme => FlexiFormTheme(
     primaryColor: _darkNavy,
     borderRadius: const BorderRadius.all(Radius.circular(10)),
@@ -39,67 +35,41 @@ class _LoginViewState extends ConsumerState<LoginView> {
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() {
+  void _handleSignup() {
     FocusScope.of(context).unfocus();
+
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    ref.read(loginViewModelProvider.notifier).login(email, password);
+    debugPrint(name);
+    debugPrint(email);
+    debugPrint(password);
+
+    // TODO: Call signup API
   }
 
   @override
   Widget build(BuildContext context) {
-    // ── Responsiveness ──────────────────────────────────────────────────────
     final mq = MediaQuery.of(context);
+
     final screenH = mq.size.height;
     final screenW = mq.size.width;
+
     final isSmall = screenH < 680;
 
-    final hPad = screenW * 0.06; // horizontal padding ~6% of width
-    final logoBoxH = screenH * 0.30; // logo area 30% of height
+    final hPad = screenW * 0.06;
+    final logoBoxH = screenH * 0.28;
     final vGapSm = screenH * 0.015;
     final vGapMd = screenH * 0.022;
-
-    // ── State listener ──────────────────────────────────────────────────────
-    ref.listen<LoginState>(loginViewModelProvider, (previous, next) async {
-      if (next.toastData != null && next.toastData != previous?.toastData) {
-        showAppToast(
-          context: context,
-          title: next.toastData!.title,
-          subtitle: next.toastData!.subtitle,
-          type: next.toastData!.type,
-        );
-      }
-
-      if (next.isSuccess && !(previous?.isSuccess ?? false)) {
-        final email = await SecureDeviceService.getEmail();
-        final token = await SecureDeviceService.getToken();
-        final parentId = await SecureDeviceService.getParentId();
-        final parentName = await SecureDeviceService.getParentName();
-
-        if (mounted) {
-          Navigator.pushReplacementNamed(
-            context,
-            '/devicespage',
-            arguments: {
-              'email': email,
-              'token': token,
-              'parentId': parentId,
-              'parent_name': parentName,
-            },
-          );
-        }
-      }
-    });
-
-    final loginState = ref.watch(loginViewModelProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -114,14 +84,14 @@ class _LoginViewState extends ConsumerState<LoginView> {
                 child: IntrinsicHeight(
                   child: Column(
                     children: [
-                      // ── Hero Section ─────────────────────────────
+                      // ───────────────── Hero Section ─────────────────
                       _HeroSection(
                         height: logoBoxH,
                         darkNavy: _darkNavy,
                         accentBlue: _accentBlue,
                       ),
 
-                      // ── Main Content ────────────────────────────
+                      // ───────────────── Main Content ─────────────────
                       Container(
                         width: double.infinity,
                         decoration: const BoxDecoration(
@@ -140,7 +110,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
                                 SizedBox(height: vGapMd * 1.2),
 
                                 Text(
-                                  'Welcome Back!',
+                                  'Create Account',
                                   style: TextStyle(
                                     fontSize: isSmall ? 22 : 26,
                                     fontWeight: FontWeight.w800,
@@ -148,10 +118,10 @@ class _LoginViewState extends ConsumerState<LoginView> {
                                   ),
                                 ),
 
-                                SizedBox(height: 4),
+                                const SizedBox(height: 4),
 
                                 Text(
-                                  'Login to your account to continue',
+                                  'Create your account to continue',
                                   style: TextStyle(
                                     fontSize: isSmall ? 12 : 13.5,
                                     color: Colors.grey.shade600,
@@ -160,8 +130,28 @@ class _LoginViewState extends ConsumerState<LoginView> {
 
                                 SizedBox(height: vGapMd),
 
-                                _FieldLabel(text: 'Email'),
-                                SizedBox(height: 6),
+                                // ───────────── Name ─────────────
+                                const _FieldLabel(text: 'Full Name'),
+                                const SizedBox(height: 6),
+
+                                FlexiFormField(
+                                  controller: _nameController,
+                                  hint: 'Enter Your Name',
+                                  isMandatory: true,
+                                  fieldStyle: FlexiFieldStyle.outline,
+                                  theme: _fieldTheme,
+                                  prefixIcon: Icon(
+                                    Icons.person_outline_rounded,
+                                    size: 20,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                ),
+
+                                SizedBox(height: vGapSm),
+
+                                // ───────────── Email ─────────────
+                                const _FieldLabel(text: 'Email'),
+                                const SizedBox(height: 6),
 
                                 FlexiFormField(
                                   controller: _emailController,
@@ -181,8 +171,9 @@ class _LoginViewState extends ConsumerState<LoginView> {
 
                                 SizedBox(height: vGapSm),
 
-                                _FieldLabel(text: 'Password'),
-                                SizedBox(height: 6),
+                                // ───────────── Password ─────────────
+                                const _FieldLabel(text: 'Password'),
+                                const SizedBox(height: 6),
 
                                 FlexiFormField(
                                   controller: _passwordController,
@@ -198,40 +189,20 @@ class _LoginViewState extends ConsumerState<LoginView> {
                                   ),
                                 ),
 
-                                SizedBox(height: vGapSm),
+                                SizedBox(height: vGapMd * 1.5),
 
-                                Row(
-                                  children: [
-                                    const Spacer(),
-                                    GestureDetector(
-                                      onTap: () => Navigator.pushNamed(
-                                        context,
-                                        AppRoutesName.forgotPasswordView,
-                                      ),
-                                      child: Text(
-                                        'Forgot Password?',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: _accentBlue,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-
-                                SizedBox(height: vGapMd * 1.4),
-
+                                // ───────────── Signup Button ─────────────
                                 CustomButton(
-                                  onTap: _handleLogin,
-                                  isLoading: loginState.isLoading,
-                                  label: 'Login',
+                                  onTap: _handleSignup,
+                                  label: 'Create Account',
                                   height: screenH * 0.053,
                                   gradient: AppGradients.primaryButton,
+                                  isLoading: false,
                                 ),
 
                                 SizedBox(height: vGapMd),
 
+                                // ───────────── OR Divider ─────────────
                                 Row(
                                   children: [
                                     Expanded(
@@ -261,24 +232,27 @@ class _LoginViewState extends ConsumerState<LoginView> {
 
                                 SizedBox(height: vGapMd),
 
+                                // ───────────── Login Redirect ─────────────
                                 Center(
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
-                                        "Don't have an Account? ",
+                                        "Already have an Account? ",
                                         style: TextStyle(
                                           fontSize: 13.5,
                                           color: Colors.black87,
                                         ),
                                       ),
                                       GestureDetector(
-                                        onTap: () => Navigator.pushNamed(
-                                          context,
-                                          AppRoutesName.signupView,
-                                        ),
+                                        onTap: () {
+                                          Navigator.pushNamed(
+                                            context,
+                                            AppRoutesName.loginView,
+                                          );
+                                        },
                                         child: Text(
-                                          'Sign up',
+                                          'Login',
                                           style: TextStyle(
                                             fontSize: 13.5,
                                             color: _accentGreen,
@@ -309,7 +283,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
 }
 
 // ---------------------------------------------------------------------------
-// Hero / Logo Section
+// Hero Section
 // ---------------------------------------------------------------------------
 
 class _HeroSection extends StatelessWidget {
@@ -331,8 +305,7 @@ class _HeroSection extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          // SizedBox(height: 60),
-          // Background wavy blobs (decorative)
+          // Left Blob
           Positioned(
             bottom: -20,
             left: -30,
@@ -348,14 +321,14 @@ class _HeroSection extends StatelessWidget {
               color: const Color(0xFFBAE4C8).withValues(alpha: 0.16),
             ),
           ),
-          // Centred logo
+
+          // Logo
           Center(
             child: Padding(
-              padding: const EdgeInsets.only(top: 10), // ← yahan se space do
-              child: Container(
-                width: height * 0.99,
-                height: height * 0.99,
-                padding: const EdgeInsets.all(1),
+              padding: const EdgeInsets.only(top: 10),
+              child: SizedBox(
+                width: height * 0.95,
+                height: height * 0.95,
                 child: Image.asset(AppImages.logo, fit: BoxFit.contain),
               ),
             ),
@@ -366,9 +339,13 @@ class _HeroSection extends StatelessWidget {
   }
 }
 
-// Decorative blob widget
+// ---------------------------------------------------------------------------
+// Blob Widget
+// ---------------------------------------------------------------------------
+
 class _Blob extends StatelessWidget {
   const _Blob({required this.size, required this.color});
+
   final double size;
   final Color color;
 
@@ -383,11 +360,12 @@ class _Blob extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Field label helper
+// Field Label
 // ---------------------------------------------------------------------------
 
 class _FieldLabel extends StatelessWidget {
   const _FieldLabel({required this.text});
+
   final String text;
 
   @override

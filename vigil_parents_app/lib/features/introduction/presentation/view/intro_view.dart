@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:introduction_screen/introduction_screen.dart';
+import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
 import 'package:vigil_parents_app/features/introduction/models/itro_model.dart';
 import 'package:vigil_parents_app/features/introduction/presentation/view_model/intro_viewmodel.dart';
+import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 
 class IntroView extends StatefulWidget {
   const IntroView({super.key});
@@ -153,24 +155,14 @@ class _IntroViewState extends State<IntroView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ElevatedButton(
-                      onPressed: () {
+                    CustomButton(
+                      onTap: () {
                         Navigator.pushNamed(context, AppRoutesName.loginView);
                       },
-                      style: ElevatedButton.styleFrom(
-                        foregroundColor: Colors.white,
-                        backgroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: 12,
-                          horizontal: 20,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        fixedSize: const Size(0, 48),
-                        elevation: 0,
-                      ),
-                      child: const Text('Login'),
+                      isLoading: false,
+                      label: 'Login',
+
+                      gradient: AppGradients.primaryButton,
                     ),
                     const SizedBox(height: 16),
                     TextButton(
