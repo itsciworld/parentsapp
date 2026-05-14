@@ -40,6 +40,7 @@ dependencies:
   shared_preferences: ^2.5.5
   flutter_secure_storage: ^10.0.0
   device_info_plus: ^12.4.0
+  pinput: ^6.0.2
 
   uuid: ^4.5.3
   flexi_form_field: ^4.0.2

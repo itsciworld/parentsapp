@@ -1,11 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
+import 'package:vigil_parents_app/core/routing/routes.dart';
 
-class SplashView extends StatelessWidget {
+class SplashView extends StatefulWidget {
   const SplashView({super.key});
 
+  @override
+  State<SplashView> createState() => _SplashViewState();
+}
+
+class _SplashViewState extends State<SplashView> {
   static const Color _darkBlue = Color(0xFF0B2C6B);
   static const Color _green = Color(0xFF46B72A);
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, AppRoutesName.introView);
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,7 +47,7 @@ class SplashView extends StatelessWidget {
 
                   // ───────────────── LOGO ─────────────────
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: screenW * 0.12),
+                    padding: EdgeInsets.symmetric(horizontal: screenW * 0.02),
                     child: Image.asset(
                       AppImages.logo,
                       fit: BoxFit.contain,
@@ -43,17 +59,17 @@ class SplashView extends StatelessWidget {
 
                   // ───────────────── BANNER CARD ─────────────────
                   Container(
-                    width: screenW * 0.90,
-                    padding: EdgeInsets.all(screenW * 0.03),
+                    width: double.infinity,
+                    // padding: EdgeInsets.all(screenW * 0.03),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      // color: Colors.white,
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 18,
-                          offset: const Offset(0, 8),
-                        ),
+                        // BoxShadow(
+                        //   color: Colors.black.withValues(alpha: 0.06),
+                        //   blurRadius: 18,
+                        //   offset: const Offset(0, 8),
+                        // ),
                       ],
                     ),
                     child: ClipRRect(
@@ -104,7 +120,7 @@ class SplashView extends StatelessWidget {
                   const Spacer(),
 
                   // ───────────────── LOADER ─────────────────
-                  SizedBox(
+                  const SizedBox(
                     width: 34,
                     height: 34,
                     child: CircularProgressIndicator(

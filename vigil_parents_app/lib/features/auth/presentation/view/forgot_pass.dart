@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
+import 'package:vigil_parents_app/core/routing/routes.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 
 class ForgotPasswordView extends ConsumerStatefulWidget {
@@ -46,8 +47,7 @@ class _ForgotPasswordViewState extends ConsumerState<ForgotPasswordView> {
     final email = _emailController.text.trim();
 
     debugPrint(email);
-
-    // TODO: Send reset password email API
+    Navigator.pushNamed(context, AppRoutesName.otpVerificationView);
   }
 
   @override

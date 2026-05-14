@@ -167,7 +167,7 @@ class _IntroViewState extends State<IntroView> {
                     const SizedBox(height: 16),
                     TextButton(
                       onPressed: () {
-                        Navigator.pushNamed(context, '/registration');
+                        Navigator.pushNamed(context, AppRoutesName.signupView);
                       },
                       child: const Text(
                         'Sign up',
