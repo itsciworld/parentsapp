@@ -20,7 +20,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  bool _rememberMe = false;
+  final bool _rememberMe = false;
 
   // Brand colours (matching the screenshot)
   static const Color _darkNavy = Color(0xFF1A237E);
