@@ -4,8 +4,11 @@ import 'package:vigil_parents_app/features/auth/presentation/view/login_view.dar
 import 'package:vigil_parents_app/features/auth/presentation/view/otp_verification.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/signup.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/splash_view.dart';
+import 'package:vigil_parents_app/features/calls/presentation/view_model/view/calls_view.dart';
+import 'package:vigil_parents_app/features/gallery/presentations/view/gallery_view.dart';
 import 'package:vigil_parents_app/features/home/presentation/view/home_view.dart';
 import 'package:vigil_parents_app/features/introduction/presentation/view/intro_view.dart';
+import 'package:vigil_parents_app/features/sms/view/sms_view.dart';
 
 class AppRoutesName {
   static const String introView = '/introView';
@@ -15,6 +18,9 @@ class AppRoutesName {
   static const String splashView = '/splashView';
   static const String otpVerificationView = '/otpVerificationView';
   static const String homeView = '/homeView';
+  static const String smsView = '/smsView';
+  static const String callView = '/callView';
+  static const String galleryView = '/galleryView';
 }
 
 class AppRouteGenerator {
@@ -34,6 +40,12 @@ class AppRouteGenerator {
         return MaterialPageRoute(builder: (_) => OtpVerificationView());
       case AppRoutesName.homeView:
         return MaterialPageRoute(builder: (_) => HomeScreen());
+      case AppRoutesName.smsView:
+        return MaterialPageRoute(builder: (_) => SmsScreen());
+      case AppRoutesName.galleryView:
+        return MaterialPageRoute(builder: (_) => GalleryScreen());
+      case AppRoutesName.callView:
+        return MaterialPageRoute(builder: (_) => AccessCallsScreen());
       default:
         return MaterialPageRoute(
           builder: (_) =>

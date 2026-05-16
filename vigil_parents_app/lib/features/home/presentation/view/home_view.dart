@@ -9,18 +9,6 @@ import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
 import 'package:vigil_parents_app/features/home/widgets/home_Appbar.dart';
 import 'package:vigil_parents_app/features/home/widgets/home_bottom.dart';
 
-/// ============================================================================
-/// HOME SCREEN
-/// ----------------------------------------------------------------------------
-/// The dashboard. It owns a [HomeViewModel] and rebuilds via [ListenableBuilder]
-/// (zero external state-management dependency). Swap that for Provider/Riverpod
-/// if your project already uses one — the View logic stays the same.
-///
-/// Visual structure:
-///   • Dark gradient header  -> app bar + child header card (overlaps body)
-///   • Rounded white body    -> feature grid, location, activity, AI, foundation
-///   • Bottom navigation bar
-/// ============================================================================
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -48,7 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffold,
-      // ✅ FIX 1: bottomNavigationBar bahar rakha — body ke andar nahi
+
       bottomNavigationBar: ListenableBuilder(
         listenable: _vm,
         builder: (context, _) => HomeBottomNav(
@@ -56,18 +44,20 @@ class _HomeScreenState extends State<HomeScreen> {
           onTap: _vm.onBottomNavTapped,
         ),
       ),
-      body: ListenableBuilder(
-        listenable: _vm,
-        builder: (context, _) {
-          if (_vm.isLoading) return const _LoadingView();
-          if (_vm.hasError) {
-            return _ErrorView(
-              message: _vm.errorMessage ?? 'Something went wrong',
-              onRetry: _vm.refresh,
-            );
-          }
-          return _LoadedView(vm: _vm, data: _vm.data!);
-        },
+      body: SafeArea(
+        child: ListenableBuilder(
+          listenable: _vm,
+          builder: (context, _) {
+            if (_vm.isLoading) return const _LoadingView();
+            if (_vm.hasError) {
+              return _ErrorView(
+                message: _vm.errorMessage ?? 'Something went wrong',
+                onRetry: _vm.refresh,
+              );
+            }
+            return _LoadedView(vm: _vm, data: _vm.data!);
+          },
+        ),
       ),
     );
   }
@@ -157,7 +147,9 @@ class _LoadedView extends StatelessWidget {
                 children: [
                   FeatureGrid(
                     features: data.features,
-                    onTap: vm.onFeatureTapped,
+                    onTap: (tile) {
+                      vm.onFeatureTapped(context, tile);
+                    },
                   ),
                   // const SizedBox(height: 16),
                   // LiveLocationCard(
@@ -170,11 +162,11 @@ class _LoadedView extends StatelessWidget {
                     activity: data.activity,
                     onViewAllAlerts: vm.onViewAllAlerts,
                   ),
-                  const SizedBox(height: 16),
-                  AiInsightCard(
-                    insight: data.aiInsight,
-                    onViewInsight: vm.onViewInsight,
-                  ),
+                  // const SizedBox(height: 16),
+                  // AiInsightCard(
+                  //   insight: data.aiInsight,
+                  //   onViewInsight: vm.onViewInsight,
+                  // ),
                   const SizedBox(height: 16),
                   FoundationCard(
                     info: data.foundation,

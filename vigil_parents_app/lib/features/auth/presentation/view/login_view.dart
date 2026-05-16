@@ -22,7 +22,6 @@ class _LoginViewState extends ConsumerState<LoginView> {
   final TextEditingController _passwordController = TextEditingController();
   final bool _rememberMe = false;
 
-  // Brand colours (matching the screenshot)
   static const Color _darkNavy = Color(0xFF1A237E);
   static const Color _brandGreen = Color(0xFF2E7D32);
   static const Color _accentGreen = Color(0xFF15BEB5);

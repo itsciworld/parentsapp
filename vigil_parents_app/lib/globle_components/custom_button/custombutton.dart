@@ -28,7 +28,6 @@ class CustomButton extends StatelessWidget {
   final TextStyle? textStyle;
   final bool arrowIcon;
 
-  // Resolved gradient (loading → disabled, else provided or default)
   LinearGradient get _resolvedGradient => isLoading
       ? AppGradients.disabled
       : (gradient ?? AppGradients.primaryButton);

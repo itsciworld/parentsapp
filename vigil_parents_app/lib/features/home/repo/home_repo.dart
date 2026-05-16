@@ -101,35 +101,35 @@ class DummyHomeRepository implements HomeRepository {
           iconBackground: AppColors.purpleSoft,
           badgeCount: 5,
         ),
-        FeatureTile(
-          id: 'location',
-          title: 'Live Location',
-          subtitle: 'Real-time tracking',
-          icon: Icons.location_on_rounded,
-          iconColor: AppColors.blueIcon,
-          iconBackground: AppColors.blueSoft,
-          isLocked: true,
-        ),
-        FeatureTile(
-          id: 'social',
-          title: 'Social Media',
-          subtitle: 'Monitor activities',
-          icon: Icons.public_rounded,
-          iconColor: AppColors.purpleIcon,
-          iconBackground: AppColors.purpleSoft,
-          badgeCount: 16,
-          isLocked: true,
+        // FeatureTile(
+        //   id: 'location',
+        //   title: 'Live Location',
+        //   subtitle: 'Real-time tracking',
+        //   icon: Icons.location_on_rounded,
+        //   iconColor: AppColors.blueIcon,
+        //   iconBackground: AppColors.blueSoft,
+        //   isLocked: true,
+        // ),
+        // FeatureTile(
+        //   id: 'social',
+        //   title: 'Social Media',
+        //   subtitle: 'Monitor activities',
+        //   icon: Icons.public_rounded,
+        //   iconColor: AppColors.purpleIcon,
+        //   iconBackground: AppColors.purpleSoft,
+        //   badgeCount: 16,
+        //   isLocked: true,
 
-          // NOTE: Material Icons has no real brand glyphs for IG/Snap/TikTok,
-          // so these are stand-ins. REPLACE-LATER with brand SVG/PNG assets
-          // (e.g. via flutter_svg) for pixel-accurate brand icons.
-          clusterIcons: [
-            Icons.camera_alt_rounded, // Instagram stand-in
-            Icons.facebook, // valid Material icon
-            Icons.chat_bubble_rounded, // Snapchat stand-in
-            Icons.music_note_rounded, // TikTok stand-in
-          ],
-        ),
+        //   // NOTE: Material Icons has no real brand glyphs for IG/Snap/TikTok,
+        //   // so these are stand-ins. REPLACE-LATER with brand SVG/PNG assets
+        //   // (e.g. via flutter_svg) for pixel-accurate brand icons.
+        //   clusterIcons: [
+        //     Icons.camera_alt_rounded, // Instagram stand-in
+        //     Icons.facebook, // valid Material icon
+        //     Icons.chat_bubble_rounded, // Snapchat stand-in
+        //     Icons.music_note_rounded, // TikTok stand-in
+        //   ],
+        // ),
         // FeatureTile(
         //   id: 'ai',
         //   title: 'AI Insights',

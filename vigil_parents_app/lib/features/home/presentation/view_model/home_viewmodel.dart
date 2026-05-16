@@ -1,6 +1,9 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:vigil_parents_app/features/calls/presentation/view_model/view/calls_view.dart';
+import 'package:vigil_parents_app/features/gallery/presentations/view/gallery_view.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
 import 'package:vigil_parents_app/features/home/repo/home_repo.dart';
+import 'package:vigil_parents_app/features/sms/view/sms_view.dart';
 
 /// UI state phases for the home screen.
 enum HomeViewState { loading, loaded, error }
@@ -64,10 +67,32 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   // --- Navigation / tap intents (stubbed for now) ---------------------------
+  void onFeatureTapped(BuildContext context, FeatureTile tile) {
+    switch (tile.id) {
+      case 'calls':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AccessCallsScreen()),
+        );
+        break;
 
-  void onFeatureTapped(FeatureTile feature) {
-    debugPrint('Feature tapped: ${feature.id}');
-    // TODO: route to the feature detail screen.
+      case 'sms':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const SmsScreen()),
+        );
+        break;
+
+      case 'gallery':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const GalleryScreen()),
+        );
+        break;
+
+      default:
+        break;
+    }
   }
 
   void onViewOnMap() {
