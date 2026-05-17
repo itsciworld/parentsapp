@@ -7,13 +7,13 @@ class SmsStateCard extends StatelessWidget {
     return Expanded(
       child: Column(
         children: [
-          Icon(icon, color: color, size: 25),
+          Icon(icon, color: color, size: 20),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
 
           Text(
             count,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
 
           const SizedBox(height: 4),
@@ -21,7 +21,7 @@ class SmsStateCard extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12),
+            style: const TextStyle(fontSize: 10),
           ),
         ],
       ),
@@ -35,6 +35,7 @@ class SmsStateCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
+        border: Border.all(width: .1, color: Colors.black),
       ),
       child: Row(
         children: [

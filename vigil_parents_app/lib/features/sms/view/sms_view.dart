@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/features/sms/view_model/sms_viewmodel.dart';
 import 'package:vigil_parents_app/features/sms/widgets/message_card.dart';
 import 'package:vigil_parents_app/features/sms/widgets/sms_filterd_cart.dart';
-import 'package:vigil_parents_app/features/sms/widgets/sms_header.dart';
+
 import 'package:vigil_parents_app/features/sms/widgets/sms_state_card.dart';
 
 class SmsScreen extends ConsumerStatefulWidget {
@@ -36,7 +37,7 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           child: Column(
             children: [
-              const SmsHeader(),
+              AppHeader(onActionTap: () {}),
 
               const SizedBox(height: 20),
 
@@ -55,7 +56,10 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(18),
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(
+                            width: .5,
+                            color: Colors.black,
+                          ),
                         ),
                       ),
                     ),
@@ -65,10 +69,9 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
                 ],
               ),
 
-              const SizedBox(height: 18),
+              // const SizedBox(height: 18),
 
-              const FilterTabs(),
-
+              // const FilterTabs(),
               const SizedBox(height: 18),
 
               SmsStateCard(),

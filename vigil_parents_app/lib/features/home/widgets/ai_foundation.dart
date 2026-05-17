@@ -136,91 +136,133 @@ class FoundationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return SectionCard(
       color: AppColors.primaryLight,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          /// 🔹 TOP HEADER
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const _FoundationLogo(),
-              const SizedBox(width: 20),
+              const SizedBox(width: 12),
+
               Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      info.tagline,
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      info.description,
-                      style: TextStyle(color: Colors.grey, height: 1.35),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          Align(
-            alignment: Alignment.centerRight,
-            child: Material(
-              color: AppColors.primary,
-              borderRadius: BorderRadius.circular(20),
-              child: InkWell(
-                onTap: onKnowMore,
-                borderRadius: BorderRadius.circular(20),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Know More',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
-                      ),
-                      const SizedBox(width: 4),
-                      const Icon(
-                        Icons.north_east_rounded,
-                        color: Colors.white,
-                        size: 14,
-                      ),
-                    ],
+                child: Text(
+                  info.tagline,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primaryDark,
                   ),
                 ),
               ),
+            ],
+          ),
+
+          const SizedBox(height: 10),
+
+          /// 🔹 DESCRIPTION
+          Text(
+            info.description,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+              height: 1.4,
             ),
           ),
-          const SizedBox(height: 20),
-          const Divider(height: 1, color: AppColors.cardBorder),
-          const SizedBox(height: 20),
+
+          const SizedBox(height: 16),
+
+          /// 🔹 STATS (MODERN STYLE)
           Row(
             children: [
               Expanded(
-                child: _FoundationStat(
+                child: _StatBox(
                   icon: Icons.groups_rounded,
                   value: info.childrenImpacted,
-                  label: 'Children Impacted',
+                  label: 'Children',
                 ),
               ),
+              const SizedBox(width: 8),
               Expanded(
-                child: _FoundationStat(
-                  icon: Icons.cast_for_education_rounded,
+                child: _StatBox(
+                  icon: Icons.school_rounded,
                   value: info.awarenessSessions,
-                  label: 'Awareness Sessions',
+                  label: 'Sessions',
                 ),
               ),
+              const SizedBox(width: 8),
               Expanded(
-                child: _FoundationStat(
-                  icon: Icons.diversity_3_rounded,
+                child: _StatBox(
+                  icon: Icons.favorite_rounded,
                   value: info.communitySupporters,
-                  label: 'Community Supporters',
+                  label: 'Supporters',
                 ),
               ),
             ],
           ),
+
+          const SizedBox(height: 16),
+
+          /// 🔹 CTA BUTTON (FULL WIDTH 🔥)
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: onKnowMore,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                ),
+              ),
+              child: const Text(
+                "Know More",
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatBox extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+
+  const _StatBox({
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 16, color: AppColors.primary),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryDark,
+            ),
+          ),
+          Text(label, style: const TextStyle(fontSize: 9, color: Colors.grey)),
         ],
       ),
     );

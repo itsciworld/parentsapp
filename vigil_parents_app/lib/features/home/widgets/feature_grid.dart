@@ -13,12 +13,12 @@ class FeatureGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     return GridView.builder(
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 3,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 10,
-        childAspectRatio: 0.9,
+        crossAxisSpacing: 15,
+        mainAxisSpacing: 15,
       ),
       itemCount: features.length,
       itemBuilder: (context, index) {
@@ -71,7 +71,7 @@ class _FeatureTileCard extends StatelessWidget {
           children: [
             // ── Main content ───────────────────────────────────────
             Padding(
-              padding: const EdgeInsets.all(10),
+              padding: const EdgeInsets.all(14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

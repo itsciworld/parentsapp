@@ -83,6 +83,15 @@ class DummyHomeRepository implements HomeRepository {
           iconBackground: AppColors.orangeSoft,
           badgeCount: 24,
         ),
+        FeatureTile(
+          id: 'Contacts',
+          title: 'Contacts',
+          subtitle: 'View contacts',
+          icon: Icons.contact_page_rounded,
+          iconColor: AppColors.orangeIcon,
+          iconBackground: AppColors.orangeSoft,
+          badgeCount: 24,
+        ),
         // FeatureTile(
         //   id: 'whatsapp',
         //   title: 'WhatsApp Messages',

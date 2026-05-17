@@ -1,45 +1,61 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:dio/dio.dart';
+
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
+import 'package:vigil_parents_app/network/api_intercptor.dart';
 
 class AuthRepository {
-  Future<String> login(String email, String password) async {
-    final url = Uri.parse(
-      'https://vigile-parent-backend.onrender.com/api/auth/login',
-    );
+  final ApiClient _apiClient = ApiClient();
 
-    try {
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'email': email, 'password': password}),
+  // مشتر function to handle response
+  Future<String> _handleAuth(Response response, String email) async {
+    final data = response.data;
+
+    final String? token = data['token'];
+    final String? parentId = data['userId'];
+    final String? parentName = data['userName'];
+
+    if (token != null) {
+      await SecureDeviceService.saveAuthData(
+        token: token,
+        email: email,
+        parentId: parentId,
+        parentName: parentName,
       );
 
-      final responseBody = json.decode(response.body);
+      return data['msg'] ?? "Success";
+    } else {
+      throw Exception("Invalid server response");
+    }
+  }
 
-      if (response.statusCode == 200) {
-        final String? token = responseBody['token'];
-        final String? parentId = responseBody['userId'];
-        final String? parentName = responseBody['userName'];
+  // LOGIN
+  Future<String> login(String email, String password) async {
+    try {
+      final response = await _apiClient.post(
+        "/api/auth/login",
+        data: {"email": email, "password": password},
+      );
 
-        if (token != null) {
-          // Save token and other data to secure storage
-          await SecureDeviceService.saveAuthData(
-            token: token,
-            email: email,
-            parentId: parentId,
-            parentName: parentName,
-          );
-
-          return responseBody['msg'] ?? 'Logged in successfully';
-        } else {
-          throw Exception('Invalid response from server');
-        }
-      } else {
-        throw Exception(responseBody['msg'] ?? 'Unknown error occurred');
-      }
+      return await _handleAuth(response, email);
+    } on DioException catch (e) {
+      throw Exception(e.error.toString()); // ✅ clean message
     } catch (e) {
-      // Re-throw to be caught by the view model
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  // REGISTER
+  Future<String> register(String name, String email, String password) async {
+    try {
+      final response = await _apiClient.post(
+        "/api/auth/register",
+        data: {"name": name, "email": email, "password": password},
+      );
+
+      return await _handleAuth(response, email);
+    } on DioException catch (e) {
+      throw Exception(e.error.toString()); // ✅ clean message
+    } catch (e) {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }

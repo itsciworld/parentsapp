@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
@@ -33,29 +34,30 @@ class HomeAppBar extends StatelessWidget {
         //   onTap: onMenuTap,
         //   iconColor: AppColors.textOnDark,
         // ),
-        const SizedBox(width: 4),
+        // const SizedBox(width: 4),
 
         // Brand / logo --------------------------------------------------------
         const _LogoMark(),
+        // AppHeader(showBack: false),
         const Spacer(),
 
         // Notifications -------------------------------------------------------
-        Stack(
-          clipBehavior: Clip.none,
-          children: [
-            _CircleIconButton(
-              icon: Icons.notifications_none_rounded,
-              onTap: onNotificationsTap,
-              iconColor: AppColors.textOnDark,
-            ),
-            if (notificationCount > 0)
-              Positioned(
-                right: -2,
-                top: -2,
-                child: CountBadge(count: notificationCount),
-              ),
-          ],
-        ),
+        // Stack(
+        //   clipBehavior: Clip.none,
+        //   children: [
+        //     _CircleIconButton(
+        //       icon: Icons.notifications_none_rounded,
+        //       onTap: onNotificationsTap,
+        //       iconColor: AppColors.textOnDark,
+        //     ),
+        //     // if (notificationCount > 0)
+        //     //   Positioned(
+        //     //     right: -2,
+        //     //     top: -2,
+        //     //     child: CountBadge(count: notificationCount),
+        //     //   ),
+        //   ],
+        // ),
         const SizedBox(width: 4),
 
         // Parent chip ---------------------------------------------------------
@@ -112,29 +114,30 @@ class _LogoMark extends StatelessWidget {
           width: 104,
           height: 68,
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: Image.asset(AppImages.lsogo),
+          child: Image.asset(AppImages.logo1),
         ),
-        const SizedBox(width: 8),
+        // const SizedBox(width: 8),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Text(
-            //   'VIGIL',
-            //   style: TextStyle(
-            //     color: AppColors.textOnDark,
-            //     letterSpacing: 2,
-            //     fontSize: 20,
-            //   ),
-            // ),
-            // Text(
-            //   'PARENTAL MONITORING SYSTEM',
-            //   style: TextStyle(
-            //     color: AppColors.textOnDarkMuted,
-            //     fontSize: 7,
-            //     letterSpacing: 1,
-            //   ),
-            // ),
+            Text(
+              'VIGIL',
+              style: TextStyle(
+                color: AppColors.textOnDark,
+                letterSpacing: 2.5,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            Text(
+              'PARENTAL MONITORING SYSTEM',
+              style: TextStyle(
+                color: AppColors.textOnDarkMuted,
+                fontSize: 5,
+                letterSpacing: 1,
+              ),
+            ),
           ],
         ),
       ],

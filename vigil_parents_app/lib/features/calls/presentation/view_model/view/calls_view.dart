@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/features/calls/models/calls_model.dart';
 import 'package:vigil_parents_app/features/calls/presentation/view_model/calls_viewmodel.dart';
 
@@ -37,7 +38,13 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            _buildAppBar(),
+            // _buildAppBar(),
+            AppHeader(
+              actionIcon: Icons.refresh_rounded,
+              onActionTap: () {
+                vm.refresh();
+              },
+            ),
 
             Expanded(
               child: vm.isLoading && vm.summary == null
@@ -90,7 +97,7 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
                     ),
             ),
 
-            _buildBottomNav(),
+            // _buildBottomNav(),
           ],
         ),
       ),

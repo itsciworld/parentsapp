@@ -20,20 +20,20 @@ class AppToastData {
   });
 }
 
-class LoginState {
+class AuthState {
   final bool isLoading;
   final bool isSuccess;
   final AppToastData? toastData;
 
-  LoginState({this.isLoading = false, this.isSuccess = false, this.toastData});
+  AuthState({this.isLoading = false, this.isSuccess = false, this.toastData});
 
-  LoginState copyWith({
+  AuthState copyWith({
     bool? isLoading,
     bool? isSuccess,
     AppToastData? toastData,
     bool clearToast = false,
   }) {
-    return LoginState(
+    return AuthState(
       isLoading: isLoading ?? this.isLoading,
       isSuccess: isSuccess ?? this.isSuccess,
       toastData: clearToast ? null : (toastData ?? this.toastData),
@@ -41,21 +41,24 @@ class LoginState {
   }
 }
 
-class LoginViewModel extends StateNotifier<LoginState> {
+class AuthViewModel extends StateNotifier<AuthState> {
   final AuthRepository _authRepository;
 
-  LoginViewModel(this._authRepository) : super(LoginState());
+  AuthViewModel(this._authRepository) : super(AuthState());
 
+  // LOGIN
   Future<void> login(String email, String password) async {
     state = state.copyWith(isLoading: true, clearToast: true);
+
     try {
-      final successMessage = await _authRepository.login(email, password);
+      final message = await _authRepository.login(email, password);
+
       state = state.copyWith(
         isLoading: false,
         isSuccess: true,
         toastData: AppToastData(
           title: 'Success',
-          subtitle: successMessage,
+          subtitle: message,
           type: ToastType.success,
         ),
       );
@@ -70,10 +73,38 @@ class LoginViewModel extends StateNotifier<LoginState> {
       );
     }
   }
+
+  Future<void> register(String name, String email, String password) async {
+    state = state.copyWith(isLoading: true, clearToast: true);
+
+    try {
+      final message = await _authRepository.register(name, email, password);
+
+      state = state.copyWith(
+        isLoading: false,
+        isSuccess: true,
+        toastData: AppToastData(
+          title: 'Success',
+          subtitle: message,
+          type: ToastType.success,
+        ),
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        toastData: AppToastData(
+          title: 'Registration Failed',
+          subtitle: e.toString().replaceAll('Exception: ', ''),
+          type: ToastType.error,
+        ),
+      );
+    }
+  }
 }
 
-final loginViewModelProvider =
-    StateNotifierProvider<LoginViewModel, LoginState>((ref) {
-      final authRepository = ref.watch(authRepositoryProvider);
-      return LoginViewModel(authRepository);
-    });
+final authViewModelProvider = StateNotifierProvider<AuthViewModel, AuthState>((
+  ref,
+) {
+  final repo = ref.watch(authRepositoryProvider);
+  return AuthViewModel(repo);
+});

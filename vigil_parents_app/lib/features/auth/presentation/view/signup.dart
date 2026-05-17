@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
+import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
+import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
+import 'package:vigil_parents_app/features/auth/presentation/view/login_view.dart';
+import 'package:vigil_parents_app/features/auth/presentation/view_model/auth_viewmodel.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 
 class SignupView extends ConsumerStatefulWidget {
@@ -15,6 +19,7 @@ class SignupView extends ConsumerStatefulWidget {
 
 class _SignupViewState extends ConsumerState<SignupView> {
   final _formKey = GlobalKey<FormState>();
+  bool _obscurePassword = true;
 
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
@@ -50,11 +55,7 @@ class _SignupViewState extends ConsumerState<SignupView> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    debugPrint(name);
-    debugPrint(email);
-    debugPrint(password);
-
-    // TODO: Call signup API
+    ref.read(authViewModelProvider.notifier).register(name, email, password);
   }
 
   @override
@@ -70,6 +71,31 @@ class _SignupViewState extends ConsumerState<SignupView> {
     final logoBoxH = screenH * 0.28;
     final vGapSm = screenH * 0.015;
     final vGapMd = screenH * 0.022;
+    final authState = ref.watch(authViewModelProvider);
+    ref.listen<AuthState>(authViewModelProvider, (previous, next) async {
+      // Toast
+      if (next.toastData != null && next.toastData != previous?.toastData) {
+        showAppToast(
+          context: context,
+          title: next.toastData!.title,
+          subtitle: next.toastData!.subtitle,
+          type: next.toastData!.type,
+        );
+      }
+
+      // Navigate after success
+      if (next.isSuccess && !(previous?.isSuccess ?? false)) {
+        final navigator = Navigator.of(context);
+        final email = await SecureDeviceService.getEmail();
+        final token = await SecureDeviceService.getToken();
+        final parentId = await SecureDeviceService.getParentId();
+        final parentName = await SecureDeviceService.getParentName();
+
+        if (!mounted) return;
+
+        navigator.pushReplacementNamed(AppRoutesName.homeView);
+      }
+    });
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -131,7 +157,10 @@ class _SignupViewState extends ConsumerState<SignupView> {
                                 SizedBox(height: vGapMd),
 
                                 // ───────────── Name ─────────────
-                                const _FieldLabel(text: 'Full Name'),
+                                const FieldLabel(
+                                  text: 'Full Name',
+                                  required: true,
+                                ),
                                 const SizedBox(height: 6),
 
                                 FlexiFormField(
@@ -150,7 +179,7 @@ class _SignupViewState extends ConsumerState<SignupView> {
                                 SizedBox(height: vGapSm),
 
                                 // ───────────── Email ─────────────
-                                const _FieldLabel(text: 'Email'),
+                                const FieldLabel(text: 'Email', required: true),
                                 const SizedBox(height: 6),
 
                                 FlexiFormField(
@@ -172,16 +201,32 @@ class _SignupViewState extends ConsumerState<SignupView> {
                                 SizedBox(height: vGapSm),
 
                                 // ───────────── Password ─────────────
-                                const _FieldLabel(text: 'Password'),
+                                const FieldLabel(
+                                  text: 'Password',
+                                  required: true,
+                                ),
                                 const SizedBox(height: 6),
 
                                 FlexiFormField(
                                   controller: _passwordController,
                                   hint: 'Enter Your Password',
-                                  obscureText: true,
+                                  obscureText: _obscurePassword,
                                   isMandatory: true,
                                   fieldStyle: FlexiFieldStyle.outline,
                                   theme: _fieldTheme,
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
                                   prefixIcon: Icon(
                                     Icons.lock_outline_rounded,
                                     size: 20,
@@ -193,11 +238,13 @@ class _SignupViewState extends ConsumerState<SignupView> {
 
                                 // ───────────── Signup Button ─────────────
                                 CustomButton(
-                                  onTap: _handleSignup,
+                                  onTap: authState.isLoading
+                                      ? null
+                                      : _handleSignup,
                                   label: 'Create Account',
                                   height: screenH * 0.053,
                                   gradient: AppGradients.primaryButton,
-                                  isLoading: false,
+                                  isLoading: authState.isLoading,
                                 ),
 
                                 SizedBox(height: vGapMd),

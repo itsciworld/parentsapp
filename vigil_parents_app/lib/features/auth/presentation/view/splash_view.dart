@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
@@ -23,69 +25,84 @@ class _SplashViewState extends State<SplashView> {
     });
   }
 
+  // Fluid font helper — scales with screen width, hard min/max bounds
+  double _fs(
+    double screenW,
+    double factor, {
+    double min = 12,
+    double max = 40,
+  }) {
+    return clampDouble(screenW * factor, min, max);
+  }
+
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
-
     final screenH = mq.size.height;
     final screenW = mq.size.width;
 
-    final isSmall = screenH < 700;
+    // Fluid height helper — clamps between a min and max px value
+    double clampH(
+      double fraction, {
+      required double minPx,
+      required double maxPx,
+    }) {
+      return clampDouble(screenH * fraction, minPx, maxPx);
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
+            final h = constraints.maxHeight;
+
             return SizedBox(
               width: double.infinity,
-              height: constraints.maxHeight,
+              height: h,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // ───────────────── TOP SPACE ─────────────────
-                  SizedBox(height: screenH * 0.05),
+                  // ── TOP SPACE ──
+                  SizedBox(height: clampH(0.04, minPx: 16, maxPx: 48)),
 
-                  // ───────────────── LOGO ─────────────────
+                  // ── LOGO ──
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: screenW * 0.02),
-                    child: Image.asset(
-                      AppImages.logo,
-                      fit: BoxFit.contain,
-                      height: screenH * 0.30,
-                    ),
-                  ),
-
-                  SizedBox(height: screenH * 0.025),
-
-                  // ───────────────── BANNER CARD ─────────────────
-                  Container(
-                    width: double.infinity,
-                    // padding: EdgeInsets.all(screenW * 0.03),
-                    decoration: BoxDecoration(
-                      // color: Colors.white,
-                      borderRadius: BorderRadius.circular(28),
-                      boxShadow: [
-                        // BoxShadow(
-                        //   color: Colors.black.withValues(alpha: 0.06),
-                        //   blurRadius: 18,
-                        //   offset: const Offset(0, 8),
-                        // ),
-                      ],
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(24),
+                    padding: EdgeInsets.symmetric(horizontal: screenW * 0.06),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: 80,
+                        maxHeight: clampH(0.28, minPx: 80, maxPx: 220),
+                      ),
                       child: Image.asset(
-                        AppImages.splashBanner,
-                        fit: BoxFit.cover,
-                        height: screenH * 0.25,
+                        AppImages.logo,
+                        fit: BoxFit.contain,
                         width: double.infinity,
                       ),
                     ),
                   ),
 
-                  SizedBox(height: screenH * 0.045),
+                  SizedBox(height: clampH(0.025, minPx: 12, maxPx: 32)),
 
-                  // ───────────────── TITLE ─────────────────
+                  // ── BANNER CARD ──
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: 100,
+                        maxHeight: clampH(0.26, minPx: 100, maxPx: 260),
+                      ),
+                      child: Image.asset(
+                        AppImages.splashBanner,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                      ),
+                    ),
+                  ),
+
+                  SizedBox(height: clampH(0.04, minPx: 16, maxPx: 48)),
+
+                  // ── TITLE ──
                   Padding(
                     padding: EdgeInsets.symmetric(horizontal: screenW * 0.08),
                     child: Column(
@@ -94,42 +111,49 @@ class _SplashViewState extends State<SplashView> {
                           'Because Your Safety',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: isSmall ? 28 : 34,
+                            fontSize: _fs(screenW, 0.085, min: 22, max: 38),
                             fontWeight: FontWeight.w800,
                             color: _darkBlue,
-                            height: 1.1,
+                            height: 1.15,
                           ),
                         ),
-
-                        SizedBox(height: screenH * 0.008),
-
+                        SizedBox(height: clampH(0.006, minPx: 4, maxPx: 12)),
                         Text(
                           'Is Your Peace of Mind',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontSize: isSmall ? 24 : 30,
+                            fontSize: _fs(screenW, 0.072, min: 18, max: 32),
                             fontWeight: FontWeight.w700,
                             color: _green,
-                            height: 1.1,
+                            height: 1.15,
                           ),
                         ),
                       ],
                     ),
                   ),
 
-                  const Spacer(),
+                  // ── FLEXIBLE GAP — never collapses fully, never grows huge ──
+                  Flexible(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: 24,
+                        maxHeight: clampH(0.10, minPx: 24, maxPx: 80),
+                      ),
+                      child: const SizedBox.expand(),
+                    ),
+                  ),
 
-                  // ───────────────── LOADER ─────────────────
-                  const SizedBox(
-                    width: 34,
-                    height: 34,
-                    child: CircularProgressIndicator(
+                  // ── LOADER ──
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: const CircularProgressIndicator(
                       strokeWidth: 3,
                       color: _green,
                     ),
                   ),
 
-                  SizedBox(height: screenH * 0.06),
+                  SizedBox(height: clampH(0.05, minPx: 20, maxPx: 56)),
                 ],
               ),
             );

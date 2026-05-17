@@ -20,7 +20,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
-  final bool _rememberMe = false;
+  bool _obscurePassword = true;
 
   static const Color _darkNavy = Color(0xFF1A237E);
   static const Color _brandGreen = Color(0xFF2E7D32);
@@ -45,12 +45,13 @@ class _LoginViewState extends ConsumerState<LoginView> {
 
   void _handleLogin() {
     FocusScope.of(context).unfocus();
+
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
-    ref.read(loginViewModelProvider.notifier).login(email, password);
+    ref.read(authViewModelProvider.notifier).login(email, password);
   }
 
   @override
@@ -67,7 +68,8 @@ class _LoginViewState extends ConsumerState<LoginView> {
     final vGapMd = screenH * 0.022;
 
     // ── State listener ──────────────────────────────────────────────────────
-    ref.listen<LoginState>(loginViewModelProvider, (previous, next) async {
+    ref.listen<AuthState>(authViewModelProvider, (previous, next) async {
+      // Show Toast
       if (next.toastData != null && next.toastData != previous?.toastData) {
         showAppToast(
           context: context,
@@ -77,28 +79,30 @@ class _LoginViewState extends ConsumerState<LoginView> {
         );
       }
 
+      // Navigate on success (ONLY once)
       if (next.isSuccess && !(previous?.isSuccess ?? false)) {
         final email = await SecureDeviceService.getEmail();
         final token = await SecureDeviceService.getToken();
         final parentId = await SecureDeviceService.getParentId();
         final parentName = await SecureDeviceService.getParentName();
 
-        if (mounted) {
-          Navigator.pushReplacementNamed(
-            context,
-            '/devicespage',
-            arguments: {
-              'email': email,
-              'token': token,
-              'parentId': parentId,
-              'parent_name': parentName,
-            },
-          );
-        }
+        if (!mounted) return;
+        Navigator.pushNamed(context, AppRoutesName.homeView);
+
+        // Navigator.pushReplacementNamed(
+        //   context,
+        //   '/devicespage',
+        //   arguments: {
+        //     'email': email,
+        //     'token': token,
+        //     'parentId': parentId,
+        //     'parent_name': parentName,
+        //   },
+        // );
       }
     });
 
-    final loginState = ref.watch(loginViewModelProvider);
+    final authState = ref.watch(authViewModelProvider);
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -159,7 +163,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
 
                                 SizedBox(height: vGapMd),
 
-                                _FieldLabel(text: 'Email'),
+                                FieldLabel(text: 'Email', required: true),
                                 SizedBox(height: 6),
 
                                 FlexiFormField(
@@ -180,13 +184,16 @@ class _LoginViewState extends ConsumerState<LoginView> {
 
                                 SizedBox(height: vGapSm),
 
-                                _FieldLabel(text: 'Password'),
+                                FieldLabel(text: 'Password', required: true),
                                 SizedBox(height: 6),
 
+                                // 2. Replace the password FlexiFormField with this
                                 FlexiFormField(
+                                  // label: 'hellow',
                                   controller: _passwordController,
                                   hint: 'Enter Your Password',
-                                  obscureText: true,
+                                  obscureText:
+                                      _obscurePassword, // ← bind to state bool
                                   isMandatory: true,
                                   fieldStyle: FlexiFieldStyle.outline,
                                   theme: _fieldTheme,
@@ -195,6 +202,20 @@ class _LoginViewState extends ConsumerState<LoginView> {
                                     size: 20,
                                     color: Colors.grey.shade500,
                                   ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                  // autoValidate: true,
                                 ),
 
                                 SizedBox(height: vGapSm),
@@ -222,8 +243,10 @@ class _LoginViewState extends ConsumerState<LoginView> {
                                 SizedBox(height: vGapMd * 1.4),
 
                                 CustomButton(
-                                  onTap: _handleLogin,
-                                  isLoading: loginState.isLoading,
+                                  onTap: authState.isLoading
+                                      ? null
+                                      : _handleLogin,
+                                  isLoading: authState.isLoading,
                                   label: 'Login',
                                   height: screenH * 0.053,
                                   gradient: AppGradients.primaryButton,
@@ -385,18 +408,32 @@ class _Blob extends StatelessWidget {
 // Field label helper
 // ---------------------------------------------------------------------------
 
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({required this.text});
+class FieldLabel extends StatelessWidget {
+  const FieldLabel({required this.text, this.required = false});
   final String text;
+  final bool required;
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: Colors.black87,
+    return RichText(
+      text: TextSpan(
+        text: text,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
+        children: required
+            ? const [
+                TextSpan(
+                  text: ' *',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ]
+            : null,
       ),
     );
   }

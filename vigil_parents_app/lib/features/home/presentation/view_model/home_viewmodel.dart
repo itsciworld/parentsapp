@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/features/calls/presentation/view_model/view/calls_view.dart';
+import 'package:vigil_parents_app/features/contact/view/contact_view.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view/gallery_view.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
 import 'package:vigil_parents_app/features/home/repo/home_repo.dart';
@@ -87,6 +88,13 @@ class HomeViewModel extends ChangeNotifier {
         Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const GalleryScreen()),
+        );
+        break;
+
+      case 'Contacts':
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ContactsPage()),
         );
         break;
 
