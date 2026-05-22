@@ -106,84 +106,6 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
 
   // ─── App Bar ────────────────────────────────────────────────────────────────
 
-  Widget _buildAppBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          _iconButton(
-            icon: Icons.arrow_back_ios_new_rounded,
-            onTap: () => Navigator.of(context).maybePop(),
-          ),
-          const Spacer(),
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1A7F5A),
-                  shape: BoxShape.circle,
-                ),
-                child: const Center(
-                  child: Icon(
-                    Icons.shield_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Text(
-                    'VIGIL',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF1A7F5A),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  Text(
-                    'Watch Smart. Protect Better',
-                    style: TextStyle(
-                      fontSize: 9,
-                      color: Colors.grey,
-                      letterSpacing: 0.3,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          const Spacer(),
-          _iconButton(
-            icon: Icons.refresh_rounded,
-            onTap: () => ref.read(callLogViewModelProvider).refresh(),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _iconButton({required IconData icon, required VoidCallback onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: const Color(0xFFF5F5F5),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(icon, size: 20, color: const Color(0xFF333333)),
-      ),
-    );
-  }
-
   // ─── Header ─────────────────────────────────────────────────────────────────
 
   Widget _buildHeader(CallLogViewModel vm) {
@@ -329,7 +251,7 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
             border: Border.all(color: const Color(0xFFE5E5E5)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -533,7 +455,7 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
           border: Border.all(color: const Color(0xFFEEEEEE)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 2),
             ),
@@ -676,7 +598,7 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
           border: Border.all(color: const Color(0xFFF0F0F0)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: .03),
               blurRadius: 6,
               offset: const Offset(0, 2),
             ),
@@ -889,140 +811,4 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
   }
 
   // ─── Bottom Nav ──────────────────────────────────────────────────────────────
-
-  Widget _buildBottomNav() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: const Color(0xFFEEEEEE))),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            children: [
-              _navItem(
-                icon: Icons.dashboard_rounded,
-                label: 'Dashboard',
-                isActive: false,
-              ),
-              _navItem(
-                icon: Icons.phone_rounded,
-                label: 'Calls',
-                isActive: true,
-              ),
-              _navItem(
-                icon: Icons.chat_rounded,
-                label: 'WhatsApp',
-                isActive: false,
-              ),
-              _navItemWithBadge(
-                icon: Icons.notifications_outlined,
-                label: 'Alerts',
-                badge: '3',
-                isActive: false,
-              ),
-              _navItem(
-                icon: Icons.menu_rounded,
-                label: 'More',
-                isActive: false,
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _navItem({
-    required IconData icon,
-    required String label,
-    required bool isActive,
-  }) {
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            color: isActive ? const Color(0xFF1A7F5A) : const Color(0xFFAAAAAA),
-            size: 24,
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11,
-              fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-              color: isActive
-                  ? const Color(0xFF1A7F5A)
-                  : const Color(0xFFAAAAAA),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _navItemWithBadge({
-    required IconData icon,
-    required String label,
-    required String badge,
-    required bool isActive,
-  }) {
-    return Expanded(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(
-                icon,
-                color: isActive
-                    ? const Color(0xFF1A7F5A)
-                    : const Color(0xFFAAAAAA),
-                size: 24,
-              ),
-              Positioned(
-                top: -4,
-                right: -6,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 5,
-                    vertical: 1,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE53935),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    badge,
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Colors.white,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(fontSize: 11, color: Color(0xFFAAAAAA)),
-          ),
-        ],
-      ),
-    );
-  }
 }

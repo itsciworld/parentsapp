@@ -8,13 +8,13 @@ import 'package:vigil_parents_app/features/home/models/home_model.dart';
 /// REPLACE-LATER: the logo here is built with an [Icon] + text. Swap the
 /// `_LogoMark` widget with your real asset, e.g.:
 ///   Image.asset('assets/images/vigil_logo.png', height: 36)
-class HomeAppBar extends StatelessWidget {
+class HomeAapbar extends StatefulWidget {
   final ParentProfile parent;
   final int notificationCount;
   final VoidCallback onMenuTap;
   final VoidCallback onNotificationsTap;
 
-  const HomeAppBar({
+  const HomeAapbar({
     super.key,
     required this.parent,
     required this.notificationCount,
@@ -22,6 +22,11 @@ class HomeAppBar extends StatelessWidget {
     required this.onNotificationsTap,
   });
 
+  @override
+  State<HomeAapbar> createState() => _HomeAapbarState();
+}
+
+class _HomeAapbarState extends State<HomeAapbar> {
   @override
   Widget build(BuildContext context) {
     return Row(
@@ -72,7 +77,7 @@ class HomeAppBar extends StatelessWidget {
                 radius: 14,
                 backgroundColor: AppColors.primary,
                 child: Text(
-                  parent.initials,
+                  widget.parent.initials,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 11,
@@ -82,7 +87,7 @@ class HomeAppBar extends StatelessWidget {
               ),
               const SizedBox(width: 6),
               Text(
-                parent.name,
+                widget.parent.name,
                 style: TextStyle(color: AppColors.textOnDark, fontSize: 13),
               ),
               // const Icon(
@@ -139,33 +144,6 @@ class _LogoMark extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-class _CircleIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-  final Color iconColor;
-
-  const _CircleIconButton({
-    required this.icon,
-    required this.onTap,
-    required this.iconColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(25),
-        child: Padding(
-          padding: const EdgeInsets.all(6),
-          child: Icon(icon, color: iconColor, size: 26),
-        ),
-      ),
     );
   }
 }

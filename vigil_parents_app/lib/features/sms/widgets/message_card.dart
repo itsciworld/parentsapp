@@ -78,7 +78,7 @@ class MessageCard extends StatelessWidget {
                         vertical: 6,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(.1),
+                        color: Colors.red.withValues(alpha: .1),
                         borderRadius: BorderRadius.circular(40),
                       ),
                       child: const Text(
@@ -104,8 +104,8 @@ class MessageCard extends StatelessWidget {
                 ),
                 decoration: BoxDecoration(
                   color: model.isSent
-                      ? Colors.green.withOpacity(.1)
-                      : Colors.blue.withOpacity(.1),
+                      ? Colors.green.withValues(alpha: .1)
+                      : Colors.blue.withValues(alpha: .1),
                   borderRadius: BorderRadius.circular(40),
                 ),
                 child: Text(

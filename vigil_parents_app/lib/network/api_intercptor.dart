@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/config/api_config.dart';
 
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
@@ -9,25 +10,23 @@ class ApiInterceptor extends Interceptor {
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) async {
-    // ✅ Add headers
     options.headers['Content-Type'] = 'application/json';
 
-    // ✅ Attach token automatically
     final token = await SecureDeviceService.getToken();
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
     }
 
-    print("➡️ REQUEST[${options.method}] => ${options.path}");
-    print("Headers: ${options.headers}");
-    print("Body: ${options.data}");
+    debugPrint("➡️ REQUEST[${options.method}] => ${options.path}");
+    debugPrint("Headers: ${options.headers}");
+    debugPrint("Body: ${options.data}");
 
     handler.next(options);
   }
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    print("✅ RESPONSE[${response.statusCode}] => ${response.data}");
+    debugPrint("✅ RESPONSE[${response.statusCode}] => ${response.data}");
     handler.next(response);
   }
 
@@ -47,7 +46,7 @@ class ApiInterceptor extends Interceptor {
         }
       }
 
-      print("❌ ERROR[${err.response?.statusCode}] => $message");
+      debugPrint("❌ ERROR[${err.response?.statusCode}] => $message");
     } else {
       // Network / timeout
       if (err.type == DioExceptionType.connectionTimeout) {
@@ -60,7 +59,7 @@ class ApiInterceptor extends Interceptor {
         message = err.message ?? "Unexpected error";
       }
 
-      print("❌ NETWORK ERROR => $message");
+      debugPrint("❌ NETWORK ERROR => $message");
     }
 
     // ✅ Throw clean message

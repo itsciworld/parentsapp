@@ -300,31 +300,3 @@ class _FoundationLogo extends StatelessWidget {
     );
   }
 }
-
-class _FoundationStat extends StatelessWidget {
-  final IconData icon;
-  final String value;
-  final String label;
-
-  const _FoundationStat({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: AppColors.primary, size: 18),
-        const SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(color: AppColors.primaryDark, fontSize: 13),
-        ),
-        const SizedBox(height: 2),
-        Text(label, textAlign: TextAlign.center, style: TextStyle(fontSize: 9)),
-      ],
-    );
-  }
-}

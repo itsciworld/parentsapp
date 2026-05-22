@@ -5,7 +5,7 @@ import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
-import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
+
 import 'package:vigil_parents_app/features/auth/presentation/view_model/auth_viewmodel.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 
@@ -23,7 +23,7 @@ class _LoginViewState extends ConsumerState<LoginView> {
   bool _obscurePassword = true;
 
   static const Color _darkNavy = Color(0xFF1A237E);
-  static const Color _brandGreen = Color(0xFF2E7D32);
+
   static const Color _accentGreen = Color(0xFF15BEB5);
   static const Color _accentBlue = Color(0xFF2BA0CC);
 
@@ -81,10 +81,10 @@ class _LoginViewState extends ConsumerState<LoginView> {
 
       // Navigate on success (ONLY once)
       if (next.isSuccess && !(previous?.isSuccess ?? false)) {
-        final email = await SecureDeviceService.getEmail();
-        final token = await SecureDeviceService.getToken();
-        final parentId = await SecureDeviceService.getParentId();
-        final parentName = await SecureDeviceService.getParentName();
+        // final email = await SecureDeviceService.getEmail();
+        // final token = await SecureDeviceService.getToken();
+        // final parentId = await SecureDeviceService.getParentId();
+        // final parentName = await SecureDeviceService.getParentName();
 
         if (!mounted) return;
         Navigator.pushNamed(context, AppRoutesName.homeView);

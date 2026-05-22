@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:vigil_parents_app/features/gallery/models/galleryChild_model.dart';
+import 'package:vigil_parents_app/features/gallery/models/gallery_child_model.dart';
 import 'package:vigil_parents_app/features/gallery/models/gallery_model.dart';
 import 'package:vigil_parents_app/features/gallery/models/gallery_state_model.dart';
 
@@ -89,7 +89,7 @@ class ProBackButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -239,7 +239,7 @@ class GalleryStatsCard extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: accent.withOpacity(0.12),
+              color: accent.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, size: 20, color: accent),
@@ -273,7 +273,7 @@ class GalleryStatsCard extends StatelessWidget {
         boxShadow: [
           BoxShadow(
             blurRadius: 20,
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: .06),
             offset: const Offset(0, 6),
           ),
         ],
@@ -414,7 +414,7 @@ class GalleryPhotoGrid extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.85),
+                        color: Colors.white.withValues(alpha: 0.85),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(

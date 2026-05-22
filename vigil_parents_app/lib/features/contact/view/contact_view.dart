@@ -23,8 +23,6 @@ class _ContactsPageState extends State<ContactsPage> {
   ContactStatus? _activeStatus; // null = all
   String _searchQuery = '';
 
-  static const _navy = Color(0xFF1A1A2E);
-
   // status tab definitions
   final _statusTabs = const [
     _StatusTab(label: 'All', status: null),
@@ -33,28 +31,28 @@ class _ContactsPageState extends State<ContactsPage> {
     _StatusTab(label: 'Blocked', status: ContactStatus.blocked),
   ];
 
-  final _categories = [
-    ContactCategory.all,
-    ContactCategory.family,
-    ContactCategory.friends,
-    ContactCategory.education,
-    ContactCategory.unknown,
-  ];
+  // final _categories = [
+  //   ContactCategory.all,
+  //   ContactCategory.family,
+  //   ContactCategory.friends,
+  //   ContactCategory.education,
+  //   ContactCategory.unknown,
+  // ];
 
-  String _categoryLabel(ContactCategory c) {
-    switch (c) {
-      case ContactCategory.all:
-        return 'All';
-      case ContactCategory.family:
-        return 'Family';
-      case ContactCategory.friends:
-        return 'Friends';
-      case ContactCategory.education:
-        return 'Education';
-      case ContactCategory.unknown:
-        return 'Unknown';
-    }
-  }
+  // String _categoryLabel(ContactCategory c) {
+  //   switch (c) {
+  //     case ContactCategory.all:
+  //       return 'All';
+  //     case ContactCategory.family:
+  //       return 'Family';
+  //     case ContactCategory.friends:
+  //       return 'Friends';
+  //     case ContactCategory.education:
+  //       return 'Education';
+  //     case ContactCategory.unknown:
+  //       return 'Unknown';
+  //   }
+  // }
 
   List<ContactModel> get _filtered => _repo.filter(
     category: _activeCategory,
@@ -379,9 +377,9 @@ class _StatCard extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.06),
+          color: color.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: color.withOpacity(0.12)),
+          border: Border.all(color: color.withValues(alpha: 0.12)),
         ),
         child: Column(
           children: [
@@ -405,67 +403,6 @@ class _StatCard extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _CategoryChips extends StatelessWidget {
-  final List<ContactCategory> categories;
-  final ContactCategory active;
-  final String Function(ContactCategory) label;
-  final ValueChanged<ContactCategory> onSelect;
-
-  const _CategoryChips({
-    required this.categories,
-    required this.active,
-    required this.label,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-      child: SizedBox(
-        height: 34,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: categories.length,
-          separatorBuilder: (_, _) => const SizedBox(width: 8),
-          itemBuilder: (_, i) {
-            final cat = categories[i];
-            final isActive = active == cat;
-            return GestureDetector(
-              onTap: () => onSelect(cat),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: isActive ? const Color(0xFF1A1A2E) : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isActive
-                        ? const Color(0xFF1A1A2E)
-                        : const Color(0xFFE9ECEF),
-                  ),
-                ),
-                child: Text(
-                  label(cat),
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: isActive ? Colors.white : const Color(0xFF868E96),
-                  ),
-                ),
-              ),
-            );
-          },
         ),
       ),
     );
@@ -623,8 +560,11 @@ class _ContactAvatar extends StatelessWidget {
           height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: contact.color.withOpacity(0.12),
-            border: Border.all(color: contact.color.withOpacity(0.3), width: 2),
+            color: contact.color.withValues(alpha: 0.12),
+            border: Border.all(
+              color: contact.color.withValues(alpha: .3),
+              width: 2,
+            ),
           ),
           alignment: Alignment.center,
           child: Text(
@@ -872,10 +812,10 @@ class ContactDetailSheet extends StatelessWidget {
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
-                            color: contact.color.withOpacity(0.1),
+                            color: contact.color.withValues(alpha: .1),
                             borderRadius: BorderRadius.circular(20),
                             border: Border.all(
-                              color: contact.color.withOpacity(0.25),
+                              color: contact.color.withValues(alpha: .25),
                             ),
                           ),
                           child: Text(
@@ -1062,71 +1002,3 @@ class _EmptyState extends StatelessWidget {
 // ══════════════════════════════════════════════════════════════
 //  VIEW  –  BOTTOM NAV
 // ══════════════════════════════════════════════════════════════
-
-class _BottomNav extends StatelessWidget {
-  static const _navy = Color(0xFF1A1A2E);
-
-  @override
-  Widget build(BuildContext context) {
-    final items = [
-      (icon: Icons.dashboard_outlined, label: 'Dashboard', active: false),
-      (icon: Icons.phone_outlined, label: 'Calls', active: false),
-      (icon: Icons.people_alt_outlined, label: 'Contacts', active: true),
-      (icon: Icons.chat_bubble_outline, label: 'Chat', active: false),
-      (icon: Icons.menu, label: 'More', active: false),
-    ];
-
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFF1F3F5))),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: items.map((item) {
-              return Opacity(
-                opacity: item.active ? 1.0 : 0.4,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      item.icon,
-                      size: 24,
-                      color: item.active ? _navy : const Color(0xFF868E96),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      item.label,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: item.active
-                            ? FontWeight.w700
-                            : FontWeight.w500,
-                        color: item.active ? _navy : const Color(0xFF868E96),
-                      ),
-                    ),
-                    if (item.active) ...[
-                      const SizedBox(height: 3),
-                      Container(
-                        width: 4,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                          color: _navy,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-        ),
-      ),
-    );
-  }
-}

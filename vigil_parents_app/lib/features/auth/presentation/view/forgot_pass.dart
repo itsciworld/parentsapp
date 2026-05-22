@@ -90,7 +90,7 @@ class _ForgotPasswordViewState extends ConsumerState<ForgotPasswordView> {
 
     final hPad = screenW * 0.06;
     final logoBoxH = screenH * 0.28;
-    final vGapSm = screenH * 0.015;
+
     final vGapMd = screenH * 0.022;
 
     return Scaffold(
@@ -303,21 +303,3 @@ class _Blob extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Field Label
 // ---------------------------------------------------------------------------
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: Colors.black87,
-      ),
-    );
-  }
-}

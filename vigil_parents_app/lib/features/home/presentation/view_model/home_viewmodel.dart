@@ -105,7 +105,6 @@ class HomeViewModel extends ChangeNotifier {
 
   void onViewOnMap() {
     debugPrint('View on map tapped');
-    // TODO: open the map screen.
   }
 
   void onViewAllAlerts() {

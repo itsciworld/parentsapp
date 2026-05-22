@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vigil_parents_app/features/gallery/models/galleryChild_model.dart';
+import 'package:vigil_parents_app/features/gallery/models/gallery_child_model.dart';
 
 import 'package:vigil_parents_app/features/gallery/models/gallery_model.dart';
 import 'package:vigil_parents_app/features/gallery/models/gallery_state_model.dart';

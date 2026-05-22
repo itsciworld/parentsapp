@@ -17,7 +17,7 @@ class _IntroViewState extends State<IntroView> {
   final IntroViewModel _viewModel = IntroViewModel();
   final introKey = GlobalKey<IntroductionScreenState>();
 
-  void _onIntroEnd(context) {
+  void _onIntroEnd(BuildContext context) {
     Navigator.of(context).pushReplacementNamed(AppRoutesName.loginView);
   }
 

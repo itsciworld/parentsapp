@@ -39,5 +39,5 @@ class AppGradients {
 
   /// Returns the last color of a [LinearGradient] — useful for shadow tinting.
   static Color shadowColor(LinearGradient gradient) =>
-      (gradient.colors.last).withOpacity(0.35);
+      (gradient.colors.last).withValues(alpha: .35);
 }

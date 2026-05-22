@@ -5,7 +5,7 @@ import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
-import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
+
 import 'package:vigil_parents_app/features/auth/presentation/view/login_view.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view_model/auth_viewmodel.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
@@ -86,10 +86,10 @@ class _SignupViewState extends ConsumerState<SignupView> {
       // Navigate after success
       if (next.isSuccess && !(previous?.isSuccess ?? false)) {
         final navigator = Navigator.of(context);
-        final email = await SecureDeviceService.getEmail();
-        final token = await SecureDeviceService.getToken();
-        final parentId = await SecureDeviceService.getParentId();
-        final parentName = await SecureDeviceService.getParentName();
+        // final email = await SecureDeviceService.getEmail();
+        // final token = await SecureDeviceService.getToken();
+        // final parentId = await SecureDeviceService.getParentId();
+        // final parentName = await SecureDeviceService.getParentName();
 
         if (!mounted) return;
 
@@ -409,21 +409,3 @@ class _Blob extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Field Label
 // ---------------------------------------------------------------------------
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: Colors.black87,
-      ),
-    );
-  }
-}

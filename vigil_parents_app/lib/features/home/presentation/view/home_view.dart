@@ -8,7 +8,7 @@ import 'package:vigil_parents_app/features/home/widgets/activity_summery.dart';
 import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
 import 'package:vigil_parents_app/features/home/widgets/child_card.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
-import 'package:vigil_parents_app/features/home/widgets/home_Appbar.dart';
+import 'package:vigil_parents_app/features/home/widgets/home_appbar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -104,7 +104,7 @@ class _LoadedView extends StatelessWidget {
                 padding: EdgeInsets.fromLTRB(16, topPadding + 12, 16, 24),
                 child: Column(
                   children: [
-                    HomeAppBar(
+                    HomeAapbar(
                       parent: data.parent,
                       notificationCount: data.notificationCount,
                       onMenuTap: () {},

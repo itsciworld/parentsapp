@@ -142,7 +142,7 @@ class _AppBottomNavState extends State<AppBottomNav>
                           ),
                           decoration: BoxDecoration(
                             color: isActive
-                                ? _activeColor.withOpacity(0.12)
+                                ? _activeColor.withValues(alpha: 0.12)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(20),
                           ),
