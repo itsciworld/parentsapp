@@ -409,7 +409,7 @@ class _Blob extends StatelessWidget {
 // ---------------------------------------------------------------------------
 
 class FieldLabel extends StatelessWidget {
-  const FieldLabel({required this.text, this.required = false});
+  const FieldLabel({super.key, required this.text, this.required = false});
   final String text;
   final bool required;
 

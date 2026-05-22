@@ -3,10 +3,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:pinput/pinput.dart';
 import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
+import 'package:vigil_parents_app/core/apptost/app_tost.dart';
+import 'package:vigil_parents_app/core/routing/routes.dart';
+import 'package:vigil_parents_app/features/auth/presentation/view_model/forgot_password_viewmodel.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 
 class OtpVerificationView extends ConsumerStatefulWidget {
-  const OtpVerificationView({super.key});
+  /// Email the OTP was sent to (passed from the Forgot Password screen).
+  final String email;
+
+  const OtpVerificationView({super.key, required this.email});
 
   @override
   ConsumerState<OtpVerificationView> createState() =>
@@ -32,21 +38,59 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
 
     final otp = _otpController.text.trim();
 
-    if (otp.length < 4) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please enter valid OTP')));
+    if (otp.length < 6) {
+      showAppToast(
+        context: context,
+        title: 'Invalid OTP',
+        subtitle: 'Please enter the 6-digit code sent to your email',
+        type: ToastType.warning,
+      );
       return;
     }
 
-    debugPrint(otp);
+    ref
+        .read(forgotPasswordViewModelProvider.notifier)
+        .verifyOtp(widget.email, otp);
+  }
 
-    // TODO: Verify OTP API
+  void _handleResend() {
+    FocusScope.of(context).unfocus();
+    ref
+        .read(forgotPasswordViewModelProvider.notifier)
+        .requestPasswordReset(widget.email);
   }
 
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
+
+    // ── State listener: toast + navigate to reset-password on success ──────
+    ref.listen<ForgotPasswordState>(forgotPasswordViewModelProvider, (
+      previous,
+      next,
+    ) {
+      if (next.toastData != null && next.toastData != previous?.toastData) {
+        showAppToast(
+          context: context,
+          title: next.toastData!.title,
+          subtitle: next.toastData!.subtitle,
+          type: next.toastData!.type,
+        );
+      }
+
+      if (next.otpVerified && !(previous?.otpVerified ?? false)) {
+        Navigator.pushNamed(
+          context,
+          AppRoutesName.resetPasswordView,
+          arguments: {
+            'email': widget.email,
+            'otp': _otpController.text.trim(),
+          },
+        );
+      }
+    });
+
+    final forgotState = ref.watch(forgotPasswordViewModelProvider);
 
     final screenH = mq.size.height;
     final screenW = mq.size.width;
@@ -58,10 +102,10 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
     final vGapMd = screenH * 0.022;
 
     final defaultPinTheme = PinTheme(
-      width: screenW * 0.16,
-      height: screenH * 0.07,
+      width: screenW * 0.12,
+      height: screenH * 0.065,
       textStyle: TextStyle(
-        fontSize: isSmall ? 20 : 22,
+        fontSize: isSmall ? 18 : 20,
         fontWeight: FontWeight.w700,
         color: _darkNavy,
       ),
@@ -133,8 +177,9 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
                               Center(
                                 child: Pinput(
                                   controller: _otpController,
-                                  length: 4,
+                                  length: 6,
                                   defaultPinTheme: defaultPinTheme,
+                                  onCompleted: (_) => _handleVerifyOtp(),
 
                                   focusedPinTheme: defaultPinTheme
                                       .copyDecorationWith(
@@ -150,7 +195,7 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
                                       ),
 
                                   separatorBuilder: (index) =>
-                                      SizedBox(width: screenW * 0.025),
+                                      SizedBox(width: screenW * 0.015),
 
                                   keyboardType: TextInputType.number,
 
@@ -174,9 +219,9 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
                                     ),
 
                                     GestureDetector(
-                                      onTap: () {
-                                        // TODO: resend otp
-                                      },
+                                      onTap: forgotState.isLoading
+                                          ? null
+                                          : _handleResend,
                                       child: Text(
                                         'Resend',
                                         style: TextStyle(
@@ -194,11 +239,13 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
 
                               // ───────────── VERIFY BUTTON ─────────────
                               CustomButton(
-                                onTap: _handleVerifyOtp,
+                                onTap: forgotState.isLoading
+                                    ? null
+                                    : _handleVerifyOtp,
                                 label: 'Verify OTP',
                                 height: screenH * 0.053,
                                 gradient: AppGradients.primaryButton,
-                                isLoading: false,
+                                isLoading: forgotState.isLoading,
                               ),
 
                               SizedBox(height: vGapMd),

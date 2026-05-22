@@ -129,7 +129,7 @@ class _AppBottomNavState extends State<AppBottomNav>
                   onTap: () => _onTap(index),
                   child: AnimatedBuilder(
                     animation: _controllers[index],
-                    builder: (_, __) => Column(
+                    builder: (_, _) => Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         // ── Pill + Icon ──────────────────────────────────

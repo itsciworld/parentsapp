@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:vigil_parents_app/config/api_config.dart';
 
-import 'package:dio/dio.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
 
 class ApiInterceptor extends Interceptor {

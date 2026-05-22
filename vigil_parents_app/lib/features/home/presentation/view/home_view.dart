@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shimmer/shimmer.dart';
-import 'package:vigil_parents_app/components/app_header.dart';
-import 'package:vigil_parents_app/components/bottomnav.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/home_viewmodel.dart';
@@ -11,8 +9,6 @@ import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
 import 'package:vigil_parents_app/features/home/widgets/child_card.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
 import 'package:vigil_parents_app/features/home/widgets/home_Appbar.dart';
-import 'package:vigil_parents_app/features/home/widgets/home_bottom.dart';
-import 'package:vigil_parents_app/features/home/widgets/live_location.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -41,14 +37,6 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffold,
-
-      // bottomNavigationBar: ListenableBuilder(
-      //   listenable: _vm,
-      //   builder: (context, _) => HomeBottomNav(
-      //     currentIndex: _vm.bottomNavIndex,
-      //     onTap: _vm.onBottomNavTapped,
-      //   ),
-      // ),
       body: ListenableBuilder(
         listenable: _vm,
         builder: (context, _) {
@@ -82,9 +70,9 @@ class _LoadedView extends StatelessWidget {
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        statusBarColor: Colors.transparent, // transparent status bar
-        statusBarIconBrightness: Brightness.light, // 🔥 WHITE icons
-        statusBarBrightness: Brightness.dark, // iOS support
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        statusBarBrightness: Brightness.dark,
       ),
       child: RefreshIndicator(
         onRefresh: vm.refresh,
@@ -92,100 +80,75 @@ class _LoadedView extends StatelessWidget {
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // AppHeader(showBack: false),
               // ---- Dark gradient header --------------------------------
-              Stack(
-                children: [
-                  // Header background
-                  Container(
-                    width: double.infinity,
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [AppColors.headerTop, AppColors.headerBottom],
-                      ),
-                    ),
-                    // ✅ Bottom padding extra rakha taaki Stack ka
-                    // white body uske neeche se nikal sake
-                    padding: EdgeInsets.fromLTRB(16, topPadding + 12, 16, 36),
-                    child: Column(
-                      children: [
-                        HomeAppBar(
-                          parent: data.parent,
-                          notificationCount: data.notificationCount,
-                          onMenuTap: () {},
-                          onNotificationsTap: vm.onNotificationsTapped,
-                        ),
-                        const SizedBox(height: 16),
-                        ChildHeaderCard(
-                          child: data.child,
-                          indicators: data.statusIndicators,
-                        ),
-                      ],
-                    ),
+              Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [AppColors.headerTop, AppColors.headerBottom],
                   ),
-
-                  // ✅ White rounded top — Positioned nahi, sirf
-                  // Column ke andar last child ki tarah rakho
-                  // taaki Stack ki height sahi calculate ho
-                  Positioned(
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    child: Container(
-                      height: 20,
-                      decoration: const BoxDecoration(
-                        color: AppColors.scaffold,
-                        borderRadius: BorderRadius.vertical(
-                          top: Radius.circular(20),
-                        ),
-                      ),
-                    ),
+                  borderRadius: BorderRadius.vertical(
+                    bottom: Radius.circular(28),
                   ),
-                ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x33000000),
+                      blurRadius: 24,
+                      offset: Offset(0, 10),
+                    ),
+                  ],
+                ),
+                padding: EdgeInsets.fromLTRB(16, topPadding + 12, 16, 24),
+                child: Column(
+                  children: [
+                    HomeAppBar(
+                      parent: data.parent,
+                      notificationCount: data.notificationCount,
+                      onMenuTap: () {},
+                      onNotificationsTap: vm.onNotificationsTapped,
+                    ),
+                    const SizedBox(height: 18),
+                    ChildHeaderCard(
+                      child: data.child,
+                      indicators: data.statusIndicators,
+                    ),
+                  ],
+                ),
               ),
 
-              // ---- White body (Stack ke baad, seamless connect hoga) ----
-              Container(
-                width: double.infinity,
-                color: AppColors.scaffold,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 2,
-                ),
+              // ---- White body ------------------------------------------
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    const _SectionTitle(
+                      title: 'Monitoring Tools',
+                      subtitle: 'Tap a tool to view activity',
+                    ),
+                    const SizedBox(height: 14),
                     FeatureGrid(
                       features: data.features,
-                      onTap: (tile) {
-                        vm.onFeatureTapped(context, tile);
-                      },
+                      onTap: (tile) => vm.onFeatureTapped(context, tile),
                     ),
-                    // const SizedBox(height: 16),
-                    // LiveLocationCard(
-                    //   location: data.location,
-                    //   childAvatarUrl: data.child.avatarUrl,
-                    //   onViewOnMap: vm.onViewOnMap,
-                    // ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 26),
+                    const _SectionTitle(title: 'Activity Overview'),
+                    const SizedBox(height: 14),
                     ActivitySummaryCard(
                       activity: data.activity,
                       onViewAllAlerts: vm.onViewAllAlerts,
                     ),
-                    // const SizedBox(height: 16),
-                    // AiInsightCard(
-                    //   insight: data.aiInsight,
-                    //   onViewInsight: vm.onViewInsight,
-                    // ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 26),
+                    const _SectionTitle(title: 'Our Initiative'),
+                    const SizedBox(height: 14),
                     FoundationCard(
                       info: data.foundation,
                       onKnowMore: vm.onKnowMoreFoundation,
                     ),
-                    SizedBox(height: bottomPadding + 16),
+                    SizedBox(height: bottomPadding + 24),
                   ],
                 ),
               ),
@@ -197,6 +160,46 @@ class _LoadedView extends StatelessWidget {
   }
 }
 
+/// A consistent section heading: a bold title with an optional muted
+/// subtitle below it.
+class _SectionTitle extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+
+  const _SectionTitle({required this.title, this.subtitle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: AppColors.textPrimary,
+            letterSpacing: -0.2,
+          ),
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            style: const TextStyle(
+              fontSize: 12,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// ----------------------------------------------------------------------------
+/// Loading state
+/// ----------------------------------------------------------------------------
 class _LoadingView extends StatelessWidget {
   const _LoadingView();
 
@@ -207,6 +210,7 @@ class _LoadingView extends StatelessWidget {
         baseColor: Colors.grey.shade300,
         highlightColor: Colors.grey.shade100,
         child: SingleChildScrollView(
+          physics: const NeverScrollableScrollPhysics(),
           child: Column(
             children: [
               // 🔹 Header skeleton
@@ -226,7 +230,7 @@ class _LoadingView extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    _box(height: 90, radius: 16), // child card
+                    _box(height: 90, radius: 16),
                   ],
                 ),
               ),
@@ -235,31 +239,30 @@ class _LoadingView extends StatelessWidget {
               Padding(
                 padding: const EdgeInsets.all(16),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Feature grid
+                    _box(width: 160, height: 18, radius: 6),
+                    const SizedBox(height: 16),
                     GridView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: 4,
+                      itemCount: 6,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            mainAxisSpacing: 12,
-                            crossAxisSpacing: 12,
-                            childAspectRatio: 1.4,
+                            crossAxisCount: 3,
+                            mainAxisSpacing: 15,
+                            crossAxisSpacing: 15,
                           ),
-                      itemBuilder: (_, __) => _box(radius: 16),
+                      itemBuilder: (_, _) => _box(radius: 14),
                     ),
-
+                    const SizedBox(height: 24),
+                    _box(width: 140, height: 18, radius: 6),
                     const SizedBox(height: 16),
-
-                    // Activity card
-                    _box(height: 120, radius: 16),
-
+                    _box(height: 110, radius: 20),
+                    const SizedBox(height: 24),
+                    _box(width: 120, height: 18, radius: 6),
                     const SizedBox(height: 16),
-
-                    // Foundation card
-                    _box(height: 100, radius: 16),
+                    _box(height: 220, radius: 20),
                   ],
                 ),
               ),
@@ -299,24 +302,77 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.cloud_off_rounded,
-              size: 56,
-              color: AppColors.textSecondary,
-            ),
-            const SizedBox(height: 16),
-            Text(message, textAlign: TextAlign.center),
-            const SizedBox(height: 20),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
-              onPressed: onRetry,
-              child: const Text('Retry'),
-            ),
-          ],
+        padding: const EdgeInsets.all(24),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: AppColors.cardBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.shadow,
+                blurRadius: 18,
+                offset: Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryLight,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.cloud_off_rounded,
+                  size: 36,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(height: 18),
+              const Text(
+                'Unable to load dashboard',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 22),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh_rounded, size: 18),
+                  label: const Text(
+                    'Try Again',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

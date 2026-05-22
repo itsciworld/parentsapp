@@ -59,4 +59,65 @@ class AuthRepository {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
+
+  // مشترك helper to read the "msg" field from a plain status response
+  String _readMessage(Response response, String fallback) {
+    final data = response.data;
+    if (data is Map && data['msg'] != null) {
+      return data['msg'].toString();
+    }
+    return fallback;
+  }
+
+  // FORGOT PASSWORD → STEP 1: request a reset code by email
+  Future<String> requestPasswordReset(String email) async {
+    try {
+      final response = await _apiClient.post(
+        "/api/auth/request-password-reset",
+        data: {"email": email},
+      );
+
+      return _readMessage(response, "Reset code sent to your email");
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  // FORGOT PASSWORD → STEP 2: verify the OTP sent to the email
+  Future<String> verifyOtp(String email, String otp) async {
+    try {
+      final response = await _apiClient.post(
+        "/api/auth/verify-otp",
+        data: {"email": email, "otp": otp},
+      );
+
+      return _readMessage(response, "OTP verified successfully");
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  // FORGOT PASSWORD → STEP 3: set a new password using the verified OTP
+  Future<String> resetPassword(
+    String email,
+    String otp,
+    String newPassword,
+  ) async {
+    try {
+      final response = await _apiClient.post(
+        "/api/auth/reset-password",
+        data: {"email": email, "otp": otp, "newPassword": newPassword},
+      );
+
+      return _readMessage(response, "Password has been reset successfully");
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
 }

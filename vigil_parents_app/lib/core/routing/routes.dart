@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/forgot_pass.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/login_view.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/otp_verification.dart';
+import 'package:vigil_parents_app/features/auth/presentation/view/reset_password_view.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/signup.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/splash_view.dart';
 import 'package:vigil_parents_app/features/calls/presentation/view_model/view/calls_view.dart';
@@ -18,6 +19,7 @@ class AppRoutesName {
   static const String forgotPasswordView = '/forgotPasswordView';
   static const String splashView = '/splashView';
   static const String otpVerificationView = '/otpVerificationView';
+  static const String resetPasswordView = '/resetPasswordView';
   static const String homeView = '/homeView';
   static const String smsView = '/smsView';
   static const String callView = '/callView';
@@ -41,7 +43,19 @@ class AppRouteGenerator {
       case AppRoutesName.splashView:
         return MaterialPageRoute(builder: (_) => SplashView());
       case AppRoutesName.otpVerificationView:
-        return MaterialPageRoute(builder: (_) => OtpVerificationView());
+        final otpArgs = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) =>
+              OtpVerificationView(email: otpArgs?['email'] as String? ?? ''),
+        );
+      case AppRoutesName.resetPasswordView:
+        final resetArgs = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => ResetPasswordView(
+            email: resetArgs?['email'] as String? ?? '',
+            otp: resetArgs?['otp'] as String? ?? '',
+          ),
+        );
       case AppRoutesName.homeView:
         return MaterialPageRoute(builder: (_) => HomeScreen());
       case AppRoutesName.smsView:

@@ -9,17 +9,29 @@ import 'package:vigil_parents_app/features/auth/presentation/view/login_view.dar
 import 'package:vigil_parents_app/features/auth/presentation/view_model/forgot_password_viewmodel.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 
-class ForgotPasswordView extends ConsumerStatefulWidget {
-  const ForgotPasswordView({super.key});
+class ResetPasswordView extends ConsumerStatefulWidget {
+  /// Email + verified OTP carried from the previous steps of the flow.
+  final String email;
+  final String otp;
+
+  const ResetPasswordView({
+    super.key,
+    required this.email,
+    required this.otp,
+  });
 
   @override
-  ConsumerState<ForgotPasswordView> createState() => _ForgotPasswordViewState();
+  ConsumerState<ResetPasswordView> createState() => _ResetPasswordViewState();
 }
 
-class _ForgotPasswordViewState extends ConsumerState<ForgotPasswordView> {
+class _ResetPasswordViewState extends ConsumerState<ResetPasswordView> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmController = TextEditingController();
+
+  bool _obscurePassword = true;
+  bool _obscureConfirm = true;
 
   // Brand Colours
   static const Color _darkNavy = Color(0xFF1A237E);
@@ -36,29 +48,49 @@ class _ForgotPasswordViewState extends ConsumerState<ForgotPasswordView> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmController.dispose();
     super.dispose();
   }
 
-  void _handleSendCode() {
+  void _handleResetPassword() {
     FocusScope.of(context).unfocus();
 
-    if (!(_formKey.currentState?.validate() ?? false)) {
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    final password = _passwordController.text;
+    final confirm = _confirmController.text;
+
+    if (password != confirm) {
+      showAppToast(
+        context: context,
+        title: 'Passwords Mismatch',
+        subtitle: 'New password and confirm password do not match',
+        type: ToastType.warning,
+      );
       return;
     }
 
-    final email = _emailController.text.trim();
-
     ref
         .read(forgotPasswordViewModelProvider.notifier)
-        .requestPasswordReset(email);
+        .resetPassword(widget.email, widget.otp, password);
   }
 
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
 
-    // ── State listener: toast + navigate to OTP screen on success ──────────
+    final screenH = mq.size.height;
+    final screenW = mq.size.width;
+
+    final isSmall = screenH < 680;
+
+    final hPad = screenW * 0.06;
+    final logoBoxH = screenH * 0.28;
+    final vGapSm = screenH * 0.015;
+    final vGapMd = screenH * 0.022;
+
+    // ── State listener: toast + back to login on success ───────────────────
     ref.listen<ForgotPasswordState>(forgotPasswordViewModelProvider, (
       previous,
       next,
@@ -72,26 +104,18 @@ class _ForgotPasswordViewState extends ConsumerState<ForgotPasswordView> {
         );
       }
 
-      if (next.resetRequested && !(previous?.resetRequested ?? false)) {
-        Navigator.pushNamed(
+      if (next.passwordReset && !(previous?.passwordReset ?? false)) {
+        // Clear the flow state and return to the login screen.
+        ref.read(forgotPasswordViewModelProvider.notifier).reset();
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          AppRoutesName.otpVerificationView,
-          arguments: {'email': _emailController.text.trim()},
+          AppRoutesName.loginView,
+          (route) => false,
         );
       }
     });
 
     final forgotState = ref.watch(forgotPasswordViewModelProvider);
-
-    final screenH = mq.size.height;
-    final screenW = mq.size.width;
-
-    final isSmall = screenH < 680;
-
-    final hPad = screenW * 0.06;
-    final logoBoxH = screenH * 0.28;
-    final vGapSm = screenH * 0.015;
-    final vGapMd = screenH * 0.022;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -132,7 +156,7 @@ class _ForgotPasswordViewState extends ConsumerState<ForgotPasswordView> {
                                 SizedBox(height: vGapMd * 1.2),
 
                                 Text(
-                                  'Forgot Password?',
+                                  'Create New Password',
                                   style: TextStyle(
                                     fontSize: isSmall ? 22 : 26,
                                     fontWeight: FontWeight.w800,
@@ -143,7 +167,7 @@ class _ForgotPasswordViewState extends ConsumerState<ForgotPasswordView> {
                                 const SizedBox(height: 4),
 
                                 Text(
-                                  'Enter your email to receive reset instructions',
+                                  'Set a new password for your account',
                                   style: TextStyle(
                                     fontSize: isSmall ? 12 : 13.5,
                                     color: Colors.grey.shade600,
@@ -152,35 +176,88 @@ class _ForgotPasswordViewState extends ConsumerState<ForgotPasswordView> {
 
                                 SizedBox(height: vGapMd),
 
-                                // ───────────── Email Field ─────────────
-                                FieldLabel(text: 'Email', required: true),
+                                // ───────────── New Password ─────────────
+                                FieldLabel(
+                                  text: 'New Password',
+                                  required: true,
+                                ),
 
                                 const SizedBox(height: 6),
 
                                 FlexiFormField(
-                                  controller: _emailController,
-                                  hint: 'Enter Your Email',
-                                  isEmail: true,
+                                  controller: _passwordController,
+                                  hint: 'Enter New Password',
+                                  obscureText: _obscurePassword,
                                   isMandatory: true,
                                   denySpace: true,
-                                  keyboardType: TextInputType.emailAddress,
                                   fieldStyle: FlexiFieldStyle.outline,
                                   theme: _fieldTheme,
                                   prefixIcon: Icon(
-                                    Icons.email_outlined,
+                                    Icons.lock_outline_rounded,
                                     size: 20,
                                     color: Colors.grey.shade500,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscurePassword = !_obscurePassword;
+                                      });
+                                    },
+                                  ),
+                                ),
+
+                                SizedBox(height: vGapSm),
+
+                                // ─────────── Confirm Password ───────────
+                                FieldLabel(
+                                  text: 'Confirm Password',
+                                  required: true,
+                                ),
+
+                                const SizedBox(height: 6),
+
+                                FlexiFormField(
+                                  controller: _confirmController,
+                                  hint: 'Re-enter New Password',
+                                  obscureText: _obscureConfirm,
+                                  isMandatory: true,
+                                  denySpace: true,
+                                  fieldStyle: FlexiFieldStyle.outline,
+                                  theme: _fieldTheme,
+                                  prefixIcon: Icon(
+                                    Icons.lock_outline_rounded,
+                                    size: 20,
+                                    color: Colors.grey.shade500,
+                                  ),
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscureConfirm
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: Colors.grey.shade500,
+                                    ),
+                                    onPressed: () {
+                                      setState(() {
+                                        _obscureConfirm = !_obscureConfirm;
+                                      });
+                                    },
                                   ),
                                 ),
 
                                 SizedBox(height: vGapMd * 1.6),
 
-                                // ───────────── Send Button ─────────────
+                                // ───────────── Submit Button ─────────────
                                 CustomButton(
                                   onTap: forgotState.isLoading
                                       ? null
-                                      : _handleSendCode,
-                                  label: 'Send Code',
+                                      : _handleResetPassword,
+                                  label: 'Reset Password',
                                   height: screenH * 0.053,
                                   gradient: AppGradients.primaryButton,
                                   isLoading: forgotState.isLoading,
@@ -296,28 +373,6 @@ class _Blob extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-    );
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Field Label
-// ---------------------------------------------------------------------------
-
-class _FieldLabel extends StatelessWidget {
-  const _FieldLabel({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w600,
-        color: Colors.black87,
-      ),
     );
   }
 }

@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
-import 'package:vigil_parents_app/features/home/widgets/omman_widgets.dart';
 
 /// The very top bar: hamburger, VIGIL logo/brand, notification bell, parent chip.
 ///

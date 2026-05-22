@@ -4,7 +4,6 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:vigil_parents_app/components/app_back.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/features/contact/contact_repo.dart';
 import 'package:vigil_parents_app/features/contact/models/contacts_model.dart';
@@ -20,7 +19,7 @@ class _ContactsPageState extends State<ContactsPage> {
   final _repo = ContactsRepository();
   final _searchCtrl = TextEditingController();
 
-  ContactCategory _activeCategory = ContactCategory.all;
+  final ContactCategory _activeCategory = ContactCategory.all;
   ContactStatus? _activeStatus; // null = all
   String _searchQuery = '';
 
@@ -114,7 +113,7 @@ class _ContactsPageState extends State<ContactsPage> {
                   : ListView.separated(
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
                       itemCount: contacts.length,
-                      separatorBuilder: (_, __) => const Divider(
+                      separatorBuilder: (_, _) => const Divider(
                         height: 1,
                         indent: 78,
                         endIndent: 0,
@@ -316,7 +315,7 @@ class _Header extends StatelessWidget {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 itemCount: statusTabs.length,
-                separatorBuilder: (_, __) => const SizedBox(width: 6),
+                separatorBuilder: (_, _) => const SizedBox(width: 6),
                 itemBuilder: (_, i) {
                   final tab = statusTabs[i];
                   final active = activeStatus == tab.status;
@@ -435,7 +434,7 @@ class _CategoryChips extends StatelessWidget {
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: categories.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          separatorBuilder: (_, _) => const SizedBox(width: 8),
           itemBuilder: (_, i) {
             final cat = categories[i];
             final isActive = active == cat;

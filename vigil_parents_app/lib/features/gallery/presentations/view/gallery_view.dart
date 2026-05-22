@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vigil_parents_app/components/app_back.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view_model/gallery_viewmodel.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/widgets/gallery_photo_grid.dart';

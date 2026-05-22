@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/features/sms/view_model/sms_viewmodel.dart';
 import 'package:vigil_parents_app/features/sms/widgets/message_card.dart';
-import 'package:vigil_parents_app/features/sms/widgets/sms_filterd_cart.dart';
 
 import 'package:vigil_parents_app/features/sms/widgets/sms_state_card.dart';
 
