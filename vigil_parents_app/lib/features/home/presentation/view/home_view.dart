@@ -8,7 +8,7 @@ import 'package:vigil_parents_app/features/home/widgets/activity_summery.dart';
 import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
 import 'package:vigil_parents_app/features/home/widgets/child_card.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
-import 'package:vigil_parents_app/features/home/widgets/home_appbar.dart';
+import 'package:vigil_parents_app/features/home/widgets/home_aapbar.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

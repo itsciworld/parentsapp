@@ -6,10 +6,12 @@ import 'package:vigil_parents_app/features/auth/presentation/view/reset_password
 import 'package:vigil_parents_app/features/auth/presentation/view/signup.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/splash_view.dart';
 import 'package:vigil_parents_app/features/calls/presentation/view_model/view/calls_view.dart';
+import 'package:vigil_parents_app/features/child/presentation/view/child_view.dart';
 import 'package:vigil_parents_app/features/contact/view/contact_view.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view/gallery_view.dart';
-import 'package:vigil_parents_app/features/home/presentation/view/home_view.dart';
 import 'package:vigil_parents_app/features/introduction/presentation/view/intro_view.dart';
+import 'package:vigil_parents_app/features/main_shell/main_shell.dart';
+import 'package:vigil_parents_app/features/settings/presentation/view/settings_view.dart';
 import 'package:vigil_parents_app/features/sms/view/sms_view.dart';
 
 class AppRoutesName {
@@ -25,6 +27,8 @@ class AppRoutesName {
   static const String callView = '/callView';
   static const String galleryView = '/galleryView';
   static const String contactView = '/contactView';
+  static const String childView = '/childView';
+  static const String settingsView = '/settingsView';
 }
 
 class AppRouteGenerator {
@@ -57,7 +61,15 @@ class AppRouteGenerator {
           ),
         );
       case AppRoutesName.homeView:
-        return MaterialPageRoute(builder: (_) => HomeScreen());
+        final shellArgs = settings.arguments as Map<String, dynamic>?;
+        final initialIndex = shellArgs?['initialIndex'] as int? ?? 0;
+        return MaterialPageRoute(
+          builder: (_) => MainShell(initialIndex: initialIndex),
+        );
+      case AppRoutesName.childView:
+        return MaterialPageRoute(builder: (_) => const ChildView());
+      case AppRoutesName.settingsView:
+        return MaterialPageRoute(builder: (_) => const SettingsView());
       case AppRoutesName.smsView:
         return MaterialPageRoute(builder: (_) => SmsScreen());
       case AppRoutesName.galleryView:
