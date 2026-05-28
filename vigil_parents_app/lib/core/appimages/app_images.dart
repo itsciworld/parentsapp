@@ -1,8 +1,11 @@
 class AppImages {
   static const String logo = 'assets/logo/Logo.png';
-  static const String slogoWhite = 'assets/logo/s_vigil_logo.png';
-  static const String slogo = 'assets/logo/s_logobg.png';
+  // static const String slogoWhite = 'assets/logo/s_vigil_logo.png';
+  // static const String slogo = 'assets/logo/s_logobg.png';
   static const String logo1 = 'assets/logo/logo_3.png';
-  static const String logoParent = 'assets/logo/vigil_parent_logo.jpeg';
+  // static const String logoParent = 'assets/logo/vigil_parent_logo.jpeg';
   static const String splashBanner = 'assets/images/splash_banner.png';
+
+  static const String appIcon = 'assets/logo/app_icon.png';
+  static const String appIconForeground = 'assets/logo/app_icon_foreground.png';
 }
