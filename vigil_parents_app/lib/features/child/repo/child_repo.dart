@@ -34,6 +34,32 @@ class ChildRepository {
     }
   }
 
+  Future<ChildModel> updateChildName(String childId, String name) async {
+    try {
+      final response = await _apiClient.put(
+        '/api/children/$childId/update-name',
+        data: {'name': name},
+      );
+      final data = response.data;
+
+      // API returns the updated child object (optionally wrapped).
+      if (data is Map<String, dynamic> && data['child'] is Map) {
+        return ChildModel.fromJson(
+          Map<String, dynamic>.from(data['child'] as Map),
+        );
+      }
+      if (data is Map<String, dynamic>) {
+        return ChildModel.fromJson(data);
+      }
+
+      throw Exception('Invalid update response');
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
   Future<String> deleteChild(String childId) async {
     try {
       final response = await _apiClient.delete('/api/children/$childId');

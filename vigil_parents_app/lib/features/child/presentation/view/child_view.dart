@@ -75,7 +75,9 @@ class _ChildViewState extends ConsumerState<ChildView> {
         return _ChildCard(
           child: c,
           isDeleting: vm.isDeleting(c.id),
+          isUpdating: vm.isUpdating(c.id),
           onDelete: () => _confirmAndDelete(vm, c),
+          onEdit: () => _editName(vm, c),
         );
       },
     );
@@ -124,17 +126,122 @@ class _ChildViewState extends ConsumerState<ChildView> {
       );
     }
   }
+
+  Future<void> _editName(ChildViewModel vm, ChildModel child) async {
+    final newName = await showDialog<String>(
+      context: context,
+      builder: (_) => _EditNameDialog(initialName: child.name),
+    );
+
+    if (newName == null || !mounted) return;
+    if (newName == child.name.trim()) return;
+
+    try {
+      await vm.updateChildName(child.id, newName);
+      if (!mounted) return;
+      showAppToast(
+        context: context,
+        title: 'Updated',
+        subtitle: 'Child name updated successfully',
+        type: ToastType.success,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      showAppToast(
+        context: context,
+        title: 'Update failed',
+        subtitle: e.toString().replaceAll('Exception: ', ''),
+        type: ToastType.error,
+      );
+    }
+  }
+}
+
+/// Dialog that owns its own [TextEditingController] so the controller's
+/// lifecycle is tied to the dialog (avoids "used after disposed" errors).
+class _EditNameDialog extends StatefulWidget {
+  final String initialName;
+
+  const _EditNameDialog({required this.initialName});
+
+  @override
+  State<_EditNameDialog> createState() => _EditNameDialogState();
+}
+
+class _EditNameDialogState extends State<_EditNameDialog> {
+  late final TextEditingController _controller;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    if (_formKey.currentState?.validate() ?? false) {
+      Navigator.of(context).pop(_controller.text.trim());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Edit child name'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          controller: _controller,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          textInputAction: TextInputAction.done,
+          onFieldSubmitted: (_) => _submit(),
+          decoration: const InputDecoration(
+            labelText: 'Name',
+            hintText: 'Enter child name',
+          ),
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'Name cannot be empty';
+            }
+            return null;
+          },
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          style: FilledButton.styleFrom(backgroundColor: AppColors.primary),
+          onPressed: _submit,
+          child: const Text('Save'),
+        ),
+      ],
+    );
+  }
 }
 
 class _ChildCard extends StatelessWidget {
   final ChildModel child;
   final bool isDeleting;
+  final bool isUpdating;
   final VoidCallback onDelete;
+  final VoidCallback onEdit;
 
   const _ChildCard({
     required this.child,
     required this.isDeleting,
+    required this.isUpdating,
     required this.onDelete,
+    required this.onEdit,
   });
 
   @override
@@ -264,28 +371,57 @@ class _ChildCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              SizedBox(
-                width: 32,
-                height: 32,
-                child: isDeleting
-                    ? const Padding(
-                        padding: EdgeInsets.all(6),
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.alert,
-                        ),
-                      )
-                    : IconButton(
-                        padding: EdgeInsets.zero,
-                        splashRadius: 18,
-                        onPressed: onDelete,
-                        icon: const Icon(
-                          Icons.delete_outline_rounded,
-                          color: AppColors.alert,
-                          size: 22,
-                        ),
-                        tooltip: 'Delete',
-                      ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: isUpdating
+                        ? const Padding(
+                            padding: EdgeInsets.all(6),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.primary,
+                            ),
+                          )
+                        : IconButton(
+                            padding: EdgeInsets.zero,
+                            splashRadius: 18,
+                            onPressed: onEdit,
+                            icon: const Icon(
+                              Icons.edit_outlined,
+                              color: AppColors.primary,
+                              size: 21,
+                            ),
+                            tooltip: 'Edit name',
+                          ),
+                  ),
+                  const SizedBox(width: 4),
+                  SizedBox(
+                    width: 32,
+                    height: 32,
+                    child: isDeleting
+                        ? const Padding(
+                            padding: EdgeInsets.all(6),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.alert,
+                            ),
+                          )
+                        : IconButton(
+                            padding: EdgeInsets.zero,
+                            splashRadius: 18,
+                            onPressed: onDelete,
+                            icon: const Icon(
+                              Icons.delete_outline_rounded,
+                              color: AppColors.alert,
+                              size: 22,
+                            ),
+                            tooltip: 'Delete',
+                          ),
+                  ),
+                ],
               ),
             ],
           ),

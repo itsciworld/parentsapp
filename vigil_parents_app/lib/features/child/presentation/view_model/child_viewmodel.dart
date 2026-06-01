@@ -27,6 +27,9 @@ class ChildViewModel extends ChangeNotifier {
   final Set<String> _deletingIds = <String>{};
   bool isDeleting(String id) => _deletingIds.contains(id);
 
+  final Set<String> _updatingIds = <String>{};
+  bool isUpdating(String id) => _updatingIds.contains(id);
+
   Future<void> loadChildren({bool showLoader = true}) async {
     if (showLoader) {
       _state = ChildViewState.loading;
@@ -48,6 +51,24 @@ class ChildViewModel extends ChangeNotifier {
   }
 
   Future<void> refresh() => loadChildren(showLoader: false);
+
+  Future<void> updateChildName(String childId, String name) async {
+    if (_updatingIds.contains(childId)) {
+      throw Exception('Update already in progress');
+    }
+    _updatingIds.add(childId);
+    notifyListeners();
+
+    try {
+      final updated = await _repository.updateChildName(childId, name);
+      _children = [
+        for (final c in _children) if (c.id == childId) updated else c,
+      ];
+    } finally {
+      _updatingIds.remove(childId);
+      notifyListeners();
+    }
+  }
 
   Future<String> deleteChild(String childId) async {
     if (_deletingIds.contains(childId)) {

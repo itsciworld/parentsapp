@@ -25,7 +25,9 @@ class DummyHomeRepository implements HomeRepository {
 
     return const HomeDashboardData(
       notificationCount: 3,
-      parent: ParentProfile(name: 'Atul Jain', initials: 'AJ'),
+      // Real name comes from the /api/auth/me profile; this is only a
+      // placeholder shown while that request is in flight.
+      parent: ParentProfile(name: '', initials: ''),
       child: ChildProfile(
         name: 'Harry Nikos',
         // Network placeholder avatar — replace with API-provided URL later.

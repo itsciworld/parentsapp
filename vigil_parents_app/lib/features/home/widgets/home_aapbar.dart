@@ -13,6 +13,7 @@ class HomeAapbar extends StatefulWidget {
   final int notificationCount;
   final VoidCallback onMenuTap;
   final VoidCallback onNotificationsTap;
+  final VoidCallback? onParentTap;
 
   const HomeAapbar({
     super.key,
@@ -20,6 +21,7 @@ class HomeAapbar extends StatefulWidget {
     required this.notificationCount,
     required this.onMenuTap,
     required this.onNotificationsTap,
+    this.onParentTap,
   });
 
   @override
@@ -64,38 +66,42 @@ class _HomeAapbarState extends State<HomeAapbar> {
         const SizedBox(width: 4),
 
         // Parent chip ---------------------------------------------------------
-        Container(
-          padding: const EdgeInsets.fromLTRB(4, 4, 8, 4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(25),
-            border: Border.all(color: Colors.white24),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: AppColors.primary,
-                child: Text(
-                  widget.parent.initials,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
+        GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onTap: widget.onParentTap,
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(4, 4, 8, 4),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(25),
+              border: Border.all(color: Colors.white24),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: AppColors.primary,
+                  child: Text(
+                    widget.parent.initials,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                widget.parent.name,
-                style: TextStyle(color: AppColors.textOnDark, fontSize: 13),
-              ),
-              // const Icon(
-              //   Icons.keyboard_arrow_down_rounded,
-              //   color: AppColors.textOnDark,
-              //   size: 18,
-              // ),
-            ],
+                const SizedBox(width: 6),
+                Text(
+                  widget.parent.name,
+                  style: TextStyle(color: AppColors.textOnDark, fontSize: 13),
+                ),
+                // const Icon(
+                //   Icons.keyboard_arrow_down_rounded,
+                //   color: AppColors.textOnDark,
+                //   size: 18,
+                // ),
+              ],
+            ),
           ),
         ),
       ],

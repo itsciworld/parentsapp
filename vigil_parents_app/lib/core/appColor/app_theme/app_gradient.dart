@@ -35,6 +35,13 @@ class AppGradients {
     end: Alignment.bottomRight,
   );
 
+  /// Red → deep red (destructive actions e.g. logout)
+  static const LinearGradient danger = LinearGradient(
+    colors: [Color(0xFFEF4444), Color(0xFFC0282D)],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
+
   // ── Helper ─────────────────────────────────────────────────────────────────
 
   /// Returns the last color of a [LinearGradient] — useful for shadow tinting.

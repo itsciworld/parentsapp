@@ -69,6 +69,21 @@ class AuthRepository {
     return fallback;
   }
 
+  // LOGOUT — notify backend, then always clear local auth data
+  Future<String> logout() async {
+    try {
+      final response = await _apiClient.post("/api/auth/logout");
+      return _readMessage(response, "Logged out successfully");
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    } finally {
+      // Local session must be cleared even if the network call fails.
+      await SecureDeviceService.clearAuthData();
+    }
+  }
+
   // FORGOT PASSWORD → STEP 1: request a reset code by email
   Future<String> requestPasswordReset(String email) async {
     try {

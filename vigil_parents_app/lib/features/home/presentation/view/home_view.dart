@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
@@ -9,15 +10,19 @@ import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
 import 'package:vigil_parents_app/features/home/widgets/child_card.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
 import 'package:vigil_parents_app/features/home/widgets/home_aapbar.dart';
+import 'package:vigil_parents_app/features/profile/presentation/view_model/profile_viewmodel.dart';
 
-class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+class HomeScreen extends ConsumerStatefulWidget {
+  /// Called when the parent chip is tapped — wired to open the Profile tab.
+  final VoidCallback? onProfileTap;
+
+  const HomeScreen({super.key, this.onProfileTap});
 
   @override
-  State<HomeScreen> createState() => _HomeScreenState();
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen> {
   late final HomeViewModel _vm;
 
   @override
@@ -25,12 +30,22 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _vm = HomeViewModel();
     _vm.init();
+    // Load the parent profile so the header shows the real name.
+    Future.microtask(() => ref.read(profileViewModelProvider).loadProfile());
   }
 
   @override
   void dispose() {
     _vm.dispose();
     super.dispose();
+  }
+
+  /// Builds the chip profile from the API, falling back to the dashboard's
+  /// parent while the profile request is still in flight.
+  ParentProfile _parentChip(ParentProfile fallback) {
+    final name = ref.watch(profileViewModelProvider).profile?.name;
+    if (name == null || name.trim().isEmpty) return fallback;
+    return ParentProfile(name: name, initials: _initialsFor(name));
   }
 
   @override
@@ -47,11 +62,25 @@ class _HomeScreenState extends State<HomeScreen> {
               onRetry: _vm.refresh,
             );
           }
-          return _LoadedView(vm: _vm, data: _vm.data!);
+          return _LoadedView(
+            vm: _vm,
+            data: _vm.data!,
+            parent: _parentChip(_vm.data!.parent),
+            onParentTap: widget.onProfileTap,
+          );
         },
       ),
     );
   }
+}
+
+String _initialsFor(String name) {
+  final trimmed = name.trim();
+  if (trimmed.isEmpty) return '?';
+  final parts = trimmed.split(RegExp(r'\s+'));
+  if (parts.length == 1) return parts.first.characters.first.toUpperCase();
+  return (parts.first.characters.first + parts.last.characters.first)
+      .toUpperCase();
 }
 
 /// ----------------------------------------------------------------------------
@@ -60,8 +89,15 @@ class _HomeScreenState extends State<HomeScreen> {
 class _LoadedView extends StatelessWidget {
   final HomeViewModel vm;
   final HomeDashboardData data;
+  final ParentProfile parent;
+  final VoidCallback? onParentTap;
 
-  const _LoadedView({required this.vm, required this.data});
+  const _LoadedView({
+    required this.vm,
+    required this.data,
+    required this.parent,
+    required this.onParentTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -105,10 +141,11 @@ class _LoadedView extends StatelessWidget {
                 child: Column(
                   children: [
                     HomeAapbar(
-                      parent: data.parent,
+                      parent: parent,
                       notificationCount: data.notificationCount,
                       onMenuTap: () {},
                       onNotificationsTap: vm.onNotificationsTapped,
+                      onParentTap: onParentTap,
                     ),
                     const SizedBox(height: 18),
                     ChildHeaderCard(

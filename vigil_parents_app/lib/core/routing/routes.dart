@@ -11,6 +11,7 @@ import 'package:vigil_parents_app/features/contact/view/contact_view.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view/gallery_view.dart';
 import 'package:vigil_parents_app/features/introduction/presentation/view/intro_view.dart';
 import 'package:vigil_parents_app/features/main_shell/main_shell.dart';
+import 'package:vigil_parents_app/features/profile/presentation/view/profile_view.dart';
 import 'package:vigil_parents_app/features/settings/presentation/view/settings_view.dart';
 import 'package:vigil_parents_app/features/sms/view/sms_view.dart';
 
@@ -29,6 +30,7 @@ class AppRoutesName {
   static const String contactView = '/contactView';
   static const String childView = '/childView';
   static const String settingsView = '/settingsView';
+  static const String profileView = '/profileView';
 }
 
 class AppRouteGenerator {
@@ -70,6 +72,8 @@ class AppRouteGenerator {
         return MaterialPageRoute(builder: (_) => const ChildView());
       case AppRoutesName.settingsView:
         return MaterialPageRoute(builder: (_) => const SettingsView());
+      case AppRoutesName.profileView:
+        return MaterialPageRoute(builder: (_) => const ProfileView());
       case AppRoutesName.smsView:
         return MaterialPageRoute(builder: (_) => SmsScreen());
       case AppRoutesName.galleryView:
