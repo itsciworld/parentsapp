@@ -11,6 +11,7 @@ class SecureDeviceService {
   static const _emailKey = "email";
   static const _parentIdKey = "parentId";
   static const _parentNameKey = "parent_name";
+  static const _childIdKey = "selected_child_id";
 
   // ───────── AUTH DATA STORAGE ─────────
 
@@ -39,11 +40,19 @@ class SecureDeviceService {
   static Future<String?> getParentName() async =>
       await _storage.read(key: _parentNameKey);
 
+  // The child currently being monitored — used by SMS and the background
+  // polling service so it can run without any UI present.
+  static Future<void> saveSelectedChildId(String childId) async =>
+      await _storage.write(key: _childIdKey, value: childId);
+  static Future<String?> getSelectedChildId() async =>
+      await _storage.read(key: _childIdKey);
+
   static Future<void> clearAuthData() async {
     await _storage.delete(key: _tokenKey);
     await _storage.delete(key: _emailKey);
     await _storage.delete(key: _parentIdKey);
     await _storage.delete(key: _parentNameKey);
+    await _storage.delete(key: _childIdKey);
   }
 
   // ───────── DEVICE INFO ─────────

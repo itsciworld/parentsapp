@@ -1,7 +1,16 @@
 import 'package:flutter/material.dart';
 
 class SmsStateCard extends StatelessWidget {
-  const SmsStateCard({super.key});
+  final int total;
+  final int suspicious;
+  final int unknown;
+
+  const SmsStateCard({
+    super.key,
+    this.total = 0,
+    this.suspicious = 0,
+    this.unknown = 0,
+  });
 
   Widget item(IconData icon, Color color, String count, String title) {
     return Expanded(
@@ -39,11 +48,26 @@ class SmsStateCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          item(Icons.message_rounded, Colors.blue, "128", "Total Messages"),
+          item(
+            Icons.message_rounded,
+            Colors.blue,
+            "$total",
+            "Total Messages",
+          ),
 
-          item(Icons.warning_amber_rounded, Colors.red, "3", "Suspicious"),
+          item(
+            Icons.warning_amber_rounded,
+            Colors.red,
+            "$suspicious",
+            "Suspicious",
+          ),
 
-          item(Icons.person_outline, Colors.deepPurple, "1", "Unknown Contact"),
+          item(
+            Icons.person_outline,
+            Colors.deepPurple,
+            "$unknown",
+            "Unknown Contact",
+          ),
         ],
       ),
     );

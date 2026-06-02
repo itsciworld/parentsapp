@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
+import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -18,11 +19,21 @@ class _SplashViewState extends State<SplashView> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, AppRoutesName.introView);
-      }
-    });
+    _decideStartScreen();
+  }
+
+  /// Wait for the splash animation, then route based on stored session:
+  /// a valid token → straight to Home, otherwise the intro/login flow.
+  Future<void> _decideStartScreen() async {
+    await Future.delayed(const Duration(seconds: 1));
+    final token = await SecureDeviceService.getToken();
+    if (!mounted) return;
+
+    final isLoggedIn = token != null && token.isNotEmpty;
+    Navigator.pushReplacementNamed(
+      context,
+      isLoggedIn ? AppRoutesName.homeView : AppRoutesName.introView,
+    );
   }
 
   // Fluid font helper — scales with screen width, hard min/max bounds

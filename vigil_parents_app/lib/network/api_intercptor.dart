@@ -17,16 +17,24 @@ class ApiInterceptor extends Interceptor {
       options.headers['Authorization'] = 'Bearer $token';
     }
 
-    debugPrint("➡️ REQUEST[${options.method}] => ${options.path}");
-    debugPrint("Headers: ${options.headers}");
-    debugPrint("Body: ${options.data}");
+    // SMS polls run every 5s — keep their request/response out of the logs.
+    if (!_isSilent(options.path)) {
+      debugPrint("➡️ REQUEST[${options.method}] => ${options.path}");
+      debugPrint("Headers: ${options.headers}");
+      debugPrint("Body: ${options.data}");
+    }
 
     handler.next(options);
   }
 
+  /// Endpoints whose request/response bodies should not be logged.
+  bool _isSilent(String path) => path.contains('/api/sms/');
+
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    debugPrint("✅ RESPONSE[${response.statusCode}] => ${response.data}");
+    if (!_isSilent(response.requestOptions.path)) {
+      debugPrint("✅ RESPONSE[${response.statusCode}] => ${response.data}");
+    }
     handler.next(response);
   }
 
@@ -90,9 +98,17 @@ class ApiClient {
   }
 
   // ✅ GET
-  Future<Response> get(String path, {Map<String, dynamic>? query}) async {
+  Future<Response> get(
+    String path, {
+    Map<String, dynamic>? query,
+    Map<String, dynamic>? headers,
+  }) async {
     try {
-      return await _dio.get(path, queryParameters: query);
+      return await _dio.get(
+        path,
+        queryParameters: query,
+        options: headers == null ? null : Options(headers: headers),
+      );
     } on DioException catch (e) {
       throw Exception(e.error.toString());
     }

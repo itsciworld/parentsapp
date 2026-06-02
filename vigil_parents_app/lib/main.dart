@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
+import 'package:vigil_parents_app/core/services/background/background_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
+  await initializeBackgroundService();
   runApp(const ProviderScope(child: MyApp()));
 }
 
