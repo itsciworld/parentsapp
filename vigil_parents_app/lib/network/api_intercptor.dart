@@ -17,11 +17,24 @@ class ApiInterceptor extends Interceptor {
       options.headers['Authorization'] = 'Bearer $token';
     }
 
+    // Attach the selected child's per-device key so child-scoped endpoints
+    // (SMS, device-info, ...) receive it automatically. A caller-supplied
+    // header wins, so explicit overrides still work.
+    final deviceKey = await SecureDeviceService.getSelectedChildDeviceKey();
+    if (deviceKey != null && deviceKey.isNotEmpty) {
+      options.headers.putIfAbsent('x-device-key', () => deviceKey);
+    }
+
     // SMS polls run every 5s — keep their request/response out of the logs.
     if (!_isSilent(options.path)) {
       debugPrint("➡️ REQUEST[${options.method}] => ${options.path}");
       debugPrint("Headers: ${options.headers}");
       debugPrint("Body: ${options.data}");
+    } else {
+      // Even for silent requests, log the device key to help debug auth issues
+      debugPrint(
+        "➡️ [Silent] ${options.method} ${options.path} | device-key: ${deviceKey ?? 'none'}",
+      );
     }
 
     handler.next(options);

@@ -235,10 +235,60 @@ class _ChildMenuOverlay extends ConsumerWidget {
   }
 
   Widget _emptyRow(bool loading, Color fg) {
+    // While the first fetch is in flight, show shimmer placeholder rows so the
+    // menu feels alive the instant it opens.
+    if (loading) {
+      final base = dark
+          ? Colors.white.withValues(alpha: 0.12)
+          : Colors.grey.shade300;
+      final highlight = dark
+          ? Colors.white.withValues(alpha: 0.28)
+          : Colors.grey.shade100;
+
+      return Shimmer.fromColors(
+        baseColor: base,
+        highlightColor: highlight,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < 3; i++)
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 18,
+                      height: 18,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Container(
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
       child: Text(
-        loading ? 'Loading children...' : 'No children found',
+        'No children found',
         style: TextStyle(color: fg.withValues(alpha: 0.7), fontSize: 14),
       ),
     );

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:vigil_parents_app/features/child/models/child_model.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
 import 'package:vigil_parents_app/network/api_intercptor.dart';
 
 class ChildRepository {
@@ -53,6 +54,33 @@ class ChildRepository {
       }
 
       throw Exception('Invalid update response');
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  /// GET /api/children/{childId}/permissions — the data/notification access
+  /// the child has granted. Bearer token is attached by ApiInterceptor.
+  Future<ChildPermissions> fetchPermissions(String childId) async {
+    try {
+      final response = await _apiClient.get(
+        '/api/children/$childId/permissions',
+      );
+      final data = response.data;
+
+      if (data is Map<String, dynamic>) {
+        // Some backends wrap the payload under `permissions`.
+        if (data['permissions'] is Map) {
+          return ChildPermissions.fromJson(
+            Map<String, dynamic>.from(data['permissions'] as Map),
+          );
+        }
+        return ChildPermissions.fromJson(data);
+      }
+
+      throw Exception('Invalid permissions response');
     } on DioException catch (e) {
       throw Exception(e.error.toString());
     } catch (e) {

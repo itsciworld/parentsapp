@@ -1,36 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:vigil_parents_app/core/appColor/app_color.dart';
 
+/// Summary strip above the SMS thread list: number of conversations (threads)
+/// and the total messages across them.
 class SmsStateCard extends StatelessWidget {
-  final int total;
-  final int suspicious;
-  final int unknown;
+  final int threads;
+  final int messages;
 
-  const SmsStateCard({
-    super.key,
-    this.total = 0,
-    this.suspicious = 0,
-    this.unknown = 0,
-  });
+  const SmsStateCard({super.key, this.threads = 0, this.messages = 0});
 
-  Widget item(IconData icon, Color color, String count, String title) {
+  Widget _item(IconData icon, Color color, String count, String title) {
     return Expanded(
       child: Column(
         children: [
           Icon(icon, color: color, size: 20),
-
           const SizedBox(height: 4),
-
           Text(
             count,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
           ),
-
-          const SizedBox(height: 4),
-
+          const SizedBox(height: 2),
           Text(
             title,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 10),
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -40,33 +40,26 @@ class SmsStateCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 10),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(width: .1, color: Colors.black),
+        border: Border.all(width: .4, color: AppColors.cardBorder),
       ),
       child: Row(
         children: [
-          item(
+          _item(
+            Icons.forum_rounded,
+            AppColors.blueIcon,
+            '$threads',
+            'Conversations',
+          ),
+          Container(width: .5, height: 34, color: AppColors.cardBorder),
+          _item(
             Icons.message_rounded,
-            Colors.blue,
-            "$total",
-            "Total Messages",
-          ),
-
-          item(
-            Icons.warning_amber_rounded,
-            Colors.red,
-            "$suspicious",
-            "Suspicious",
-          ),
-
-          item(
-            Icons.person_outline,
-            Colors.deepPurple,
-            "$unknown",
-            "Unknown Contact",
+            AppColors.primary,
+            '$messages',
+            'Total Messages',
           ),
         ],
       ),

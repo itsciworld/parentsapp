@@ -5,6 +5,9 @@ import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
 import 'package:vigil_parents_app/features/auth/repo/auth_repo.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/profile/models/profile_model.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view_model/profile_viewmodel.dart';
@@ -22,9 +25,25 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
+    Future.microtask(() async {
       ref.read(profileViewModelProvider).loadProfile();
+      // Load the selected child, then the permissions it has granted.
+      await ref.read(selectedChildProvider).load();
+      final childId = ref.read(selectedChildProvider).selectedId;
+      if (childId != null) {
+        ref.read(childPermissionsProvider).load(childId);
+      }
     });
+  }
+
+  /// Pull-to-refresh: reloads the profile and the child's permissions.
+  Future<void> _refreshAll() async {
+    await ref.read(profileViewModelProvider).refresh();
+    await ref.read(selectedChildProvider).load(force: true);
+    final childId = ref.read(selectedChildProvider).selectedId;
+    if (childId != null) {
+      await ref.read(childPermissionsProvider).load(childId);
+    }
   }
 
   @override
@@ -49,7 +68,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
       ),
       body: RefreshIndicator(
         color: AppColors.primary,
-        onRefresh: vm.refresh,
+        onRefresh: _refreshAll,
         child: _buildBody(vm),
       ),
     );
@@ -74,6 +93,9 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
         onRetry: null,
       );
     }
+
+    final selectedChild = ref.watch(selectedChildProvider);
+    final permsVm = ref.watch(childPermissionsProvider);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -151,6 +173,15 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
             ),
           ],
         ),
+        if (selectedChild.selected != null) ...[
+          const SizedBox(height: 16),
+          _PermissionsSection(
+            childName: selectedChild.selected!.name,
+            permissions: permsVm.permissions,
+            loading: permsVm.loading,
+            error: permsVm.error,
+          ),
+        ],
         const SizedBox(height: 24),
         CustomButton(
           label: 'Log out',
@@ -356,6 +387,13 @@ class _InfoSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Hide rows whose value is null/empty, and the whole section if nothing
+    // is left to show.
+    final visibleRows = rows
+        .where((r) => r.value.trim().isNotEmpty)
+        .toList();
+    if (visibleRows.isEmpty) return const SizedBox.shrink();
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -388,9 +426,9 @@ class _InfoSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 6),
-          for (int i = 0; i < rows.length; i++) ...[
+          for (int i = 0; i < visibleRows.length; i++) ...[
             if (i > 0) const Divider(height: 1, color: AppColors.cardBorder),
-            rows[i],
+            visibleRows[i],
           ],
         ],
       ),
@@ -437,6 +475,190 @@ class _InfoRow extends StatelessWidget {
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Child permissions card ──────────────────────────────────────────────────────
+class _PermissionsSection extends StatelessWidget {
+  final String childName;
+  final ChildPermissions? permissions;
+  final bool loading;
+  final String? error;
+
+  const _PermissionsSection({
+    required this.childName,
+    required this.permissions,
+    required this.loading,
+    required this.error,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.admin_panel_settings_outlined,
+                size: 18,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                'Child Permissions',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            childName.trim().isEmpty
+                ? 'Access this child has granted'
+                : 'Access ${childName.trim()} has granted',
+            style: const TextStyle(
+              fontSize: 11.5,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 10),
+          _buildContent(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (permissions == null && loading) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 18),
+        child: Center(
+          child: SizedBox(
+            width: 22,
+            height: 22,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      );
+    }
+
+    if (permissions == null) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        child: Text(
+          error ?? 'Couldn\'t load permissions',
+          style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+      );
+    }
+
+    final items = permissions!.items;
+    return Column(
+      children: [
+        for (int i = 0; i < items.length; i++) ...[
+          if (i > 0) const Divider(height: 1, color: AppColors.cardBorder),
+          _PermissionRow(item: items[i]),
+        ],
+      ],
+    );
+  }
+}
+
+class _PermissionRow extends StatelessWidget {
+  final PermissionItem item;
+  const _PermissionRow({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final granted = item.granted;
+    final Color color = granted ? AppColors.online : AppColors.textSecondary;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 11),
+      child: Row(
+        children: [
+          Icon(item.icon, size: 18, color: AppColors.textSecondary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.label,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  granted
+                      ? 'Allowed by child'
+                      : 'Not allowed — child hasn\'t granted this',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    color: granted ? AppColors.online : AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Status pill
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.10),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: color.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  granted
+                      ? Icons.check_circle_rounded
+                      : Icons.cancel_rounded,
+                  size: 13,
+                  color: color,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  granted ? 'Active' : 'Off',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: color,
                   ),
                 ),
               ],
@@ -510,9 +732,11 @@ class _ErrorState extends StatelessWidget {
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
+// These return an empty string for missing values so the row/section is hidden
+// instead of showing a placeholder.
 String _capitalize(String value) {
   final trimmed = value.trim();
-  if (trimmed.isEmpty) return '—';
+  if (trimmed.isEmpty) return '';
   return trimmed[0].toUpperCase() + trimmed.substring(1);
 }
 
@@ -533,12 +757,12 @@ const _months = [
 ];
 
 String _formatDate(DateTime? date) {
-  if (date == null) return '—';
+  if (date == null) return '';
   return '${date.day} ${_months[date.month]} ${date.year}';
 }
 
 String _formatDateTime(DateTime? date) {
-  if (date == null) return '—';
+  if (date == null) return '';
   final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
   final minute = date.minute.toString().padLeft(2, '0');
   final period = date.hour >= 12 ? 'PM' : 'AM';

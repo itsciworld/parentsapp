@@ -1,45 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/legacy.dart';
-import 'package:vigil_parents_app/features/sms/models/sms_model.dart';
+import 'package:vigil_parents_app/features/sms/models/sms_thread_model.dart';
 import 'package:vigil_parents_app/features/sms/repo/sms_repo.dart';
 
+/// Drives the thread-based SMS screen: loads grouped threads for the selected
+/// child and exposes a search filter.
 class SmsViewModel extends ChangeNotifier {
   final SmsRepository repository;
 
   SmsViewModel(this.repository);
 
-  static const int pageSize = 20;
-
-  List<SmsModel> _all = [];
+  List<SmsThread> _threads = [];
   bool loading = false;
-  bool loadingMore = false;
   String? error;
-  int total = 0;
-  int _limit = pageSize;
   String _query = '';
 
   String get query => _query;
 
-  /// Messages after applying the current search query.
-  List<SmsModel> get messages {
-    if (_query.trim().isEmpty) return _all;
+  /// Threads after applying the current search query (by address or any
+  /// message body within the thread).
+  List<SmsThread> get threads {
+    if (_query.trim().isEmpty) return _threads;
     final q = _query.toLowerCase();
-    return _all
+    return _threads
         .where(
-          (m) =>
-              m.name.toLowerCase().contains(q) ||
-              m.phone.toLowerCase().contains(q) ||
-              m.message.toLowerCase().contains(q),
+          (t) =>
+              t.address.toLowerCase().contains(q) ||
+              t.messages.any((m) => m.body.toLowerCase().contains(q)),
         )
         .toList();
   }
 
-  /// More messages exist on the server than we've loaded.
-  bool get hasMore => _query.trim().isEmpty && _all.length < total;
+  int get totalThreads => _threads.length;
+  int get totalMessages => _threads.fold(0, (sum, t) => sum + t.count);
 
-  int get unknownCount => _all.where((m) => m.isUnknown).length;
-
-  Future<void> loadMessages({bool showLoader = true}) async {
+  Future<void> loadThreads({bool showLoader = true}) async {
     if (showLoader) {
       loading = true;
       error = null;
@@ -49,22 +44,15 @@ class SmsViewModel extends ChangeNotifier {
     try {
       final ctx = await repository.resolveContext();
       if (!ctx.isValid) {
-        _all = [];
-        total = 0;
+        _threads = [];
         error = ctx.childId.isEmpty
             ? 'No child linked to this account yet'
             : 'Missing account information';
       } else {
-        // page=1 with a growing limit keeps the list stable across the 5s
-        // auto-refresh while still letting the user load more.
-        final res = await repository.getSms(
+        _threads = await repository.getThreads(
           childId: ctx.childId,
           parentId: ctx.parentId,
-          page: 1,
-          limit: _limit,
         );
-        _all = res.messages;
-        total = res.total;
         error = null;
       }
     } catch (e) {
@@ -75,34 +63,18 @@ class SmsViewModel extends ChangeNotifier {
     }
   }
 
-  /// Loads the next window of messages.
-  Future<void> loadMore() async {
-    if (loadingMore || !hasMore) return;
-    loadingMore = true;
-    notifyListeners();
-
-    _limit += pageSize;
-    await loadMessages(showLoader: false);
-
-    loadingMore = false;
-    notifyListeners();
-  }
-
   void setQuery(String value) {
     _query = value;
     notifyListeners();
   }
 
-  /// Reloads from scratch — used when the selected child changes. Resets the
-  /// page window and clears the current list so the new child's messages
-  /// replace the old ones immediately.
+  /// Reloads from scratch — used when the selected child changes.
   Future<void> reload() async {
-    _limit = pageSize;
-    _all = [];
-    await loadMessages();
+    _threads = [];
+    await loadThreads();
   }
 
-  Future<void> refresh() => loadMessages(showLoader: false);
+  Future<void> refresh() => loadThreads(showLoader: false);
 }
 
 final smsViewModelProvider = ChangeNotifierProvider((ref) {

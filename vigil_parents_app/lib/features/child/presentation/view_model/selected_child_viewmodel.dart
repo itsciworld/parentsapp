@@ -50,13 +50,30 @@ class SelectedChildViewModel extends ChangeNotifier {
         selectedId = stored;
       } else if (children.isNotEmpty) {
         selectedId = children.first.id;
-        await SecureDeviceService.saveSelectedChildId(selectedId!);
       } else {
         selectedId = null;
       }
+      // Persist the resolved selection (id + device key) so API calls and the
+      // background service pick up the right child. This ensures the device key
+      // is always fresh from the API, even if the child was previously selected.
+      await _persistSelection();
+
+      if (kDebugMode) {
+        print('[SelectedChild] Loaded ${children.length} children');
+        if (selected != null) {
+          print(
+            '[SelectedChild] Selected: ${selected!.name} (${selected!.id})',
+          );
+          print('[SelectedChild] Device Key: ${selected!.deviceKey}');
+        }
+      }
+
       error = null;
     } catch (e) {
       error = e.toString().replaceAll('Exception: ', '');
+      if (kDebugMode) {
+        print('[SelectedChild] Load error: $error');
+      }
     } finally {
       loading = false;
       initialized = true;
@@ -68,13 +85,23 @@ class SelectedChildViewModel extends ChangeNotifier {
   Future<bool> select(String id) async {
     if (id == selectedId) return false;
     selectedId = id;
-    await SecureDeviceService.saveSelectedChildId(id);
+    await _persistSelection();
     notifyListeners();
     return true;
   }
+
+  /// Persists the current selection — both the child id and its per-device key
+  /// — so child-scoped API calls send the right `x-device-key`.
+  Future<void> _persistSelection() async {
+    final child = selected;
+    if (child == null) return;
+    await SecureDeviceService.saveSelectedChildId(child.id);
+    await SecureDeviceService.saveSelectedChildDeviceKey(child.deviceKey);
+  }
 }
 
-final selectedChildProvider =
-    ChangeNotifierProvider<SelectedChildViewModel>((ref) {
-      return SelectedChildViewModel(ref.read(childRepositoryProvider));
-    });
+final selectedChildProvider = ChangeNotifierProvider<SelectedChildViewModel>((
+  ref,
+) {
+  return SelectedChildViewModel(ref.read(childRepositoryProvider));
+});

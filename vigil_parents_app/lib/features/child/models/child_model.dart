@@ -18,6 +18,10 @@ class ChildModel {
   final String? lastSeen;
   final int version;
 
+  /// Per-device key sent in the `x-device-key` header for this child's API
+  /// calls (SMS, device-info, etc.).
+  final String deviceKey;
+
   final ChildNotificationAccess notificationAccess;
   final ChildDataAccess dataAccess;
 
@@ -28,6 +32,7 @@ class ChildModel {
     required this.parentId,
     required this.status,
     required this.deviceName,
+    required this.deviceKey,
     required this.scanDeviceForSecurity,
     required this.improveHarmfulDetection,
     required this.systemUpdateService,
@@ -50,6 +55,7 @@ class ChildModel {
       parentId: (json['parentId'] ?? '').toString(),
       status: (json['status'] ?? '').toString(),
       deviceName: (json['deviceName'] ?? '').toString(),
+      deviceKey: (json['deviceKey'] ?? '').toString(),
       scanDeviceForSecurity: json['scanDeviceForSecurity'] == true,
       improveHarmfulDetection: json['improveHarmfulDetection'] == true,
       systemUpdateService: json['systemUpdateService'] == true,
