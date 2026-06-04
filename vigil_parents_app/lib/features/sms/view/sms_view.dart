@@ -3,6 +3,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
 import 'package:vigil_parents_app/features/sms/view_model/sms_viewmodel.dart';
 import 'package:vigil_parents_app/features/sms/widgets/message_card.dart';
 
@@ -23,7 +26,10 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
   void initState() {
     super.initState();
 
-    Future.microtask(() {
+    Future.microtask(() async {
+      // Load the children list for the picker, then the messages for the
+      // currently selected child.
+      await ref.read(selectedChildProvider).load();
       ref.read(smsViewModelProvider).loadMessages();
     });
 
@@ -124,10 +130,21 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
     );
   }
 
+  /// Reloads messages for the newly-selected child. The dropdown itself
+  /// persists the selection.
+  void _onChildSelected(String childId) {
+    ref.read(smsViewModelProvider).reload();
+  }
+
   @override
   Widget build(BuildContext context) {
     final vm = ref.watch(smsViewModelProvider);
+    final selectedChild = ref.watch(selectedChildProvider);
     final size = MediaQuery.of(context).size;
+
+    // No child registered/linked to this account yet (only after the first
+    // fetch completes, so we don't flash this state before loading).
+    final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
 
     return Scaffold(
       // bottomNavigationBar: const BottomNavbar(),
@@ -139,47 +156,77 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
             children: [
               AppHeader(onActionTap: () {}),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              /// SEARCH
-              TextField(
-                controller: _searchController,
-                onChanged: (value) =>
-                    ref.read(smsViewModelProvider).setQuery(value),
-                decoration: InputDecoration(
-                  hintText: "Search messages or contacts...",
-                  prefixIcon: const Icon(Icons.search),
-                  suffixIcon: vm.query.isEmpty
-                      ? null
-                      : IconButton(
-                          icon: const Icon(Icons.close),
-                          onPressed: () {
-                            _searchController.clear();
-                            ref.read(smsViewModelProvider).setQuery('');
-                          },
-                        ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(18),
-                    borderSide: const BorderSide(width: .5, color: Colors.black),
+              if (noChild)
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: NoChildLinkedView(
+                        refreshing: selectedChild.loading,
+                        onRefresh: () => ref
+                            .read(selectedChildProvider)
+                            .load(force: true),
+                      ),
+                    ),
+                  ),
+                )
+              else ...[
+                /// CHILD PICKER — compact, right-aligned, shows selected child.
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 180),
+                    child: ChildSelectorDropdown(onChanged: _onChildSelected),
                   ),
                 ),
-              ),
 
-              const SizedBox(height: 18),
+                const SizedBox(height: 16),
 
-              SmsStateCard(total: vm.total, unknown: vm.unknownCount),
-
-              const SizedBox(height: 18),
-
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: vm.refresh,
-                  child: _buildList(vm, size),
+                /// SEARCH
+                TextField(
+                  controller: _searchController,
+                  onChanged: (value) =>
+                      ref.read(smsViewModelProvider).setQuery(value),
+                  decoration: InputDecoration(
+                    hintText: "Search messages or contacts...",
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: vm.query.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () {
+                              _searchController.clear();
+                              ref.read(smsViewModelProvider).setQuery('');
+                            },
+                          ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(18),
+                      borderSide: const BorderSide(
+                        width: .5,
+                        color: Colors.black,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
+
+                const SizedBox(height: 18),
+
+                SmsStateCard(total: vm.total, unknown: vm.unknownCount),
+
+                const SizedBox(height: 18),
+
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: vm.refresh,
+                    child: _buildList(vm, size),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

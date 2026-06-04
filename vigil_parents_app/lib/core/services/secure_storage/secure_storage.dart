@@ -57,43 +57,43 @@ class SecureDeviceService {
 
   // ───────── DEVICE INFO ─────────
 
-  static Future<Map<String, dynamic>> getDeviceInfo() async {
-    Map<String, dynamic> deviceData = {};
+  // static Future<Map<String, dynamic>> getDeviceInfo() async {
+  //   Map<String, dynamic> deviceData = {};
 
-    if (Platform.isAndroid) {
-      AndroidDeviceInfo androidInfo = await _deviceInfo.androidInfo;
+  //   // if (Platform.isAndroid) {
+  //   //   AndroidDeviceInfo androidInfo = await _deviceInfo.androidInfo;
 
-      deviceData = {
-        "platform": "android",
-        "deviceId": androidInfo.id,
-        "model": androidInfo.model,
-        "deviceName": androidInfo.name,
-        "systemName": "Android",
-        "brand": androidInfo.brand,
-        "manufacturer": androidInfo.manufacturer,
-        "osVersion": androidInfo.version.release,
-        "sdkInt": androidInfo.version.sdkInt,
-        "isPhysicalDevice": androidInfo.isPhysicalDevice,
-      };
-    }
+  //   //   deviceData = {
+  //   //     "platform": "android",
+  //   //     "deviceId": androidInfo.id,
+  //   //     "model": androidInfo.model,
+  //   //     "deviceName": androidInfo.name,
+  //   //     "systemName": "Android",
+  //   //     "brand": androidInfo.brand,
+  //   //     "manufacturer": androidInfo.manufacturer,
+  //   //     "osVersion": androidInfo.version.release,
+  //   //     "sdkInt": androidInfo.version.sdkInt,
+  //   //     "isPhysicalDevice": androidInfo.isPhysicalDevice,
+  //   //   };
+  //   // }
 
-    if (Platform.isIOS) {
-      IosDeviceInfo iosInfo = await _deviceInfo.iosInfo;
+  //   // if (Platform.isIOS) {
+  //   //   IosDeviceInfo iosInfo = await _deviceInfo.iosInfo;
 
-      deviceData = {
-        "platform": "ios",
-        "deviceId": iosInfo.identifierForVendor,
-        "model": iosInfo.model,
-        "deviceName": iosInfo.name,
-        "systemName": iosInfo.systemName,
-        "brand": "Apple",
-        "manufacturer": "Apple",
-        "osVersion": iosInfo.systemVersion,
-        "sdkInt": null,
-        "isPhysicalDevice": iosInfo.isPhysicalDevice,
-      };
-    }
+  //   //   deviceData = {
+  //   //     "platform": "ios",
+  //   //     "deviceId": iosInfo.identifierForVendor,
+  //   //     "model": iosInfo.model,
+  //   //     "deviceName": iosInfo.name,
+  //   //     "systemName": iosInfo.systemName,
+  //   //     "brand": "Apple",
+  //   //     "manufacturer": "Apple",
+  //   //     "osVersion": iosInfo.systemVersion,
+  //   //     "sdkInt": null,
+  //   //     "isPhysicalDevice": iosInfo.isPhysicalDevice,
+  //   //   };
+  //   // }
 
-    return deviceData;
-  }
+  //   return deviceData;
+  // }
 }

@@ -93,6 +93,15 @@ class SmsViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Reloads from scratch — used when the selected child changes. Resets the
+  /// page window and clears the current list so the new child's messages
+  /// replace the old ones immediately.
+  Future<void> reload() async {
+    _limit = pageSize;
+    _all = [];
+    await loadMessages();
+  }
+
   Future<void> refresh() => loadMessages(showLoader: false);
 }
 

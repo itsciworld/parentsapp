@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
-import 'package:vigil_parents_app/features/home/widgets/omman_widgets.dart';
 
 /// The child header that sits on the dark gradient: avatar, name + "Online"
 /// pill, device line, last-sync line, and the three status indicators.
@@ -9,10 +8,15 @@ class ChildHeaderCard extends StatelessWidget {
   final ChildProfile child;
   final List<StatusIndicator> indicators;
 
+  /// Widget shown on the right of the header row. Defaults to the security
+  /// shield; the Home screen passes the child picker dropdown here instead.
+  final Widget? trailing;
+
   const ChildHeaderCard({
     super.key,
     required this.child,
     required this.indicators,
+    this.trailing,
   });
 
   @override
@@ -23,11 +27,11 @@ class ChildHeaderCard extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _ChildAvatar(avatarUrl: child.avatarUrl, isOnline: child.isOnline),
+            _ChildAvatar(isOnline: child.isOnline),
             const SizedBox(width: 12),
             Expanded(child: _ChildInfo(child: child)),
             const SizedBox(width: 8),
-            const _SecurityShield(),
+            trailing ?? const _SecurityShield(),
           ],
         ),
         const SizedBox(height: 22),
@@ -38,66 +42,40 @@ class ChildHeaderCard extends StatelessWidget {
 }
 
 class _ChildAvatar extends StatelessWidget {
-  final String avatarUrl;
   final bool isOnline;
 
-  const _ChildAvatar({required this.avatarUrl, required this.isOnline});
+  const _ChildAvatar({required this.isOnline});
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         Container(
-          width: 70,
-          height: 70,
-          padding: const EdgeInsets.all(3),
+          width: 56,
+          height: 56,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(color: AppColors.primary, width: 2.5),
+            border: Border.all(color: AppColors.primary, width: 2),
           ),
-          child: ClipOval(
-            child: Image.network(
-              avatarUrl,
-              fit: BoxFit.cover,
-              // Graceful fallback if the dummy network image fails to load.
-              errorBuilder: (_, _, _) => Container(
-                color: AppColors.primaryLight,
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: AppColors.primary,
-                  size: 40,
-                ),
-              ),
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return Container(
-                  color: AppColors.primaryLight,
-                  child: const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.primary,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
+          // Static profile picture removed for now — use a simple account icon
+          // sized to fill the ring.
+          child: const Icon(
+            Icons.account_circle,
+            color: AppColors.textOnDarkMuted,
+            size: 52,
           ),
         ),
         if (isOnline)
           Positioned(
-            right: 4,
-            bottom: 4,
+            right: 2,
+            bottom: 2,
             child: Container(
-              width: 16,
-              height: 16,
+              width: 14,
+              height: 14,
               decoration: BoxDecoration(
                 color: AppColors.online,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.headerBottom, width: 2.5),
+                border: Border.all(color: AppColors.headerBottom, width: 2),
               ),
             ),
           ),
@@ -112,37 +90,28 @@ class _ChildInfo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Device name + OS only — e.g. "Samsung Galaxy A52  •  Android 13".
+    final deviceLine = [
+      child.deviceModel,
+      child.osVersion,
+    ].where((s) => s.trim().isNotEmpty).join('  •  ');
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Flexible(
-              child: Text(
-                child.name,
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textOnDark,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 5),
-            if (child.isOnline)
-              const StatusPill(label: 'Online', color: AppColors.online),
-          ],
+        Text(
+          child.name,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: AppColors.textOnDark,
+          ),
+          overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 5),
-        _IconLine(
-          icon: Icons.smartphone_rounded,
-          text: '${child.deviceModel}  •  ${child.osVersion}',
-        ),
-        const SizedBox(height: 4),
-        _IconLine(
-          icon: Icons.sync_rounded,
-          text: 'Last Sync: ${child.lastSync}',
-        ),
+        if (deviceLine.isNotEmpty) ...[
+          const SizedBox(height: 5),
+          _IconLine(icon: Icons.smartphone_rounded, text: deviceLine),
+        ],
       ],
     );
   }

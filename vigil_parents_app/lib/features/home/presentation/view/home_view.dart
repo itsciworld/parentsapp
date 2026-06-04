@@ -3,6 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
+import 'package:vigil_parents_app/features/device_info/models/device_info_model.dart';
+import 'package:vigil_parents_app/features/device_info/presentation/view_model/device_info_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/home_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/widgets/activity_summery.dart';
@@ -31,7 +36,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _vm = HomeViewModel();
     _vm.init();
     // Load the parent profile so the header shows the real name.
-    Future.microtask(() => ref.read(profileViewModelProvider).loadProfile());
+    Future.microtask(() async {
+      ref.read(profileViewModelProvider).loadProfile();
+      // Load the children list, then the device info for the selected one.
+      await ref.read(selectedChildProvider).load();
+      final id = ref.read(selectedChildProvider).selectedId;
+      if (id != null) ref.read(deviceInfoViewModelProvider).load(id);
+    });
+  }
+
+  /// Refreshes the device info for the newly-selected child. The dropdown
+  /// itself persists the selection.
+  void _onChildSelected(String childId) {
+    ref.read(deviceInfoViewModelProvider).load(childId);
   }
 
   @override
@@ -67,6 +84,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             data: _vm.data!,
             parent: _parentChip(_vm.data!.parent),
             onParentTap: widget.onProfileTap,
+            onChildSelected: _onChildSelected,
           );
         },
       ),
@@ -86,23 +104,40 @@ String _initialsFor(String name) {
 /// ----------------------------------------------------------------------------
 /// Loaded state
 /// ----------------------------------------------------------------------------
-class _LoadedView extends StatelessWidget {
+class _LoadedView extends ConsumerWidget {
   final HomeViewModel vm;
   final HomeDashboardData data;
   final ParentProfile parent;
   final VoidCallback? onParentTap;
+  final ValueChanged<String> onChildSelected;
 
   const _LoadedView({
     required this.vm,
     required this.data,
     required this.parent,
     required this.onParentTap,
+    required this.onChildSelected,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final topPadding = MediaQuery.of(context).padding.top;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+
+    final selectedChild = ref.watch(selectedChildProvider);
+    final deviceInfoVm = ref.watch(deviceInfoViewModelProvider);
+
+    // Merge the selected child + live device info over the dummy fallback so
+    // the header reflects the real, currently-selected child.
+    final childProfile = _buildChildProfile(
+      fallback: data.child,
+      selectedName: selectedChild.selected?.name,
+      info: deviceInfoVm.info,
+    );
+
+    // No child registered/linked to this account yet (only after the first
+    // fetch has completed, so the header doesn't flash this state on startup).
+    final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -148,10 +183,23 @@ class _LoadedView extends StatelessWidget {
                       onParentTap: onParentTap,
                     ),
                     const SizedBox(height: 18),
-                    ChildHeaderCard(
-                      child: data.child,
-                      indicators: data.statusIndicators,
-                    ),
+                    if (noChild)
+                      NoChildLinkedView(
+                        dark: true,
+                        refreshing: selectedChild.loading,
+                        onRefresh: () =>
+                            ref.read(selectedChildProvider).load(force: true),
+                      )
+                    else
+                      ChildHeaderCard(
+                        child: childProfile,
+                        indicators: data.statusIndicators,
+                        trailing: ChildSelectorDropdown(
+                          onChanged: onChildSelected,
+                          dark: true,
+                          showLabel: false,
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -194,6 +242,53 @@ class _LoadedView extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  /// Builds the header [ChildProfile] from the selected child + its live
+  /// device info, falling back to the dummy dashboard values when those
+  /// aren't loaded yet.
+  ChildProfile _buildChildProfile({
+    required ChildProfile fallback,
+    required String? selectedName,
+    required DeviceInfoResponse? info,
+  }) {
+    final device = info?.deviceInfo;
+
+    String firstNonEmpty(List<String?> values, String fallbackValue) {
+      for (final v in values) {
+        if (v != null && v.trim().isNotEmpty) return v.trim();
+      }
+      return fallbackValue;
+    }
+
+    return ChildProfile(
+      name: firstNonEmpty([selectedName, info?.name], fallback.name),
+      avatarUrl: fallback.avatarUrl,
+      isOnline: info?.isOnline ?? fallback.isOnline,
+      deviceModel: firstNonEmpty([
+        device?.model,
+        info?.deviceName,
+      ], fallback.deviceModel),
+      osVersion: firstNonEmpty([device?.osVersion], fallback.osVersion),
+      lastSync: _formatLastSeen(info?.lastSeen) ?? fallback.lastSync,
+    );
+  }
+
+  /// Formats an ISO timestamp into a short, human "last sync" label.
+  String? _formatLastSeen(String? iso) {
+    if (iso == null || iso.isEmpty) return null;
+    final dt = DateTime.tryParse(iso)?.toLocal();
+    if (dt == null) return null;
+
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours} hr ago';
+    if (diff.inDays < 7) return '${diff.inDays} day(s) ago';
+
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${dt.year}-${two(dt.month)}-${two(dt.day)} ${two(dt.hour)}:${two(dt.minute)}';
   }
 }
 
