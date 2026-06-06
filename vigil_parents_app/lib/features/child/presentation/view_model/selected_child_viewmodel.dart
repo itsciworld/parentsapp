@@ -36,7 +36,7 @@ class SelectedChildViewModel extends ChangeNotifier {
   /// (falling back to the first child). Safe to call multiple times.
   Future<void> load({bool force = false}) async {
     if (loading) return;
-    if (!force && children.isNotEmpty) return;
+    if (!force && children.isNotEmpty && selectedId != null) return;
 
     loading = true;
     error = null;

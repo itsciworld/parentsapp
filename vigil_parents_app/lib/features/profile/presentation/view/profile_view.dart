@@ -25,9 +25,10 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
   @override
   void initState() {
     super.initState();
+
     Future.microtask(() async {
       ref.read(profileViewModelProvider).loadProfile();
-      // Load the selected child, then the permissions it has granted.
+      // Load the selected child, then permissions for the active child.
       await ref.read(selectedChildProvider).load();
       final childId = ref.read(selectedChildProvider).selectedId;
       if (childId != null) {
@@ -48,7 +49,24 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<String?>(selectedChildProvider.select((vm) => vm.selectedId), (
+      previousId,
+      nextId,
+    ) {
+      if (nextId != null && nextId != previousId) {
+        ref.read(childPermissionsProvider).load(nextId);
+      }
+    });
+
     final vm = ref.watch(profileViewModelProvider);
+    final selectedChild = ref.watch(selectedChildProvider);
+    final permsVm = ref.watch(childPermissionsProvider);
+
+    if (selectedChild.selectedId != null &&
+        permsVm.permissions == null &&
+        !permsVm.loading) {
+      ref.read(childPermissionsProvider).load(selectedChild.selectedId!);
+    }
 
     return Scaffold(
       backgroundColor: AppColors.scaffold,
@@ -389,9 +407,7 @@ class _InfoSection extends StatelessWidget {
   Widget build(BuildContext context) {
     // Hide rows whose value is null/empty, and the whole section if nothing
     // is left to show.
-    final visibleRows = rows
-        .where((r) => r.value.trim().isNotEmpty)
-        .toList();
+    final visibleRows = rows.where((r) => r.value.trim().isNotEmpty).toList();
     if (visibleRows.isEmpty) return const SizedBox.shrink();
 
     return Container(
@@ -582,90 +598,79 @@ class _PermissionsSection extends StatelessWidget {
     }
 
     final items = permissions!.items;
-    return Column(
-      children: [
-        for (int i = 0; i < items.length; i++) ...[
-          if (i > 0) const Divider(height: 1, color: AppColors.cardBorder),
-          _PermissionRow(item: items[i]),
-        ],
-      ],
-    );
-  }
-}
+    if (items.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 10),
+        child: Text(
+          'No permissions available',
+          style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+        ),
+      );
+    }
 
-class _PermissionRow extends StatelessWidget {
-  final PermissionItem item;
-  const _PermissionRow({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final granted = item.granted;
-    final Color color = granted ? AppColors.online : AppColors.textSecondary;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 11),
-      child: Row(
-        children: [
-          Icon(item.icon, size: 18, color: AppColors.textSecondary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  item.label,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
+    return Wrap(
+      spacing: 10,
+      runSpacing: 10,
+      children: items.map((item) {
+        final color = item.granted ? AppColors.online : AppColors.textSecondary;
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          decoration: BoxDecoration(
+            color: item.granted
+                ? AppColors.online.withValues(alpha: 0.14)
+                : AppColors.surface,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: color.withValues(alpha: 0.25)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                item.icon,
+                size: 16,
+                color: item.granted
+                    ? AppColors.online
+                    : AppColors.textSecondary,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                item.label,
+                style: TextStyle(
+                  color: item.granted
+                      ? AppColors.online
+                      : AppColors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  granted
-                      ? 'Allowed by child'
-                      : 'Not allowed — child hasn\'t granted this',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: granted ? AppColors.online : AppColors.textSecondary,
+              ),
+              if (!item.granted) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: AppColors.textSecondary.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: const Text(
+                    'Off',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textSecondary,
+                    ),
                   ),
                 ),
               ],
-            ),
+            ],
           ),
-          const SizedBox(width: 8),
-          // Status pill
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: color.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  granted
-                      ? Icons.check_circle_rounded
-                      : Icons.cancel_rounded,
-                  size: 13,
-                  color: color,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  granted ? 'Active' : 'Off',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    color: color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      }).toList(),
     );
   }
 }

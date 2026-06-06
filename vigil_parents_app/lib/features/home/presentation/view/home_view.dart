@@ -13,9 +13,7 @@ import 'package:vigil_parents_app/features/home/presentation/view_model/feature_
 import 'package:vigil_parents_app/features/home/presentation/view_model/home_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/widgets/activity_summery.dart';
 import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
-import 'package:vigil_parents_app/features/home/widgets/child_card.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
-import 'package:vigil_parents_app/features/home/widgets/home_aapbar.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view_model/profile_viewmodel.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -36,10 +34,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     _vm = HomeViewModel();
     _vm.init();
-    // Load the parent profile so the header shows the real name.
     Future.microtask(() async {
       ref.read(profileViewModelProvider).loadProfile();
-      // Load the children list, then the device info + badges for the selected.
       await ref.read(selectedChildProvider).load();
       final id = ref.read(selectedChildProvider).selectedId;
       if (id != null) ref.read(deviceInfoViewModelProvider).load(id);
@@ -47,8 +43,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  /// Refreshes the device info + badges for the newly-selected child. The
-  /// dropdown itself persists the selection.
   void _onChildSelected(String childId) {
     ref.read(deviceInfoViewModelProvider).load(childId);
     ref.read(featureBadgesProvider).load();
@@ -60,8 +54,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.dispose();
   }
 
-  /// Builds the chip profile from the API, falling back to the dashboard's
-  /// parent while the profile request is still in flight.
   ParentProfile _parentChip(ParentProfile fallback) {
     final name = ref.watch(profileViewModelProvider).profile?.name;
     if (name == null || name.trim().isEmpty) return fallback;
@@ -105,7 +97,7 @@ String _initialsFor(String name) {
 }
 
 /// ----------------------------------------------------------------------------
-/// Loaded state
+/// Loaded state — clean light layout with staggered entrance animation.
 /// ----------------------------------------------------------------------------
 class _LoadedView extends ConsumerWidget {
   final HomeViewModel vm;
@@ -131,7 +123,6 @@ class _LoadedView extends ConsumerWidget {
     final deviceInfoVm = ref.watch(deviceInfoViewModelProvider);
     final badges = ref.watch(featureBadgesProvider);
 
-    // Override the static tile badges with the dynamic "unseen" counts.
     final features = [
       for (final t in data.features)
         t.withBadge(
@@ -139,138 +130,141 @@ class _LoadedView extends ConsumerWidget {
         ),
     ];
 
-    // Merge the selected child + live device info over the dummy fallback so
-    // the header reflects the real, currently-selected child.
     final childProfile = _buildChildProfile(
       fallback: data.child,
       selectedName: selectedChild.selected?.name,
       info: deviceInfoVm.info,
     );
 
-    // No child registered/linked to this account yet (only after the first
-    // fetch has completed, so the header doesn't flash this state on startup).
     final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
       ),
-      child: RefreshIndicator(
-        onRefresh: () async {
-          await Future.wait([
-            vm.refresh(),
-            ref.read(featureBadgesProvider).load(),
-          ]);
-        },
-        color: AppColors.primary,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ---- Dark gradient header --------------------------------
-              Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [AppColors.headerTop, AppColors.headerBottom],
-                  ),
-                  borderRadius: BorderRadius.vertical(
-                    bottom: Radius.circular(28),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x33000000),
-                      blurRadius: 24,
-                      offset: Offset(0, 10),
-                    ),
-                  ],
-                ),
-                padding: EdgeInsets.fromLTRB(16, topPadding + 12, 16, 24),
+      child: Stack(
+        children: [
+          const _HeaderBackdrop(),
+          RefreshIndicator(
+            onRefresh: () async {
+              await Future.wait([
+                vm.refresh(),
+                ref.read(featureBadgesProvider).load(),
+              ]);
+            },
+            color: AppColors.primary,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(16, topPadding + 10, 16, 0),
                 child: Column(
-                  children: [
-                    HomeAapbar(
-                      parent: parent,
-                      notificationCount: data.notificationCount,
-                      onMenuTap: () {},
-                      onNotificationsTap: vm.onNotificationsTapped,
-                      onParentTap: onParentTap,
-                    ),
-                    const SizedBox(height: 18),
-                    if (noChild)
-                      NoChildLinkedView(
-                        dark: true,
-                        refreshing: selectedChild.loading,
-                        onRefresh: () =>
-                            ref.read(selectedChildProvider).load(force: true),
-                      )
-                    else
-                      ChildHeaderCard(
-                        child: childProfile,
-                        indicators: data.statusIndicators,
-                        trailing: ChildSelectorDropdown(
-                          onChanged: onChildSelected,
-                          dark: true,
-                          showLabel: false,
-                        ),
-                      ),
-                  ],
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ---- Greeting bar -------------------------------------
+                _Reveal(
+                  delayMs: 0,
+                  child: _TopBar(
+                    parent: parent,
+                    notificationCount: data.notificationCount,
+                    onParentTap: onParentTap,
+                    onNotificationsTap: vm.onNotificationsTapped,
+                  ),
                 ),
-              ),
+                const SizedBox(height: 18),
 
-              // ---- White body ------------------------------------------
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const _SectionTitle(
-                      title: 'Monitoring Tools',
-                      subtitle: 'Tap a tool to view activity',
-                    ),
-                    const SizedBox(height: 14),
-                    FeatureGrid(
-                      features: features,
-                      onTap: (tile) {
-                        // Clear the badge immediately, navigate, then refresh
-                        // badges on return so new items reappear.
-                        ref.read(featureBadgesProvider).markSeenForTile(tile.id);
-                        vm.onFeatureTapped(context, tile).then(
-                          (_) => ref.read(featureBadgesProvider).load(),
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 26),
-                    const _SectionTitle(title: 'Activity Overview'),
-                    const SizedBox(height: 14),
-                    ActivitySummaryCard(
-                      activity: data.activity,
-                      onViewAllAlerts: vm.onViewAllAlerts,
-                    ),
-                    const SizedBox(height: 26),
-                    const _SectionTitle(title: 'Our Initiative'),
-                    const SizedBox(height: 14),
-                    FoundationCard(
-                      info: data.foundation,
-                      onKnowMore: vm.onKnowMoreFoundation,
-                    ),
-                    SizedBox(height: bottomPadding + 24),
-                  ],
+                // ---- Child hero card ----------------------------------
+                _Reveal(
+                  delayMs: 90,
+                  child: noChild
+                      ? NoChildLinkedView(
+                          refreshing: selectedChild.loading,
+                          onRefresh: () => ref
+                              .read(selectedChildProvider)
+                              .load(force: true),
+                        )
+                      : _ChildHeroCard(
+                          child: childProfile,
+                          batteryLevel: deviceInfoVm.info?.batteryLevel,
+                          dropdown: ChildSelectorDropdown(
+                            onChanged: onChildSelected,
+                            showLabel: false,
+                          ),
+                        ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 26),
+
+                // ---- Monitoring tools ---------------------------------
+                _Reveal(
+                  delayMs: 170,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SectionTitle(
+                        title: 'Monitoring Tools',
+                        subtitle: 'Tap a tool to view activity',
+                      ),
+                      const SizedBox(height: 14),
+                      FeatureGrid(
+                        features: features,
+                        onTap: (tile) {
+                          ref
+                              .read(featureBadgesProvider)
+                              .markSeenForTile(tile.id);
+                          vm.onFeatureTapped(context, tile).then(
+                            (_) => ref.read(featureBadgesProvider).load(),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 26),
+
+                // ---- Activity overview --------------------------------
+                _Reveal(
+                  delayMs: 240,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SectionTitle(title: 'Activity Overview'),
+                      const SizedBox(height: 14),
+                      ActivitySummaryCard(
+                        activity: data.activity,
+                        onViewAllAlerts: vm.onViewAllAlerts,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 26),
+
+                // ---- Foundation ---------------------------------------
+                _Reveal(
+                  delayMs: 310,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const _SectionTitle(title: 'Our Initiative'),
+                      const SizedBox(height: 14),
+                      FoundationCard(
+                        info: data.foundation,
+                        onKnowMore: vm.onKnowMoreFoundation,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: bottomPadding + 24),
+              ],
+            ),
           ),
         ),
+          ),
+        ],
       ),
     );
   }
 
-  /// Builds the header [ChildProfile] from the selected child + its live
-  /// device info, falling back to the dummy dashboard values when those
-  /// aren't loaded yet.
   ChildProfile _buildChildProfile({
     required ChildProfile fallback,
     required String? selectedName,
@@ -298,7 +292,6 @@ class _LoadedView extends ConsumerWidget {
     );
   }
 
-  /// Formats an ISO timestamp into a short, human "last sync" label.
   String? _formatLastSeen(String? iso) {
     if (iso == null || iso.isEmpty) return null;
     final dt = DateTime.tryParse(iso)?.toLocal();
@@ -307,17 +300,543 @@ class _LoadedView extends ConsumerWidget {
     final now = DateTime.now();
     final diff = now.difference(dt);
     if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-    if (diff.inHours < 24) return '${diff.inHours} hr ago';
-    if (diff.inDays < 7) return '${diff.inDays} day(s) ago';
-
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
     String two(int n) => n.toString().padLeft(2, '0');
-    return '${dt.year}-${two(dt.month)}-${two(dt.day)} ${two(dt.hour)}:${two(dt.minute)}';
+    return '${dt.day}/${two(dt.month)}';
   }
 }
 
-/// A consistent section heading: a bold title with an optional muted
-/// subtitle below it.
+/// A soft decorative gradient + glow blobs behind the top of the page.
+class _HeaderBackdrop extends StatelessWidget {
+  const _HeaderBackdrop();
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: SizedBox(
+        height: 340,
+        width: double.infinity,
+        child: Stack(
+          children: [
+            Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Color(0xFFEAF1FF), AppColors.scaffold],
+                ),
+              ),
+            ),
+            Positioned(
+              top: -50,
+              right: -40,
+              child: _blob(180, AppColors.primary.withValues(alpha: 0.14)),
+            ),
+            Positioned(
+              top: 40,
+              left: -50,
+              child: _blob(150, AppColors.blueIcon.withValues(alpha: 0.12)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _blob(double size, Color color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
+      ),
+    );
+  }
+}
+
+/// ----------------------------------------------------------------------------
+/// Top greeting bar
+/// ----------------------------------------------------------------------------
+class _TopBar extends StatelessWidget {
+  final ParentProfile parent;
+  final int notificationCount;
+  final VoidCallback? onParentTap;
+  final VoidCallback onNotificationsTap;
+
+  const _TopBar({
+    required this.parent,
+    required this.notificationCount,
+    required this.onParentTap,
+    required this.onNotificationsTap,
+  });
+
+  String get _greeting {
+    final h = DateTime.now().hour;
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final name = parent.name.trim().isEmpty ? 'Parent' : parent.name.trim();
+    final initials = parent.initials.trim().isEmpty
+        ? _initialsFor(name)
+        : parent.initials;
+
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: onParentTap,
+          child: Container(
+            width: 46,
+            height: 46,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [AppColors.primary, AppColors.blueIcon],
+              ),
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              initials,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                fontSize: 16,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _greeting,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 19,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+        _NotifBell(count: notificationCount, onTap: onNotificationsTap),
+      ],
+    );
+  }
+}
+
+class _NotifBell extends StatelessWidget {
+  final int count;
+  final VoidCallback onTap;
+
+  const _NotifBell({required this.count, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 46,
+        height: 46,
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const Icon(
+              Icons.notifications_none_rounded,
+              color: AppColors.textPrimary,
+              size: 24,
+            ),
+            if (count > 0)
+              Positioned(
+                top: 10,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppColors.alert,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(minWidth: 8, minHeight: 8),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// ----------------------------------------------------------------------------
+/// Child hero card (light, well-aligned)
+/// ----------------------------------------------------------------------------
+class _ChildHeroCard extends StatelessWidget {
+  final ChildProfile child;
+  final int? batteryLevel;
+  final Widget dropdown;
+
+  const _ChildHeroCard({
+    required this.child,
+    required this.batteryLevel,
+    required this.dropdown,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final online = child.isOnline;
+    final deviceLine = [
+      child.deviceModel,
+      child.osVersion,
+    ].where((s) => s.trim().isNotEmpty).join('  •  ');
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.surface, Color(0xFFF7FAFF)],
+        ),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.blueIcon.withValues(alpha: 0.10),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              // Gradient avatar ring + status dot
+              Stack(
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    padding: const EdgeInsets.all(2.5),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [AppColors.primary, AppColors.blueIcon],
+                      ),
+                    ),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.surface,
+                      ),
+                      child: const Icon(
+                        Icons.account_circle,
+                        size: 50,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ),
+                  if (online)
+                    const Positioned(
+                      right: 1,
+                      bottom: 1,
+                      child: _PulsingDot(),
+                    ),
+                ],
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      child.name.isEmpty ? 'Child' : child.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.3,
+                      ),
+                    ),
+                    if (deviceLine.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.smartphone_rounded,
+                            size: 13,
+                            color: AppColors.textSecondary,
+                          ),
+                          const SizedBox(width: 5),
+                          Expanded(
+                            child: Text(
+                              deviceLine,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              dropdown,
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _InfoStat(
+                  icon: online ? Icons.wifi_rounded : Icons.wifi_off_rounded,
+                  color: online ? AppColors.online : AppColors.textSecondary,
+                  value: online ? 'Online' : 'Offline',
+                  label: 'Status',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _InfoStat(
+                  icon: _batteryIcon(batteryLevel),
+                  color: _batteryColor(batteryLevel),
+                  value: batteryLevel != null ? '$batteryLevel%' : '—',
+                  label: 'Battery',
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _InfoStat(
+                  icon: Icons.sync_rounded,
+                  color: AppColors.blueIcon,
+                  value: child.lastSync,
+                  label: 'Last sync',
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static IconData _batteryIcon(int? level) {
+    if (level == null) return Icons.battery_unknown_rounded;
+    if (level >= 90) return Icons.battery_full_rounded;
+    if (level >= 50) return Icons.battery_5_bar_rounded;
+    if (level >= 20) return Icons.battery_3_bar_rounded;
+    return Icons.battery_alert_rounded;
+  }
+
+  static Color _batteryColor(int? level) {
+    if (level == null) return AppColors.textSecondary;
+    if (level <= 20) return AppColors.alert;
+    if (level <= 40) return AppColors.warning;
+    return AppColors.primary;
+  }
+}
+
+class _InfoStat extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String value;
+  final String label;
+
+  const _InfoStat({
+    required this.icon,
+    required this.color,
+    required this.value,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, size: 18, color: color),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
+          ),
+          const SizedBox(height: 1),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// A small green dot with a soft expanding pulse ring (online indicator).
+class _PulsingDot extends StatefulWidget {
+  const _PulsingDot();
+
+  @override
+  State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _PulsingDotState extends State<_PulsingDot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 16,
+      height: 16,
+      child: AnimatedBuilder(
+        animation: _c,
+        builder: (context, _) {
+          final t = _c.value;
+          return Stack(
+            alignment: Alignment.center,
+            children: [
+              Container(
+                width: 8 + t * 8,
+                height: 8 + t * 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.online.withValues(alpha: (1 - t) * 0.4),
+                ),
+              ),
+              Container(
+                width: 11,
+                height: 11,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.online,
+                  border: Border.all(color: AppColors.surface, width: 2),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+/// ----------------------------------------------------------------------------
+/// Entrance animation wrapper — fade + slide up, with an optional delay.
+/// ----------------------------------------------------------------------------
+class _Reveal extends StatefulWidget {
+  final Widget child;
+  final int delayMs;
+
+  const _Reveal({required this.child, this.delayMs = 0});
+
+  @override
+  State<_Reveal> createState() => _RevealState();
+}
+
+class _RevealState extends State<_Reveal> with SingleTickerProviderStateMixin {
+  late final AnimationController _c;
+
+  @override
+  void initState() {
+    super.initState();
+    _c = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 480),
+    );
+    Future.delayed(Duration(milliseconds: widget.delayMs), () {
+      if (mounted) _c.forward();
+    });
+  }
+
+  @override
+  void dispose() {
+    _c.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _c,
+      builder: (context, child) {
+        final t = Curves.easeOutCubic.transform(_c.value);
+        return Opacity(
+          opacity: t,
+          child: Transform.translate(
+            offset: Offset(0, (1 - t) * 26),
+            child: child,
+          ),
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+/// A consistent section heading.
 class _SectionTitle extends StatelessWidget {
   final String title;
   final String? subtitle;
@@ -326,28 +845,48 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w800,
-            color: AppColors.textPrimary,
-            letterSpacing: -0.2,
+        Container(
+          width: 4,
+          height: subtitle != null ? 34 : 18,
+          margin: const EdgeInsets.only(right: 10, top: 1),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppColors.primary, AppColors.blueIcon],
+            ),
+            borderRadius: BorderRadius.circular(4),
           ),
         ),
-        if (subtitle != null) ...[
-          const SizedBox(height: 2),
-          Text(
-            subtitle!,
-            style: const TextStyle(
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                  letterSpacing: -0.2,
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 2),
+                Text(
+                  subtitle!,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ],
           ),
-        ],
+        ),
       ],
     );
   }
@@ -367,62 +906,41 @@ class _LoadingView extends StatelessWidget {
         highlightColor: Colors.grey.shade100,
         child: SingleChildScrollView(
           physics: const NeverScrollableScrollPhysics(),
-          child: Column(
-            children: [
-              // 🔹 Header skeleton
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: const BoxDecoration(color: Colors.white),
-                child: Column(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
                   children: [
-                    Row(
-                      children: [
-                        _box(width: 40, height: 40, radius: 20),
-                        const SizedBox(width: 12),
-                        Expanded(child: _box(height: 16)),
-                        const SizedBox(width: 12),
-                        _box(width: 30, height: 30, radius: 8),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    _box(height: 90, radius: 16),
+                    _box(width: 46, height: 46, radius: 23),
+                    const SizedBox(width: 12),
+                    Expanded(child: _box(height: 18)),
+                    const SizedBox(width: 12),
+                    _box(width: 46, height: 46, radius: 14),
                   ],
                 ),
-              ),
-
-              // 🔹 Body skeleton
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _box(width: 160, height: 18, radius: 6),
-                    const SizedBox(height: 16),
-                    GridView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: 6,
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 3,
-                            mainAxisSpacing: 15,
-                            crossAxisSpacing: 15,
-                          ),
-                      itemBuilder: (_, _) => _box(radius: 14),
-                    ),
-                    const SizedBox(height: 24),
-                    _box(width: 140, height: 18, radius: 6),
-                    const SizedBox(height: 16),
-                    _box(height: 110, radius: 20),
-                    const SizedBox(height: 24),
-                    _box(width: 120, height: 18, radius: 6),
-                    const SizedBox(height: 16),
-                    _box(height: 220, radius: 20),
-                  ],
+                const SizedBox(height: 20),
+                _box(height: 150, radius: 22),
+                const SizedBox(height: 24),
+                _box(width: 160, height: 18, radius: 6),
+                const SizedBox(height: 16),
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: 6,
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 3,
+                        mainAxisSpacing: 15,
+                        crossAxisSpacing: 15,
+                      ),
+                  itemBuilder: (_, _) => _box(radius: 14),
                 ),
-              ),
-            ],
+                const SizedBox(height: 24),
+                _box(height: 110, radius: 20),
+              ],
+            ),
           ),
         ),
       ),
@@ -465,13 +983,6 @@ class _ErrorView extends StatelessWidget {
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(24),
             border: Border.all(color: AppColors.cardBorder),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 18,
-                offset: Offset(0, 8),
-              ),
-            ],
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
