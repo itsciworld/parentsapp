@@ -9,7 +9,7 @@ class SmsSyncJob implements BackgroundJob {
   String get name => 'sms_sync';
 
   @override
-  Duration get interval => const Duration(seconds: 5);
+  Duration get interval => const Duration(seconds: 30);
 
   /// Last seen total, so we only announce genuinely new messages.
   int _lastTotal = -1;
@@ -28,9 +28,9 @@ class SmsSyncJob implements BackgroundJob {
     final res = await repo.getSms(childId: ctx.childId, parentId: ctx.parentId);
 
     if (_lastTotal >= 0 && res.total > _lastTotal) {
-      debugPrint('SMS: new message received');
+      debugPrint('SMS:  paerent new message received');
     } else {
-      debugPrint('SMS: skip — no new msg');
+      debugPrint('SMS: skip — parent no new msg');
     }
     _lastTotal = res.total;
 

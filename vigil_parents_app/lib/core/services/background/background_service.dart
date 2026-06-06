@@ -6,6 +6,7 @@ import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/background_job.dart';
+import 'package:vigil_parents_app/core/services/background/jobs/calls_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/contacts_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/sms_job.dart';
 
@@ -20,6 +21,7 @@ import 'package:vigil_parents_app/core/services/background/jobs/sms_job.dart';
 final List<BackgroundJob> _jobs = <BackgroundJob>[
   SmsSyncJob(),
   ContactsSyncJob(),
+  CallsSyncJob(),
 ];
 
 /// Base tick resolution. Each job decides its own cadence via [BackgroundJob.interval].
@@ -75,6 +77,11 @@ Future<bool> onIosBackground(ServiceInstance service) async {
   return true;
 }
 
+/// True while the app UI is in the foreground. The foreground screens do their
+/// own polling, so we pause the background sync jobs to avoid duplicate API
+/// calls. The app toggles this via `app_foreground` / `app_background` events.
+bool _appInForeground = false;
+
 /// Main entry point for the background isolate (Android + iOS foreground).
 @pragma('vm:entry-point')
 void onStart(ServiceInstance service) async {
@@ -82,6 +89,8 @@ void onStart(ServiceInstance service) async {
   await _ensureEnv();
 
   service.on('stopService').listen((_) => service.stopSelf());
+  service.on('app_foreground').listen((_) => _appInForeground = true);
+  service.on('app_background').listen((_) => _appInForeground = false);
 
   await _runDueJobs(service);
   Timer.periodic(_tick, (_) => _runDueJobs(service));
@@ -90,6 +99,10 @@ void onStart(ServiceInstance service) async {
 /// Runs each registered job whose [BackgroundJob.interval] has elapsed.
 final Map<String, DateTime> _lastRun = {};
 Future<void> _runDueJobs(ServiceInstance service) async {
+  // While the app is open its screens poll directly — skip background jobs to
+  // avoid double-calling the same endpoints.
+  if (_appInForeground) return;
+
   final now = DateTime.now();
   for (final job in _jobs) {
     final last = _lastRun[job.name];

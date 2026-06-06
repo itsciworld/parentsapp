@@ -73,6 +73,22 @@ class FeatureTile {
     this.clusterIcons,
     this.isLocked = false, // 👈 default false
   });
+
+  /// Returns a copy with the badge overridden. Pass `clearBadge: true` to
+  /// remove the badge regardless of [badgeCount].
+  FeatureTile withBadge(int? count) {
+    return FeatureTile(
+      id: id,
+      title: title,
+      subtitle: subtitle,
+      icon: icon,
+      iconColor: iconColor,
+      iconBackground: iconBackground,
+      badgeCount: count,
+      clusterIcons: clusterIcons,
+      isLocked: isLocked,
+    );
+  }
 }
 
 /// Live location card data.

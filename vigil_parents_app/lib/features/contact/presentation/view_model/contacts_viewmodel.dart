@@ -3,22 +3,20 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:vigil_parents_app/features/contact/contact_repo.dart';
 import 'package:vigil_parents_app/features/contact/models/contacts_model.dart';
 
-/// Drives the contacts screen: paginated load for the selected child plus a
-/// search filter. Uses page=1 with a growing limit so the list stays stable
-/// across the 5s foreground refresh while still supporting "load more".
+/// Drives the contacts screen: loads all contacts for the selected child in a
+/// single request (no lazy loading) plus a search filter.
 class ContactsViewModel extends ChangeNotifier {
   final ContactsRepository repository;
 
   ContactsViewModel(this.repository);
 
-  static const int pageSize = 20;
+  // Large limit so a single request returns the whole contact list.
+  static const int _allLimit = 1000;
 
   List<ContactModel> _all = [];
   bool loading = false;
-  bool loadingMore = false;
   String? error;
   int total = 0;
-  int _limit = pageSize;
   String _query = '';
 
   String get query => _query;
@@ -35,9 +33,6 @@ class ContactsViewModel extends ChangeNotifier {
         )
         .toList();
   }
-
-  /// More contacts exist on the server than we've loaded.
-  bool get hasMore => _query.trim().isEmpty && _all.length < total;
 
   Future<void> loadContacts({bool showLoader = true}) async {
     if (showLoader) {
@@ -59,7 +54,7 @@ class ContactsViewModel extends ChangeNotifier {
           childId: ctx.childId,
           parentId: ctx.parentId,
           page: 1,
-          limit: _limit,
+          limit: _allLimit,
         );
         _all = res.contacts;
         total = res.total;
@@ -73,19 +68,6 @@ class ContactsViewModel extends ChangeNotifier {
     }
   }
 
-  /// Loads the next page window.
-  Future<void> loadMore() async {
-    if (loadingMore || !hasMore) return;
-    loadingMore = true;
-    notifyListeners();
-
-    _limit += pageSize;
-    await loadContacts(showLoader: false);
-
-    loadingMore = false;
-    notifyListeners();
-  }
-
   void setQuery(String value) {
     _query = value;
     notifyListeners();
@@ -93,7 +75,6 @@ class ContactsViewModel extends ChangeNotifier {
 
   /// Reloads from scratch — used when the selected child changes.
   Future<void> reload() async {
-    _limit = pageSize;
     _all = [];
     await loadContacts();
   }

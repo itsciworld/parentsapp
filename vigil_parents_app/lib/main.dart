@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
@@ -15,8 +16,45 @@ void main() async {
   runApp(const ProviderScope(child: MyApp()));
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  final FlutterBackgroundService _service = FlutterBackgroundService();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // App starts in the foreground — pause the background sync jobs so they
+    // don't duplicate the on-screen polling. Re-send shortly after to win the
+    // race against the background isolate finishing its event subscription.
+    _service.invoke('app_foreground');
+    Future.delayed(
+      const Duration(seconds: 2),
+      () => _service.invoke('app_foreground'),
+    );
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _service.invoke('app_foreground');
+    } else {
+      // paused / inactive / hidden / detached → let the background sync resume.
+      _service.invoke('app_background');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

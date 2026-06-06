@@ -6,9 +6,17 @@ import 'package:vigil_parents_app/features/sms/models/sms_thread_model.dart';
 /// message preview, time, and a count badge of messages in the thread.
 class ThreadCard extends StatelessWidget {
   final SmsThread thread;
+
+  /// Unread messages in this thread — shown as a badge, hidden when 0.
+  final int unread;
   final VoidCallback onTap;
 
-  const ThreadCard({super.key, required this.thread, required this.onTap});
+  const ThreadCard({
+    super.key,
+    required this.thread,
+    required this.unread,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -23,34 +31,28 @@ class ThreadCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.all(14),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.cardBorder),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 10,
-                offset: Offset(0, 3),
-              ),
-            ],
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               CircleAvatar(
-                radius: 24,
+                radius: 19,
                 backgroundColor: AppColors.primaryLight,
                 child: Text(
                   _initials(thread.address),
                   style: const TextStyle(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
-                    fontSize: 15,
+                    fontSize: 13,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,7 +67,7 @@ class ThreadCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 15.5,
+                              fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: AppColors.textPrimary,
                             ),
@@ -76,14 +78,14 @@ class ThreadCard extends StatelessWidget {
                           Text(
                             _formatRelative(thread.lastMessageAt!),
                             style: const TextStyle(
-                              fontSize: 11.5,
+                              fontSize: 11,
                               color: AppColors.textSecondary,
                             ),
                           ),
                         ],
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Row(
                       children: [
                         if (isSentLast)
@@ -91,7 +93,7 @@ class ThreadCard extends StatelessWidget {
                             padding: EdgeInsets.only(right: 4),
                             child: Icon(
                               Icons.reply_rounded,
-                              size: 13,
+                              size: 12,
                               color: AppColors.textSecondary,
                             ),
                           ),
@@ -101,7 +103,7 @@ class ThreadCard extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              fontSize: 13,
+                              fontSize: 12.5,
                               color: AppColors.textSecondary,
                             ),
                           ),
@@ -111,34 +113,30 @@ class ThreadCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              // Count badge — number of messages in this thread.
-              Container(
-                constraints: const BoxConstraints(minWidth: 26),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  '${thread.count}',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: AppColors.textOnDark,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
+              // Unread badge — count of new messages; clears once opened.
+              if (unread > 0) ...[
+                const SizedBox(width: 8),
+                Container(
+                  constraints: const BoxConstraints(minWidth: 20),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 6,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '$unread',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.textOnDark,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textSecondary,
-                size: 20,
-              ),
+              ],
             ],
           ),
         ),

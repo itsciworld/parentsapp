@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:vigil_parents_app/components/bottom_bar.dart';
+import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/child/presentation/view/child_view.dart';
 import 'package:vigil_parents_app/features/home/presentation/view/home_view.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view/profile_view.dart';
@@ -78,6 +79,7 @@ class _MainShellState extends State<MainShell> {
           currentIndex: _currentIndex,
           onTabSelected: _onTabSelected,
           items: _navItems,
+          activeColor: AppColors.primary,
         ),
       ),
     );

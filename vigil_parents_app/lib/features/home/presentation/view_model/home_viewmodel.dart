@@ -67,39 +67,36 @@ class HomeViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  // --- Navigation / tap intents (stubbed for now) ---------------------------
-  void onFeatureTapped(BuildContext context, FeatureTile tile) {
+  // --- Navigation / tap intents --------------------------------------------
+  // Returns the navigation Future so callers can refresh state on return.
+  Future<void> onFeatureTapped(BuildContext context, FeatureTile tile) {
     switch (tile.id) {
       case 'calls':
-        Navigator.push(
+        return Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const AccessCallsScreen()),
         );
-        break;
 
       case 'sms':
-        Navigator.push(
+        return Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const SmsScreen()),
         );
-        break;
 
       case 'gallery':
-        Navigator.push(
+        return Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const GalleryScreen()),
         );
-        break;
 
       case 'Contacts':
-        Navigator.push(
+        return Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const ContactsPage()),
         );
-        break;
 
       default:
-        break;
+        return Future.value();
     }
   }
 

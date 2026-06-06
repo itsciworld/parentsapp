@@ -9,6 +9,7 @@ import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_l
 import 'package:vigil_parents_app/features/device_info/models/device_info_model.dart';
 import 'package:vigil_parents_app/features/device_info/presentation/view_model/device_info_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
+import 'package:vigil_parents_app/features/home/presentation/view_model/feature_badges_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/home_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/widgets/activity_summery.dart';
 import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
@@ -38,17 +39,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // Load the parent profile so the header shows the real name.
     Future.microtask(() async {
       ref.read(profileViewModelProvider).loadProfile();
-      // Load the children list, then the device info for the selected one.
+      // Load the children list, then the device info + badges for the selected.
       await ref.read(selectedChildProvider).load();
       final id = ref.read(selectedChildProvider).selectedId;
       if (id != null) ref.read(deviceInfoViewModelProvider).load(id);
+      ref.read(featureBadgesProvider).load();
     });
   }
 
-  /// Refreshes the device info for the newly-selected child. The dropdown
-  /// itself persists the selection.
+  /// Refreshes the device info + badges for the newly-selected child. The
+  /// dropdown itself persists the selection.
   void _onChildSelected(String childId) {
     ref.read(deviceInfoViewModelProvider).load(childId);
+    ref.read(featureBadgesProvider).load();
   }
 
   @override
@@ -126,6 +129,15 @@ class _LoadedView extends ConsumerWidget {
 
     final selectedChild = ref.watch(selectedChildProvider);
     final deviceInfoVm = ref.watch(deviceInfoViewModelProvider);
+    final badges = ref.watch(featureBadgesProvider);
+
+    // Override the static tile badges with the dynamic "unseen" counts.
+    final features = [
+      for (final t in data.features)
+        t.withBadge(
+          badges.unseenFor(t.id) > 0 ? badges.unseenFor(t.id) : null,
+        ),
+    ];
 
     // Merge the selected child + live device info over the dummy fallback so
     // the header reflects the real, currently-selected child.
@@ -146,7 +158,12 @@ class _LoadedView extends ConsumerWidget {
         statusBarBrightness: Brightness.dark,
       ),
       child: RefreshIndicator(
-        onRefresh: vm.refresh,
+        onRefresh: () async {
+          await Future.wait([
+            vm.refresh(),
+            ref.read(featureBadgesProvider).load(),
+          ]);
+        },
         color: AppColors.primary,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
@@ -216,8 +233,15 @@ class _LoadedView extends ConsumerWidget {
                     ),
                     const SizedBox(height: 14),
                     FeatureGrid(
-                      features: data.features,
-                      onTap: (tile) => vm.onFeatureTapped(context, tile),
+                      features: features,
+                      onTap: (tile) {
+                        // Clear the badge immediately, navigate, then refresh
+                        // badges on return so new items reappear.
+                        ref.read(featureBadgesProvider).markSeenForTile(tile.id);
+                        vm.onFeatureTapped(context, tile).then(
+                          (_) => ref.read(featureBadgesProvider).load(),
+                        );
+                      },
                     ),
                     const SizedBox(height: 26),
                     const _SectionTitle(title: 'Activity Overview'),

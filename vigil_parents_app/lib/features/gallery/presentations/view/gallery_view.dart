@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view_model/gallery_viewmodel.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/widgets/gallery_photo_grid.dart';
@@ -13,7 +14,7 @@ class GalleryScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: Colors.white,
-      // bottomNavigationBar: const GalleryBottomNav(),
+      bottomNavigationBar: const AppBottomNav(),
       body: state.when(
         data: (vm) {
           return SafeArea(

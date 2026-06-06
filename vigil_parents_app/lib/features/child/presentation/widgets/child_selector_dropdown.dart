@@ -36,8 +36,11 @@ class ChildSelectorDropdown extends ConsumerWidget {
 
     final Color fg = dark ? AppColors.textOnDark : AppColors.textPrimary;
     final Color bg = dark
-        ? Colors.white.withValues(alpha: 0.10)
+        ? Colors.white.withValues(alpha: 0.08)
         : AppColors.surface;
+    final Color border = dark
+        ? Colors.white.withValues(alpha: 0.22)
+        : AppColors.cardBorder;
 
     final selectedName = vm.selected?.name.trim();
     final label = (selectedName == null || selectedName.isEmpty)
@@ -50,25 +53,59 @@ class ChildSelectorDropdown extends ConsumerWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(10),
         onTap: () => _open(context, ref),
-        child: Padding(
+        child: Container(
           padding: showLabel
-              ? const EdgeInsets.symmetric(horizontal: 12, vertical: 12)
+              ? const EdgeInsets.symmetric(horizontal: 10, vertical: 8)
               : const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: border),
+          ),
           child: showLabel
               ? Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: Text(
-                        label,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: fg,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                    Icon(
+                      Icons.account_circle_rounded,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 7),
+                    Flexible(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Child',
+                            style: TextStyle(
+                              color: fg.withValues(alpha: 0.55),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              height: 1,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            label,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: fg,
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w700,
+                              height: 1,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: fg),
+                    const SizedBox(width: 4),
+                    Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 20,
+                      color: fg.withValues(alpha: 0.7),
+                    ),
                   ],
                 )
               : Icon(Icons.keyboard_arrow_down_rounded, size: 22, color: fg),

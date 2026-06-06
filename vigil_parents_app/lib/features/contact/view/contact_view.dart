@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
+import 'package:vigil_parents_app/components/app_search_field.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
@@ -31,7 +33,7 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
     });
 
     // Keep the list fresh while the screen is open.
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _pollTimer = Timer.periodic(const Duration(minutes: 5), (_) {
       ref.read(contactsViewModelProvider).refresh();
     });
   }
@@ -66,7 +68,11 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           SizedBox(height: size.height * 0.16),
-          const Icon(Icons.cloud_off_rounded, size: 52, color: Colors.redAccent),
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 52,
+            color: Colors.redAccent,
+          ),
           const SizedBox(height: 12),
           Center(
             child: Text(
@@ -91,11 +97,7 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           SizedBox(height: size.height * 0.16),
-          Icon(
-            Icons.contacts_outlined,
-            size: 52,
-            color: Colors.grey.shade300,
-          ),
+          Icon(Icons.contacts_outlined, size: 52, color: Colors.grey.shade300),
           const SizedBox(height: 12),
           const Center(
             child: Text(
@@ -113,32 +115,12 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
 
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      itemCount: vm.contacts.length + (vm.hasMore ? 1 : 0),
+      itemCount: vm.contacts.length,
       separatorBuilder: (_, _) => const SizedBox(height: 10),
       itemBuilder: (_, index) {
-        if (index >= vm.contacts.length) return _loadMoreFooter(vm);
         final c = vm.contacts[index];
         return _ContactRow(contact: c, onTap: () => _openDetail(c));
       },
-    );
-  }
-
-  Widget _loadMoreFooter(ContactsViewModel vm) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Center(
-        child: vm.loadingMore
-            ? const SizedBox(
-                width: 22,
-                height: 22,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : OutlinedButton.icon(
-                onPressed: () => ref.read(contactsViewModelProvider).loadMore(),
-                icon: const Icon(Icons.expand_more_rounded, size: 18),
-                label: Text('Show more (${vm.total - vm.contacts.length} left)'),
-              ),
-      ),
     );
   }
 
@@ -152,6 +134,7 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      bottomNavigationBar: const AppBottomNav(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -198,33 +181,16 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
                 const SizedBox(height: 14),
 
                 /// SEARCH
-                TextField(
+                AppSearchField(
                   controller: _searchController,
+                  hint: 'Search name or number...',
+                  value: vm.query,
                   onChanged: (value) =>
                       ref.read(contactsViewModelProvider).setQuery(value),
-                  decoration: InputDecoration(
-                    hintText: "Search name or number...",
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: vm.query.isEmpty
-                        ? null
-                        : IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(contactsViewModelProvider).setQuery('');
-                            },
-                          ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: const BorderSide(
-                        width: .5,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
+                  onClear: () {
+                    _searchController.clear();
+                    ref.read(contactsViewModelProvider).setQuery('');
+                  },
                 ),
 
                 const SizedBox(height: 14),
@@ -271,7 +237,11 @@ class _ContactsSummary extends StatelessWidget {
         : '$total contact${total == 1 ? '' : 's'}';
     return Row(
       children: [
-        const Icon(Icons.people_alt_rounded, size: 16, color: AppColors.primary),
+        const Icon(
+          Icons.people_alt_rounded,
+          size: 16,
+          color: AppColors.primary,
+        ),
         const SizedBox(width: 6),
         Text(
           text,
@@ -306,15 +276,9 @@ class _ContactRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
+            color: AppColors.surface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: AppColors.cardBorder),
-            boxShadow: const [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 8,
-                offset: Offset(0, 3),
-              ),
-            ],
           ),
           child: Row(
             children: [

@@ -2,7 +2,9 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
+import 'package:vigil_parents_app/components/app_search_field.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
@@ -34,7 +36,7 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
     });
 
     // While the screen is open, refresh from the API every 5 seconds.
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
       ref.read(smsViewModelProvider).refresh();
     });
   }
@@ -47,7 +49,10 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
   }
 
   void _openThread(int index) {
-    final thread = ref.read(smsViewModelProvider).threads[index];
+    final vm = ref.read(smsViewModelProvider);
+    final thread = vm.threads[index];
+    // Mark read so the unread badge clears once the conversation is opened.
+    vm.markThreadSeen(thread);
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => ConversationScreen(thread: thread)),
@@ -64,7 +69,11 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         children: [
           SizedBox(height: size.height * 0.18),
-          const Icon(Icons.cloud_off_rounded, size: 52, color: Colors.redAccent),
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 52,
+            color: Colors.redAccent,
+          ),
           const SizedBox(height: 12),
           Center(
             child: Text(
@@ -111,6 +120,7 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (_, index) => ThreadCard(
         thread: vm.threads[index],
+        unread: vm.unreadFor(vm.threads[index]),
         onTap: () => _openThread(index),
       ),
     );
@@ -134,6 +144,7 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      bottomNavigationBar: const AppBottomNav(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -150,9 +161,8 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: NoChildLinkedView(
                         refreshing: selectedChild.loading,
-                        onRefresh: () => ref
-                            .read(selectedChildProvider)
-                            .load(force: true),
+                        onRefresh: () =>
+                            ref.read(selectedChildProvider).load(force: true),
                       ),
                     ),
                   ),
@@ -167,46 +177,29 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
 
                 /// SEARCH
-                TextField(
+                AppSearchField(
                   controller: _searchController,
+                  hint: 'Search conversations or numbers...',
+                  value: vm.query,
                   onChanged: (value) =>
                       ref.read(smsViewModelProvider).setQuery(value),
-                  decoration: InputDecoration(
-                    hintText: "Search conversations or numbers...",
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: vm.query.isEmpty
-                        ? null
-                        : IconButton(
-                            icon: const Icon(Icons.close),
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(smsViewModelProvider).setQuery('');
-                            },
-                          ),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(18),
-                      borderSide: const BorderSide(
-                        width: .5,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
+                  onClear: () {
+                    _searchController.clear();
+                    ref.read(smsViewModelProvider).setQuery('');
+                  },
                 ),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
 
                 SmsStateCard(
                   threads: vm.totalThreads,
                   messages: vm.totalMessages,
                 ),
 
-                const SizedBox(height: 18),
+                const SizedBox(height: 12),
 
                 Expanded(
                   child: RefreshIndicator(
