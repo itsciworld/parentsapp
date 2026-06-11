@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/features/calls/presentation/view_model/view/calls_view.dart';
-import 'package:vigil_parents_app/features/contact/view/contact_view.dart';
+// Kept for when Contacts is re-enabled (see the 'Contacts' case below).
+// import 'package:vigil_parents_app/features/contact/view/contact_view.dart';
+import 'package:vigil_parents_app/features/device_info/presentation/view/device_info_view.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view/gallery_view.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
 import 'package:vigil_parents_app/features/home/repo/home_repo.dart';
@@ -90,9 +93,24 @@ class HomeViewModel extends ChangeNotifier {
         );
 
       case 'Contacts':
+        // Contacts is not ready yet — show a "coming soon" toast for now.
+        // (Navigation kept here for when the feature is enabled.)
+        // return Navigator.push(
+        //   context,
+        //   MaterialPageRoute(builder: (_) => const ContactsPage()),
+        // );
+        showAppToast(
+          context: context,
+          title: 'Coming soon',
+          subtitle: 'Contacts monitoring will be available soon.',
+          type: ToastType.info,
+        );
+        return Future.value();
+
+      case 'device_info':
         return Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => const ContactsPage()),
+          MaterialPageRoute(builder: (_) => const DeviceInfoScreen()),
         );
 
       default:
@@ -116,8 +134,14 @@ class HomeViewModel extends ChangeNotifier {
     debugPrint('Foundation "Know More" tapped');
   }
 
-  void onNotificationsTapped() {
-    debugPrint('Notifications tapped');
+  void onNotificationsTapped(BuildContext context) {
+    // Notifications are not built yet — let the user know it's coming.
+    showAppToast(
+      context: context,
+      title: 'Coming soon',
+      subtitle: 'Notifications will be available in a future update.',
+      type: ToastType.info,
+    );
   }
 
   int _bottomNavIndex = 0;

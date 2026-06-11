@@ -199,7 +199,7 @@ class _LoadedView extends ConsumerWidget {
                     parent: parent,
                     notificationCount: data.notificationCount,
                     onParentTap: onParentTap,
-                    onNotificationsTap: vm.onNotificationsTapped,
+                    onNotificationsTap: () => vm.onNotificationsTapped(context),
                   ),
                 ),
                 const SizedBox(height: 18),

@@ -28,7 +28,7 @@ class AppHeader extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return Container(
       height: preferredSize.height,
-      color: backgroundColor,
+      // color: backgroundColor,
       padding: const EdgeInsets.symmetric(horizontal: 5),
       child: Row(
         children: [

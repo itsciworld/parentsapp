@@ -10,7 +10,7 @@ class LiveStatusSyncJob implements BackgroundJob {
   String get name => 'live_status_sync';
 
   @override
-  Duration get interval => const Duration(seconds: 30);
+  Duration get interval => const Duration(seconds: 60);
 
   @override
   Future<void> run(ServiceInstance service) async {
