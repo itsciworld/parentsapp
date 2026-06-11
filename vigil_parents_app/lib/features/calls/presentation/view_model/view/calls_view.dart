@@ -53,7 +53,7 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
       await ref.read(selectedChildProvider).load();
       ref.read(callLogViewModelProvider).loadCallLogs();
     });
-    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       ref.read(callLogViewModelProvider).refresh();
     });
   }

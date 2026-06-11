@@ -36,7 +36,7 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
     });
 
     // While the screen is open, refresh from the API every 5 seconds.
-    _pollTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       ref.read(smsViewModelProvider).refresh();
     });
   }

@@ -14,6 +14,8 @@ import 'package:vigil_parents_app/features/home/presentation/view_model/home_vie
 import 'package:vigil_parents_app/features/home/widgets/activity_summery.dart';
 import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
+import 'package:vigil_parents_app/features/live_status/models/live_status_model.dart';
+import 'package:vigil_parents_app/features/live_status/presentation/view_model/live_status_viewmodel.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view_model/profile_viewmodel.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -26,30 +28,52 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with WidgetsBindingObserver {
   late final HomeViewModel _vm;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _vm = HomeViewModel();
     _vm.init();
     Future.microtask(() async {
       ref.read(profileViewModelProvider).loadProfile();
       await ref.read(selectedChildProvider).load();
       final id = ref.read(selectedChildProvider).selectedId;
-      if (id != null) ref.read(deviceInfoViewModelProvider).load(id);
+      if (id != null) {
+        ref.read(deviceInfoViewModelProvider).load(id);
+        // Begin live battery/connectivity polling for the selected child.
+        ref.read(liveStatusViewModelProvider).startPolling(id);
+      }
       ref.read(featureBadgesProvider).load();
     });
   }
 
   void _onChildSelected(String childId) {
     ref.read(deviceInfoViewModelProvider).load(childId);
+    ref.read(liveStatusViewModelProvider).startPolling(childId);
     ref.read(featureBadgesProvider).load();
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Pause foreground polling when the app isn't visible — the background
+    // service keeps the status fresh while we're away. Resume on return.
+    final vm = ref.read(liveStatusViewModelProvider);
+    if (state == AppLifecycleState.resumed) {
+      final id = ref.read(selectedChildProvider).selectedId;
+      if (id != null) vm.startPolling(id);
+    } else {
+      vm.stopPolling();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    ref.read(liveStatusViewModelProvider).stopPolling();
     _vm.dispose();
     super.dispose();
   }
@@ -121,6 +145,7 @@ class _LoadedView extends ConsumerWidget {
 
     final selectedChild = ref.watch(selectedChildProvider);
     final deviceInfoVm = ref.watch(deviceInfoViewModelProvider);
+    final liveStatusVm = ref.watch(liveStatusViewModelProvider);
     final badges = ref.watch(featureBadgesProvider);
 
     final features = [
@@ -130,10 +155,14 @@ class _LoadedView extends ConsumerWidget {
         ),
     ];
 
+    final liveStatus = liveStatusVm.status;
+
     final childProfile = _buildChildProfile(
       fallback: data.child,
       selectedName: selectedChild.selected?.name,
       info: deviceInfoVm.info,
+      live: liveStatus,
+      lastSyncAt: liveStatusVm.lastSyncAt,
     );
 
     final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
@@ -151,6 +180,7 @@ class _LoadedView extends ConsumerWidget {
             onRefresh: () async {
               await Future.wait([
                 vm.refresh(),
+                ref.read(liveStatusViewModelProvider).refresh(),
                 ref.read(featureBadgesProvider).load(),
               ]);
             },
@@ -186,7 +216,8 @@ class _LoadedView extends ConsumerWidget {
                         )
                       : _ChildHeroCard(
                           child: childProfile,
-                          batteryLevel: deviceInfoVm.info?.batteryLevel,
+                          battery: liveStatus?.battery,
+                          connectivity: liveStatus?.connectivity,
                           dropdown: ChildSelectorDropdown(
                             onChanged: onChildSelected,
                             showLabel: false,
@@ -269,6 +300,8 @@ class _LoadedView extends ConsumerWidget {
     required ChildProfile fallback,
     required String? selectedName,
     required DeviceInfoResponse? info,
+    required LiveStatusResponse? live,
+    required DateTime? lastSyncAt,
   }) {
     final device = info?.deviceInfo;
 
@@ -280,26 +313,31 @@ class _LoadedView extends ConsumerWidget {
     }
 
     return ChildProfile(
-      name: firstNonEmpty([selectedName, info?.name], fallback.name),
+      name: firstNonEmpty(
+        [selectedName, live?.name, info?.name],
+        fallback.name,
+      ),
       avatarUrl: fallback.avatarUrl,
-      isOnline: info?.isOnline ?? fallback.isOnline,
+      // Online state comes from the live-status endpoint; fall back to
+      // device-info, then the static placeholder.
+      isOnline: live?.isOnline ?? info?.isOnline ?? fallback.isOnline,
       deviceModel: firstNonEmpty([
         device?.model,
+        live?.deviceName,
         info?.deviceName,
       ], fallback.deviceModel),
       osVersion: firstNonEmpty([device?.osVersion], fallback.osVersion),
-      lastSync: _formatLastSeen(info?.lastSeen) ?? fallback.lastSync,
+      // "Last sync" = the moment we last polled live-status.
+      lastSync: _formatSync(lastSyncAt) ?? fallback.lastSync,
     );
   }
 
-  String? _formatLastSeen(String? iso) {
-    if (iso == null || iso.isEmpty) return null;
-    final dt = DateTime.tryParse(iso)?.toLocal();
+  /// Formats a timestamp as a short relative "ago" label.
+  String? _formatSync(DateTime? dt) {
     if (dt == null) return null;
-
     final now = DateTime.now();
     final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inSeconds < 60) return 'Just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays < 7) return '${diff.inDays}d ago';
@@ -497,18 +535,22 @@ class _NotifBell extends StatelessWidget {
 /// ----------------------------------------------------------------------------
 class _ChildHeroCard extends StatelessWidget {
   final ChildProfile child;
-  final int? batteryLevel;
+  final BatteryInfo? battery;
+  final ConnectivityInfo? connectivity;
   final Widget dropdown;
 
   const _ChildHeroCard({
     required this.child,
-    required this.batteryLevel,
+    required this.battery,
+    required this.connectivity,
     required this.dropdown,
   });
 
   @override
   Widget build(BuildContext context) {
     final online = child.isOnline;
+    final batteryLevel = battery?.level;
+    final charging = battery?.isCharging ?? false;
     final deviceLine = [
       child.deviceModel,
       child.osVersion,
@@ -632,10 +674,14 @@ class _ChildHeroCard extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: _InfoStat(
-                  icon: _batteryIcon(batteryLevel),
-                  color: _batteryColor(batteryLevel),
+                  icon: charging
+                      ? Icons.battery_charging_full_rounded
+                      : _batteryIcon(batteryLevel),
+                  color: charging
+                      ? AppColors.online
+                      : _batteryColor(batteryLevel),
                   value: batteryLevel != null ? '$batteryLevel%' : '—',
-                  label: 'Battery',
+                  label: charging ? 'Charging' : 'Battery',
                 ),
               ),
               const SizedBox(width: 8),
@@ -649,6 +695,10 @@ class _ChildHeroCard extends StatelessWidget {
               ),
             ],
           ),
+          if (connectivity != null) ...[
+            const SizedBox(height: 10),
+            _LiveDetails(connectivity: connectivity!, battery: battery),
+          ],
         ],
       ),
     );
@@ -667,6 +717,129 @@ class _ChildHeroCard extends StatelessWidget {
     if (level <= 20) return AppColors.alert;
     if (level <= 40) return AppColors.warning;
     return AppColors.primary;
+  }
+}
+
+/// A single compact line of live connection + device chips. It scrolls
+/// horizontally, so every detail (Wi-Fi name, link speed, battery state,
+/// temperature, …) shows in full without making the card any taller.
+class _LiveDetails extends StatelessWidget {
+  final ConnectivityInfo connectivity;
+  final BatteryInfo? battery;
+
+  const _LiveDetails({required this.connectivity, this.battery});
+
+  @override
+  Widget build(BuildContext context) {
+    final connected = connectivity.isConnected;
+    final wifi = connectivity.wifi;
+    final color = connected ? AppColors.blueIcon : AppColors.textSecondary;
+
+    IconData connIcon;
+    if (!connected) {
+      connIcon = Icons.signal_wifi_connected_no_internet_4_rounded;
+    } else if (connectivity.hasWifi) {
+      connIcon = Icons.wifi_rounded;
+    } else if (connectivity.hasMobile) {
+      connIcon = Icons.signal_cellular_alt_rounded;
+    } else {
+      connIcon = Icons.lan_rounded;
+    }
+
+    String? clean(String? s) =>
+        (s != null && s.trim().isNotEmpty) ? s.trim() : null;
+
+    final ssid = connectivity.hasWifi ? clean(wifi.ssid) : null;
+    final connLabel = ssid != null
+        ? '${connectivity.label} • $ssid'
+        : connectivity.label;
+    final speed = wifi.linkSpeed != null ? '${wifi.linkSpeed} Mbps' : null;
+    final battState = clean(battery?.state);
+    final temp = battery?.temperature != null
+        ? '${battery!.temperature!.toStringAsFixed(1)}°C'
+        : null;
+
+    final pills = <Widget>[
+      _Pill(icon: connIcon, color: color, text: connLabel),
+      if (speed != null)
+        _Pill(icon: Icons.speed_rounded, color: AppColors.blueIcon, text: speed),
+      if (battState != null)
+        _Pill(
+          icon: Icons.bolt_rounded,
+          color: AppColors.online,
+          text: _capitalize(battState),
+        ),
+      if (temp != null)
+        _Pill(
+          icon: Icons.thermostat_rounded,
+          color: AppColors.warning,
+          text: temp,
+        ),
+      if (battery?.isInBatterySaveMode ?? false)
+        const _Pill(
+          icon: Icons.battery_saver_rounded,
+          color: AppColors.warning,
+          text: 'Saver',
+        ),
+      if (connectivity.hasVpn)
+        const _Pill(
+          icon: Icons.vpn_lock_rounded,
+          color: AppColors.primary,
+          text: 'VPN',
+        ),
+    ];
+
+    return SizedBox(
+      height: 32,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: EdgeInsets.zero,
+        itemCount: pills.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (_, i) => Center(child: pills[i]),
+      ),
+    );
+  }
+
+  static String _capitalize(String s) =>
+      s.isEmpty ? s : '${s[0].toUpperCase()}${s.substring(1)}';
+}
+
+class _Pill extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final String text;
+
+  const _Pill({required this.icon, required this.color, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Icon(icon, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            text,
+            maxLines: 1,
+            strutStyle: const StrutStyle(forceStrutHeight: true, height: 1.1),
+            style: const TextStyle(
+              fontSize: 11.5,
+              height: 1.1,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
