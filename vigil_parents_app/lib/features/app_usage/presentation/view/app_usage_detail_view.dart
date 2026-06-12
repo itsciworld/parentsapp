@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/app_usage/models/app_usage_model.dart';
@@ -68,6 +69,7 @@ class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.scaffold,
+      bottomNavigationBar: const AppBottomNav(),
       body: SafeArea(
         bottom: false,
         child: Column(
