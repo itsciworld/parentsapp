@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +18,8 @@ import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
 import 'package:vigil_parents_app/features/live_status/models/live_status_model.dart';
 import 'package:vigil_parents_app/features/live_status/presentation/view_model/live_status_viewmodel.dart';
+import 'package:vigil_parents_app/features/location/presentation/view_model/location_viewmodel.dart';
+import 'package:vigil_parents_app/features/location/presentation/widgets/home_location_card.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view_model/profile_viewmodel.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -31,6 +35,7 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen>
     with WidgetsBindingObserver {
   late final HomeViewModel _vm;
+  Timer? _locationTimer;
 
   @override
   void initState() {
@@ -46,14 +51,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ref.read(deviceInfoViewModelProvider).load(id);
         // Begin live battery/connectivity polling for the selected child.
         ref.read(liveStatusViewModelProvider).startPolling(id);
+        ref.read(locationViewModelProvider).load(id);
       }
       ref.read(featureBadgesProvider).load();
+    });
+
+    // Keep the home map's "latest location" fresh while the screen is visible.
+    _locationTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+      ref.read(locationViewModelProvider).refresh();
     });
   }
 
   void _onChildSelected(String childId) {
     ref.read(deviceInfoViewModelProvider).load(childId);
     ref.read(liveStatusViewModelProvider).startPolling(childId);
+    ref.read(locationViewModelProvider).load(childId);
     ref.read(featureBadgesProvider).load();
   }
 
@@ -65,6 +77,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (state == AppLifecycleState.resumed) {
       final id = ref.read(selectedChildProvider).selectedId;
       if (id != null) vm.startPolling(id);
+      // Pull a fresh location fix the moment we return to the foreground.
+      ref.read(locationViewModelProvider).refresh();
     } else {
       vm.stopPolling();
     }
@@ -73,6 +87,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _locationTimer?.cancel();
     ref.read(liveStatusViewModelProvider).stopPolling();
     _vm.dispose();
     super.dispose();
@@ -181,6 +196,7 @@ class _LoadedView extends ConsumerWidget {
               await Future.wait([
                 vm.refresh(),
                 ref.read(liveStatusViewModelProvider).refresh(),
+                ref.read(locationViewModelProvider).refresh(),
                 ref.read(featureBadgesProvider).load(),
               ]);
             },
@@ -252,6 +268,25 @@ class _LoadedView extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(height: 26),
+
+                // ---- Live location ------------------------------------
+                if (!noChild) ...[
+                  _Reveal(
+                    delayMs: 210,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        _SectionTitle(
+                          title: 'Live Location',
+                          subtitle: 'Tap to expand the full map',
+                        ),
+                        SizedBox(height: 14),
+                        HomeLocationCard(),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 26),
+                ],
 
                 // ---- Activity overview --------------------------------
                 _Reveal(
