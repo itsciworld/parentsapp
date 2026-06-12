@@ -9,12 +9,11 @@ import 'package:vigil_parents_app/features/location/presentation/view/location_d
 import 'package:vigil_parents_app/features/location/presentation/view_model/location_viewmodel.dart';
 import 'package:vigil_parents_app/features/location/presentation/widgets/location_marker.dart';
 
-/// Carto "Voyager" raster basemap — a clean, Google-Maps-like style. Free to
-/// use with attribution, served round-robin from the {s} subdomains below.
-/// Shared by the home card and the detail view.
-const String kMapTileUrl =
-    'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png';
-const List<String> kMapSubdomains = ['a', 'b', 'c', 'd'];
+/// Standard OpenStreetMap raster basemap — detailed and colorful. Free to use
+/// with attribution; no subdomains needed. Shared by the home card and the
+/// detail view.
+const String kMapTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const List<String> kMapSubdomains = <String>[];
 const String kMapUserAgent = 'com.vigil.parents';
 
 /// Home-page "Live Location" card: a live OpenStreetMap preview centered on the
