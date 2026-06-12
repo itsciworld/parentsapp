@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:vigil_parents_app/core/services/background/jobs/app_usage_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/background_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/calls_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/contacts_job.dart';
@@ -24,6 +25,7 @@ final List<BackgroundJob> _jobs = <BackgroundJob>[
   ContactsSyncJob(),
   CallsSyncJob(),
   LiveStatusSyncJob(),
+  AppUsageSyncJob(),
 ];
 
 /// Base tick resolution. Each job decides its own cadence via [BackgroundJob.interval].

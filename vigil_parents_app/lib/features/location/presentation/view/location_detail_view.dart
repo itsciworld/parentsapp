@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
@@ -123,57 +124,60 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
       });
     }
 
-    final topPadding = MediaQuery.of(context).padding.top;
-
     return Scaffold(
       backgroundColor: AppColors.scaffold,
-      body: Stack(
-        children: [
-          // ---- Interactive map -------------------------------------------
-          Positioned.fill(
-            child: _Map(
-              controller: _mapController,
-              latest: latest,
-              onReady: () {
-                _mapReady = true;
-                if (latest != null) _mapController.move(latest.latLng, 16);
-              },
-            ),
-          ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // ---- VIGIL logo header (same as SMS / other views) ----------
+            const AppHeader(),
 
-          // ---- Loading / empty overlays ----------------------------------
-          if (vm.loading && latest == null)
-            const Center(child: CircularProgressIndicator())
-          else if (latest == null)
-            _EmptyOverlay(error: vm.error),
-
-          // ---- Floating glass header -------------------------------------
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: _Header(
-              topPadding: topPadding,
-              onBack: () => Navigator.of(context).maybePop(),
+            // ---- Title + child picker -----------------------------------
+            _TitleBar(
               onChildSelected: _onChildSelected,
               hasFix: latest != null,
               loading: vm.loading,
             ),
-          ),
 
-          // ---- Latest-location card --------------------------------------
-          if (latest != null)
-            Positioned(
-              left: 16,
-              right: 16,
-              bottom: 16 + MediaQuery.of(context).padding.bottom,
-              child: _LatestCard(
-                location: latest,
-                childName: selectedChild.selected?.name,
-                onRecenter: () => _recenter(latest),
+            // ---- Map + overlays -----------------------------------------
+            Expanded(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: _Map(
+                      controller: _mapController,
+                      latest: latest,
+                      onReady: () {
+                        _mapReady = true;
+                        if (latest != null) {
+                          _mapController.move(latest.latLng, 16);
+                        }
+                      },
+                    ),
+                  ),
+
+                  if (vm.loading && latest == null)
+                    const Center(child: CircularProgressIndicator())
+                  else if (latest == null)
+                    _EmptyOverlay(error: vm.error),
+
+                  if (latest != null)
+                    Positioned(
+                      left: 16,
+                      right: 16,
+                      bottom: 16 + MediaQuery.of(context).padding.bottom,
+                      child: _LatestCard(
+                        location: latest,
+                        childName: selectedChild.selected?.name,
+                        onRecenter: () => _recenter(latest),
+                      ),
+                    ),
+                ],
               ),
             ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -230,18 +234,14 @@ class _Map extends StatelessWidget {
 }
 
 /// ----------------------------------------------------------------------------
-/// Floating header (glass) with back, title, and the shared child dropdown.
+/// Title + shared child dropdown, shown under the VIGIL logo header.
 /// ----------------------------------------------------------------------------
-class _Header extends StatelessWidget {
-  final double topPadding;
-  final VoidCallback onBack;
+class _TitleBar extends StatelessWidget {
   final ValueChanged<String> onChildSelected;
   final bool hasFix;
   final bool loading;
 
-  const _Header({
-    required this.topPadding,
-    required this.onBack,
+  const _TitleBar({
     required this.onChildSelected,
     required this.hasFix,
     required this.loading,
@@ -250,21 +250,9 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.fromLTRB(14, topPadding + 10, 14, 14),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            AppColors.scaffold,
-            AppColors.scaffold.withValues(alpha: 0.0),
-          ],
-        ),
-      ),
+      padding: const EdgeInsets.fromLTRB(16, 4, 14, 12),
       child: Row(
         children: [
-          _CircleButton(icon: Icons.arrow_back_rounded, onTap: onBack),
-          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -308,31 +296,6 @@ class _Header extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _CircleButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _CircleButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surface,
-      shape: const CircleBorder(),
-      elevation: 2,
-      shadowColor: Colors.black.withValues(alpha: 0.15),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Icon(icon, size: 20, color: AppColors.textPrimary),
-        ),
       ),
     );
   }

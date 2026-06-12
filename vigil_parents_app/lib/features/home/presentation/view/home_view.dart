@@ -13,7 +13,8 @@ import 'package:vigil_parents_app/features/device_info/presentation/view_model/d
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/feature_badges_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/home_viewmodel.dart';
-import 'package:vigil_parents_app/features/home/widgets/activity_summery.dart';
+import 'package:vigil_parents_app/features/app_usage/presentation/view_model/app_usage_viewmodel.dart';
+import 'package:vigil_parents_app/features/app_usage/presentation/widgets/activity_overview_card.dart';
 import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
 import 'package:vigil_parents_app/features/live_status/models/live_status_model.dart';
@@ -52,6 +53,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         // Begin live battery/connectivity polling for the selected child.
         ref.read(liveStatusViewModelProvider).startPolling(id);
         ref.read(locationViewModelProvider).load(id);
+        ref.read(appUsageViewModelProvider).load(id);
       }
       ref.read(featureBadgesProvider).load();
     });
@@ -66,6 +68,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     ref.read(deviceInfoViewModelProvider).load(childId);
     ref.read(liveStatusViewModelProvider).startPolling(childId);
     ref.read(locationViewModelProvider).load(childId);
+    ref.read(appUsageViewModelProvider).load(childId);
     ref.read(featureBadgesProvider).load();
   }
 
@@ -77,8 +80,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (state == AppLifecycleState.resumed) {
       final id = ref.read(selectedChildProvider).selectedId;
       if (id != null) vm.startPolling(id);
-      // Pull a fresh location fix the moment we return to the foreground.
+      // Pull fresh location + app-usage the moment we return to the foreground.
       ref.read(locationViewModelProvider).refresh();
+      ref.read(appUsageViewModelProvider).refresh();
     } else {
       vm.stopPolling();
     }
@@ -197,6 +201,7 @@ class _LoadedView extends ConsumerWidget {
                 vm.refresh(),
                 ref.read(liveStatusViewModelProvider).refresh(),
                 ref.read(locationViewModelProvider).refresh(),
+                ref.read(appUsageViewModelProvider).refresh(),
                 ref.read(featureBadgesProvider).load(),
               ]);
             },
@@ -294,12 +299,12 @@ class _LoadedView extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const _SectionTitle(title: 'Activity Overview'),
-                      const SizedBox(height: 14),
-                      ActivitySummaryCard(
-                        activity: data.activity,
-                        onViewAllAlerts: vm.onViewAllAlerts,
+                      const _SectionTitle(
+                        title: 'Activity Overview',
+                        subtitle: 'Tap to expand app usage',
                       ),
+                      const SizedBox(height: 14),
+                      const ActivityOverviewCard(),
                     ],
                   ),
                 ),

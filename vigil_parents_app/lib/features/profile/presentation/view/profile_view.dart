@@ -62,10 +62,20 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
     final selectedChild = ref.watch(selectedChildProvider);
     final permsVm = ref.watch(childPermissionsProvider);
 
+    // Safety net: if permissions haven't loaded for the selected child yet,
+    // kick it off — but *after* this frame. Modifying a provider during build
+    // (which load() does via notifyListeners) throws in Riverpod.
     if (selectedChild.selectedId != null &&
         permsVm.permissions == null &&
         !permsVm.loading) {
-      ref.read(childPermissionsProvider).load(selectedChild.selectedId!);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final id = ref.read(selectedChildProvider).selectedId;
+        final perms = ref.read(childPermissionsProvider);
+        if (id != null && perms.permissions == null && !perms.loading) {
+          perms.load(id);
+        }
+      });
     }
 
     return Scaffold(
