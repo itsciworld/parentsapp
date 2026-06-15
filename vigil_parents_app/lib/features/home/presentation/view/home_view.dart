@@ -169,9 +169,7 @@ class _LoadedView extends ConsumerWidget {
 
     final features = [
       for (final t in data.features)
-        t.withBadge(
-          badges.unseenFor(t.id) > 0 ? badges.unseenFor(t.id) : null,
-        ),
+        t.withBadge(badges.unseenFor(t.id) > 0 ? badges.unseenFor(t.id) : null),
     ];
 
     final liveStatus = liveStatusVm.status;
@@ -211,125 +209,110 @@ class _LoadedView extends ConsumerWidget {
               child: Padding(
                 padding: EdgeInsets.fromLTRB(16, topPadding + 10, 16, 0),
                 child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ---- Greeting bar -------------------------------------
-                _Reveal(
-                  delayMs: 0,
-                  child: _TopBar(
-                    parent: parent,
-                    notificationCount: data.notificationCount,
-                    onParentTap: onParentTap,
-                    onNotificationsTap: () => vm.onNotificationsTapped(context),
-                  ),
-                ),
-                const SizedBox(height: 18),
-
-                // ---- Child hero card ----------------------------------
-                _Reveal(
-                  delayMs: 90,
-                  child: noChild
-                      ? NoChildLinkedView(
-                          refreshing: selectedChild.loading,
-                          onRefresh: () => ref
-                              .read(selectedChildProvider)
-                              .load(force: true),
-                        )
-                      : _ChildHeroCard(
-                          child: childProfile,
-                          battery: liveStatus?.battery,
-                          connectivity: liveStatus?.connectivity,
-                          dropdown: ChildSelectorDropdown(
-                            onChanged: onChildSelected,
-                            showLabel: false,
-                          ),
-                        ),
-                ),
-                const SizedBox(height: 26),
-
-                // ---- Monitoring tools ---------------------------------
-                _Reveal(
-                  delayMs: 170,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SectionTitle(
-                        title: 'Monitoring Tools',
-                        subtitle: 'Tap a tool to view activity',
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // ---- Greeting bar -------------------------------------
+                    _Reveal(
+                      delayMs: 0,
+                      child: _TopBar(
+                        parent: parent,
+                        notificationCount: data.notificationCount,
+                        onParentTap: onParentTap,
+                        onNotificationsTap: () =>
+                            vm.onNotificationsTapped(context),
                       ),
-                      const SizedBox(height: 14),
-                      FeatureGrid(
-                        features: features,
-                        onTap: (tile) {
-                          ref
-                              .read(featureBadgesProvider)
-                              .markSeenForTile(tile.id);
-                          vm.onFeatureTapped(context, tile).then(
-                            (_) => ref.read(featureBadgesProvider).load(),
-                          );
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 26),
-
-                // ---- Live location ------------------------------------
-                if (!noChild) ...[
-                  _Reveal(
-                    delayMs: 210,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        _SectionTitle(
-                          title: 'Live Location',
-                          subtitle: 'Tap to expand the full map',
-                        ),
-                        SizedBox(height: 14),
-                        HomeLocationCard(),
-                      ],
                     ),
-                  ),
-                  const SizedBox(height: 26),
-                ],
+                    const SizedBox(height: 18),
 
-                // ---- Activity overview --------------------------------
-                _Reveal(
-                  delayMs: 240,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SectionTitle(
-                        title: 'Activity Overview',
-                        subtitle: 'Tap to expand app usage',
-                      ),
-                      const SizedBox(height: 14),
-                      const ActivityOverviewCard(),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 26),
+                    // ---- Child hero card ----------------------------------
+                    _Reveal(
+                      delayMs: 90,
+                      child: noChild
+                          ? NoChildLinkedView(
+                              refreshing: selectedChild.loading,
+                              onRefresh: () => ref
+                                  .read(selectedChildProvider)
+                                  .load(force: true),
+                            )
+                          : _ChildHeroCard(
+                              child: childProfile,
+                              battery: liveStatus?.battery,
+                              connectivity: liveStatus?.connectivity,
+                              dropdown: ChildSelectorDropdown(
+                                onChanged: onChildSelected,
+                                showLabel: false,
+                              ),
+                            ),
+                    ),
+                    const SizedBox(height: 26),
 
-                // ---- Foundation ---------------------------------------
-                _Reveal(
-                  delayMs: 310,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const _SectionTitle(title: 'Our Initiative'),
-                      const SizedBox(height: 14),
-                      FoundationCard(
-                        info: data.foundation,
-                        onKnowMore: vm.onKnowMoreFoundation,
+                    // ---- Monitoring tools ---------------------------------
+                    _Reveal(
+                      delayMs: 170,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _SectionTitle(
+                            title: 'Monitoring Tools',
+                            subtitle: 'Tap a tool to view activity',
+                          ),
+                          const SizedBox(height: 14),
+                          FeatureGrid(
+                            features: features,
+                            onTap: (tile) {
+                              ref
+                                  .read(featureBadgesProvider)
+                                  .markSeenForTile(tile.id);
+                              vm
+                                  .onFeatureTapped(context, tile)
+                                  .then(
+                                    (_) =>
+                                        ref.read(featureBadgesProvider).load(),
+                                  );
+                            },
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(height: 26),
+
+                    // ---- Activity overview --------------------------------
+                    _Reveal(
+                      delayMs: 240,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _SectionTitle(title: 'Activity Overview'),
+                          const SizedBox(height: 14),
+                          ActivitySummaryCard(
+                            activity: data.activity,
+                            onViewAllAlerts: vm.onViewAllAlerts,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+
+                    // ---- Foundation ---------------------------------------
+                    _Reveal(
+                      delayMs: 310,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const _SectionTitle(title: 'Our Initiative'),
+                          const SizedBox(height: 14),
+                          FoundationCard(
+                            info: data.foundation,
+                            onKnowMore: vm.onKnowMoreFoundation,
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(height: bottomPadding + 24),
+                  ],
                 ),
-                SizedBox(height: bottomPadding + 24),
-              ],
+              ),
             ),
-          ),
-        ),
           ),
         ],
       ),
@@ -353,10 +336,11 @@ class _LoadedView extends ConsumerWidget {
     }
 
     return ChildProfile(
-      name: firstNonEmpty(
-        [selectedName, live?.name, info?.name],
-        fallback.name,
-      ),
+      name: firstNonEmpty([
+        selectedName,
+        live?.name,
+        info?.name,
+      ], fallback.name),
       avatarUrl: fallback.avatarUrl,
       // Online state comes from the live-status endpoint; fall back to
       // device-info, then the static placeholder.
@@ -646,11 +630,7 @@ class _ChildHeroCard extends StatelessWidget {
                     ),
                   ),
                   if (online)
-                    const Positioned(
-                      right: 1,
-                      bottom: 1,
-                      child: _PulsingDot(),
-                    ),
+                    const Positioned(right: 1, bottom: 1, child: _PulsingDot()),
                 ],
               ),
               const SizedBox(width: 14),
@@ -802,7 +782,11 @@ class _LiveDetails extends StatelessWidget {
     final pills = <Widget>[
       _Pill(icon: connIcon, color: color, text: connLabel),
       if (speed != null)
-        _Pill(icon: Icons.speed_rounded, color: AppColors.blueIcon, text: speed),
+        _Pill(
+          icon: Icons.speed_rounded,
+          color: AppColors.blueIcon,
+          text: speed,
+        ),
       if (battState != null)
         _Pill(
           icon: Icons.bolt_rounded,
@@ -1142,12 +1126,11 @@ class _LoadingView extends StatelessWidget {
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
                   itemCount: 6,
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 3,
-                        mainAxisSpacing: 15,
-                        crossAxisSpacing: 15,
-                      ),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 15,
+                    crossAxisSpacing: 15,
+                  ),
                   itemBuilder: (_, _) => _box(radius: 14),
                 ),
                 const SizedBox(height: 24),

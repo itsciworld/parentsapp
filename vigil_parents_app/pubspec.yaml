@@ -49,6 +49,11 @@ dependencies:
   shimmer: ^3.0.0
   flutter_background_service: ^5.1.0
   flutter_local_notifications: ^19.4.0
+  url_launcher: ^6.3.1
+  # Pinned to 32.1.23: newer (>=32.1.24 / 33.x) require timezone ^0.11.0, which
+  # conflicts with flutter_local_notifications ^19.4.0 (timezone ^0.10.0) used by
+  # the background service. 32.1.23 is the latest that resolves with it.
+  syncfusion_flutter_calendar: 32.1.23
   flutter_map: ^8.3.0
   latlong2: ^0.9.1
   fl_chart: ^1.2.0

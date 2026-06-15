@@ -74,6 +74,10 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
           perms.load(id);
         }
       });
+      // Defer out of build — load() calls notifyListeners synchronously, and
+      // modifying a provider during build throws in Riverpod.
+      final id = selectedChild.selectedId!;
+      Future.microtask(() => ref.read(childPermissionsProvider).load(id));
     }
 
     return Scaffold(
@@ -168,10 +172,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
           ),
         ],
         const SizedBox(height: 24),
-        _LogoutButton(
-          isLoading: _isLoggingOut,
-          onTap: _confirmAndLogout,
-        ),
+        _LogoutButton(isLoading: _isLoggingOut, onTap: _confirmAndLogout),
         const SizedBox(height: 16),
         const Center(
           child: Text(
@@ -669,7 +670,11 @@ class _LogoutButton extends StatelessWidget {
                 : const Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.logout_rounded, size: 20, color: AppColors.alert),
+                      Icon(
+                        Icons.logout_rounded,
+                        size: 20,
+                        color: AppColors.alert,
+                      ),
                       SizedBox(width: 10),
                       Text(
                         'Log out',

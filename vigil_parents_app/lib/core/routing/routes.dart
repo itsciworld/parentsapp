@@ -8,6 +8,7 @@ import 'package:vigil_parents_app/features/auth/presentation/view/splash_view.da
 import 'package:vigil_parents_app/features/calls/presentation/view_model/view/calls_view.dart';
 import 'package:vigil_parents_app/features/child/presentation/view/child_view.dart';
 import 'package:vigil_parents_app/features/contact/view/contact_view.dart';
+import 'package:vigil_parents_app/features/events/view/events_view.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view/gallery_view.dart';
 import 'package:vigil_parents_app/features/introduction/presentation/view/intro_view.dart';
 import 'package:vigil_parents_app/features/main_shell/main_shell.dart';
@@ -28,6 +29,7 @@ class AppRoutesName {
   static const String callView = '/callView';
   static const String galleryView = '/galleryView';
   static const String contactView = '/contactView';
+  static const String eventsView = '/eventsView';
   static const String childView = '/childView';
   static const String settingsView = '/settingsView';
   static const String profileView = '/profileView';
@@ -80,6 +82,8 @@ class AppRouteGenerator {
         return MaterialPageRoute(builder: (_) => GalleryScreen());
       case AppRoutesName.callView:
         return MaterialPageRoute(builder: (_) => AccessCallsScreen());
+      case AppRoutesName.eventsView:
+        return MaterialPageRoute(builder: (_) => const EventsScreen());
       default:
         return MaterialPageRoute(
           builder: (_) =>

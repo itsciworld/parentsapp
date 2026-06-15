@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/components/app_search_field.dart';
+import 'package:vigil_parents_app/components/app_shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
@@ -60,7 +61,7 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
 
   Widget _buildList(ContactsViewModel vm, Size size) {
     if (vm.loading && vm.contacts.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const ListShimmer();
     }
 
     if (vm.error != null && vm.contacts.isEmpty) {

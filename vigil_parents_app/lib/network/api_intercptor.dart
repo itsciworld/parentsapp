@@ -1,7 +1,8 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/config/api_config.dart';
-
+import 'package:vigil_parents_app/core/navigation/app_navigator.dart';
+import 'package:vigil_parents_app/core/routing/routes.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
 
 class ApiInterceptor extends Interceptor {
@@ -52,14 +53,14 @@ class ApiInterceptor extends Interceptor {
   }
 
   @override
-  void onError(DioException err, ErrorInterceptorHandler handler) {
+  void onError(DioException err, ErrorInterceptorHandler handler) async {
     String message = "Something went wrong";
 
     if (err.response != null) {
+      final statusCode = err.response?.statusCode;
       final data = err.response?.data;
 
       if (data is Map<String, dynamic>) {
-        // ✅ Your backend uses "msg"
         if (data['msg'] != null) {
           message = data['msg'];
         } else if (data['message'] != null) {
@@ -67,7 +68,15 @@ class ApiInterceptor extends Interceptor {
         }
       }
 
-      debugPrint("❌ ERROR[${err.response?.statusCode}] => $message");
+      debugPrint("❌ ERROR[$statusCode] => $message");
+
+      if (statusCode == 401) {
+        await SecureDeviceService.clearAuthData();
+        navigatorKey.currentState?.pushNamedAndRemoveUntil(
+          AppRoutesName.loginView,
+          (_) => false,
+        );
+      }
     } else {
       // Network / timeout
       if (err.type == DioExceptionType.connectionTimeout) {
@@ -83,7 +92,6 @@ class ApiInterceptor extends Interceptor {
       debugPrint("❌ NETWORK ERROR => $message");
     }
 
-    // ✅ Throw clean message
     handler.reject(
       DioException(
         requestOptions: err.requestOptions,

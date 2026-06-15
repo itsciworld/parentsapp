@@ -9,6 +9,7 @@ import 'package:vigil_parents_app/core/services/background/jobs/app_usage_job.da
 import 'package:vigil_parents_app/core/services/background/jobs/background_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/calls_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/contacts_job.dart';
+import 'package:vigil_parents_app/core/services/background/jobs/events_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/live_status_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/sms_job.dart';
 
@@ -24,6 +25,7 @@ final List<BackgroundJob> _jobs = <BackgroundJob>[
   SmsSyncJob(),
   ContactsSyncJob(),
   CallsSyncJob(),
+  EventsSyncJob(),
   LiveStatusSyncJob(),
   AppUsageSyncJob(),
 ];

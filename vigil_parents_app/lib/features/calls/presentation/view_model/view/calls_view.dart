@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/components/app_search_field.dart';
+import 'package:vigil_parents_app/components/app_shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/calls/models/calls_model.dart';
 import 'package:vigil_parents_app/features/calls/presentation/view_model/calls_viewmodel.dart';
@@ -168,7 +169,7 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
 
   Widget _buildList(CallLogViewModel vm, Size size) {
     if (vm.loading && vm.logs.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const ListShimmer();
     }
 
     if (vm.error != null && vm.logs.isEmpty) {

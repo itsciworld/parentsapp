@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/core/navigation/app_navigator.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
 import 'package:vigil_parents_app/core/services/background/background_service.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
@@ -59,6 +60,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       title: 'Vigil Parents App',
       theme: ThemeData(

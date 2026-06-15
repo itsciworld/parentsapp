@@ -56,5 +56,11 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Lets url_launcher open https links (e.g. the Google Meet "Join"
+             button on the Events screen) on Android 11+ package visibility. -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 </manifest>

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
+import 'package:vigil_parents_app/components/app_shimmer.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view_model/gallery_viewmodel.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/widgets/gallery_photo_grid.dart';
 
@@ -64,7 +65,33 @@ class GalleryScreen extends ConsumerWidget {
           );
         },
         error: (_, _) => const Center(child: Text('Error')),
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => SafeArea(
+          child: SingleChildScrollView(
+            physics: const NeverScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(5),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppHeader(showBack: true, onActionTap: () {}),
+                const Padding(
+                  padding: EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ShimmerBox(height: 90, radius: 16),
+                      SizedBox(height: 20),
+                      ShimmerBox(height: 70, radius: 16),
+                      SizedBox(height: 24),
+                      ShimmerBox(width: 120, height: 18),
+                      SizedBox(height: 16),
+                      GridShimmer(),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
