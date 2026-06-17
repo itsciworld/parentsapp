@@ -42,7 +42,8 @@ class ApiInterceptor extends Interceptor {
   }
 
   /// Endpoints whose request/response bodies should not be logged.
-  bool _isSilent(String path) => path.contains('/api/sms/');
+  bool _isSilent(String path) =>
+      path.contains('/api/sms/') || path.contains('/api/files/');
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {

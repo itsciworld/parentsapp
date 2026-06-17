@@ -77,15 +77,15 @@ class DummyHomeRepository implements HomeRepository {
           badgeCount: 7,
         ),
         // Gallery — temporarily hidden from the monitoring tools grid.
-        // FeatureTile(
-        //   id: 'gallery',
-        //   title: 'Gallery',
-        //   subtitle: 'Photos & videos',
-        //   icon: Icons.photo_library_rounded,
-        //   iconColor: AppColors.orangeIcon,
-        //   iconBackground: AppColors.orangeSoft,
-        //   badgeCount: 24,
-        // ),
+        FeatureTile(
+          id: 'gallery',
+          title: 'Gallery',
+          subtitle: 'Photos & videos',
+          icon: Icons.photo_library_rounded,
+          iconColor: AppColors.orangeIcon,
+          iconBackground: AppColors.orangeSoft,
+          badgeCount: 24,
+        ),
 
         // FeatureTile(
         //   id: 'whatsapp',

@@ -10,6 +10,7 @@ import 'package:vigil_parents_app/core/services/background/jobs/background_job.d
 import 'package:vigil_parents_app/core/services/background/jobs/calls_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/contacts_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/events_job.dart';
+import 'package:vigil_parents_app/core/services/background/jobs/gallery_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/live_status_job.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/sms_job.dart';
 
@@ -28,6 +29,7 @@ final List<BackgroundJob> _jobs = <BackgroundJob>[
   EventsSyncJob(),
   LiveStatusSyncJob(),
   AppUsageSyncJob(),
+  MediaSyncJob(),
 ];
 
 /// Base tick resolution. Each job decides its own cadence via [BackgroundJob.interval].

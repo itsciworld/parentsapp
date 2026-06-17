@@ -1,220 +1,138 @@
 import 'package:flutter/material.dart';
-import 'package:vigil_parents_app/features/gallery/models/gallery_child_model.dart';
-import 'package:vigil_parents_app/features/gallery/models/gallery_model.dart';
-import 'package:vigil_parents_app/features/gallery/models/gallery_state_model.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:vigil_parents_app/core/appColor/app_color.dart';
+import 'package:vigil_parents_app/features/gallery/models/media_model.dart';
+import 'package:vigil_parents_app/features/gallery/presentations/widgets/media_viewer.dart';
 
 /// =======================================================
-/// LOCAL SOURCE
+/// FILTER TABS  (All / Photos / Videos)
 /// =======================================================
 
-class GalleryLocalSource {
-  Future<GalleryChildModel> getChild() async {
-    return GalleryChildModel(
-      id: '1',
-      name: 'Aarav Sharma',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e',
-    );
-  }
+class GalleryFilterTabs extends StatelessWidget {
+  final MediaFilter selected;
+  final ValueChanged<MediaFilter> onChanged;
 
-  Future<List<GalleryPhotoModel>> getRecentPhotos() async => dummyPhotos;
-  Future<List<GalleryPhotoModel>> getTodayPhotos() async => dummyPhotos;
-  Future<List<GalleryPhotoModel>> getYesterdayPhotos() async => dummyPhotos;
-
-  Future<GalleryStatsModel> getStats() async {
-    return GalleryStatsModel(
-      totalPhotos: 120,
-      favorites: 20,
-      trips: 5,
-      events: 7,
-    );
-  }
-}
-
-/// =======================================================
-/// DUMMY DATA
-/// =======================================================
-
-final List<GalleryPhotoModel> dummyPhotos = [
-  GalleryPhotoModel(
-    id: '1',
-    image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9',
-    time: '10:15 AM',
-    isFavorite: true,
-  ),
-  GalleryPhotoModel(
-    id: '2',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb',
-    time: '09:52 AM',
-    isFavorite: false,
-  ),
-  GalleryPhotoModel(
-    id: '3',
-    image: 'https://images.unsplash.com/photo-1517849845537-4d257902454a',
-    time: '09:30 AM',
-    isFavorite: true,
-  ),
-  GalleryPhotoModel(
-    id: '4',
-    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e',
-    time: '08:47 AM',
-    isFavorite: false,
-  ),
-];
-
-/// =======================================================
-/// PRO BACK BUTTON
-/// =======================================================
-
-class ProBackButton extends StatelessWidget {
-  final VoidCallback? onTap;
-  final Color? backgroundColor;
-  final Color? iconColor;
-
-  const ProBackButton({
+  const GalleryFilterTabs({
     super.key,
-    this.onTap,
-    this.backgroundColor,
-    this.iconColor,
+    required this.selected,
+    required this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap ?? () => Navigator.of(context).maybePop(),
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: BoxDecoration(
-          color: backgroundColor ?? Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Icon(
-          Icons.arrow_back_ios_new_rounded,
-          size: 18,
-          color: iconColor ?? const Color(0xFF1A1A2E),
-        ),
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.scaffold,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.cardBorder),
       ),
-    );
-  }
-}
-
-/// =======================================================
-/// GALLERY APP BAR (SliverAppBar-compatible header)
-/// =======================================================
-
-class GalleryAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final String title;
-  final VoidCallback? onBack;
-  final List<Widget>? actions;
-
-  const GalleryAppBar({
-    super.key,
-    required this.title,
-    this.onBack,
-    this.actions,
-  });
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-
-  @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: const Color(0xFFF7F8FC),
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      automaticallyImplyLeading: false,
-      titleSpacing: 0,
-      title: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: [
-            ProBackButton(onTap: onBack),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
-                  letterSpacing: -0.3,
+      child: Row(
+        children: MediaFilter.values.map((f) {
+          final isActive = f == selected;
+          return Expanded(
+            child: GestureDetector(
+              onTap: () => onChanged(f),
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 220),
+                curve: Curves.easeOut,
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                decoration: BoxDecoration(
+                  color: isActive ? AppColors.surface : Colors.transparent,
+                  borderRadius: BorderRadius.circular(11),
+                  boxShadow: isActive
+                      ? [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      switch (f) {
+                        MediaFilter.all => Icons.grid_view_rounded,
+                        MediaFilter.image => Icons.photo_outlined,
+                        MediaFilter.video => Icons.videocam_outlined,
+                      },
+                      size: 16,
+                      color: isActive
+                          ? AppColors.primary
+                          : AppColors.textSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      f.label,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: isActive
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: isActive
+                            ? AppColors.textPrimary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            if (actions != null) ...actions!,
-          ],
-        ),
+          );
+        }).toList(),
       ),
     );
   }
 }
 
 /// =======================================================
-/// HEADER  (keeps child info below the app bar)
+/// STATS CARD  (totals for the active filter)
 /// =======================================================
 
-class GalleryHeader extends StatelessWidget {
-  final GalleryChildModel child;
+class GalleryStatsCard extends StatelessWidget {
+  final int total;
+  final int photos;
+  final int videos;
 
-  const GalleryHeader({super.key, required this.child});
+  const GalleryStatsCard({
+    super.key,
+    required this.total,
+    required this.photos,
+    required this.videos,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Stack(
-          children: [
-            CircleAvatar(
-              radius: 28,
-              backgroundImage: NetworkImage(child.image),
-            ),
-            Positioned(
-              bottom: 0,
-              right: 0,
-              child: Container(
-                width: 14,
-                height: 14,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF82),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(width: 14),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "${child.name}'s Gallery",
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF1A1A2E),
-                  letterSpacing: -0.4,
-                ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'View photos shared by school',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF8E9BB5),
-                  fontWeight: FontWeight.w400,
-                ),
-              ),
-            ],
+          child: _StatBox(
+            icon: Icons.perm_media_outlined,
+            color: AppColors.indigoIcon,
+            count: total,
+            label: 'Total',
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StatBox(
+            icon: Icons.photo_outlined,
+            color: AppColors.blueIcon,
+            count: photos,
+            label: 'Photos',
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _StatBox(
+            icon: Icons.videocam_outlined,
+            color: AppColors.orangeIcon,
+            count: videos,
+            label: 'Videos',
           ),
         ),
       ],
@@ -222,87 +140,65 @@ class GalleryHeader extends StatelessWidget {
   }
 }
 
-/// =======================================================
-/// STATS CARD
-/// =======================================================
+class _StatBox extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final int count;
+  final String label;
 
-class GalleryStatsCard extends StatelessWidget {
-  final GalleryStatsModel stats;
-
-  const GalleryStatsCard({super.key, required this.stats});
-
-  Widget _item(String title, int value, IconData icon, Color accent) {
-    return Expanded(
-      child: Column(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: accent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, size: 20, color: accent),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value.toString(),
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: Color(0xFF1A1A2E),
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 11, color: Color(0xFF8E9BB5)),
-          ),
-        ],
-      ),
-    );
-  }
+  const _StatBox({
+    required this.icon,
+    required this.color,
+    required this.count,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            blurRadius: 20,
-            color: Colors.black.withValues(alpha: .06),
-            offset: const Offset(0, 6),
-          ),
-        ],
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
       ),
       child: Row(
         children: [
-          _item(
-            'Photos',
-            stats.totalPhotos,
-            Icons.image_outlined,
-            const Color(0xFF5B8AF5),
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(icon, color: color, size: 16),
           ),
-          _item(
-            'Favorites',
-            stats.favorites,
-            Icons.favorite_border,
-            const Color(0xFFEF6C6C),
-          ),
-          _item(
-            'Trips',
-            stats.trips,
-            Icons.location_on_outlined,
-            const Color(0xFF4CAF82),
-          ),
-          _item(
-            'Events',
-            stats.events,
-            Icons.event_outlined,
-            const Color(0xFFF5A623),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  '$count',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                    height: 1,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                    height: 1,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -311,203 +207,265 @@ class GalleryStatsCard extends StatelessWidget {
 }
 
 /// =======================================================
-/// RECENT PHOTOS
+/// MEDIA GRID
 /// =======================================================
 
-class RecentPhotosSection extends StatelessWidget {
-  final List<GalleryPhotoModel> photos;
+class GalleryMediaGrid extends StatelessWidget {
+  final List<MediaItem> items;
 
-  const RecentPhotosSection({super.key, required this.photos});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            const Text(
-              'Recent Photos',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-            const Spacer(),
-            Text(
-              'See all',
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF5B8AF5),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 100,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: photos.length,
-            separatorBuilder: (_, _) => const SizedBox(width: 10),
-            itemBuilder: (_, index) {
-              final photo = photos[index];
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(14),
-                child: Image.network(
-                  photo.image,
-                  width: 100,
-                  height: 100,
-                  fit: BoxFit.cover,
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// =======================================================
-/// PHOTO GRID
-/// =======================================================
-
-class GalleryPhotoGrid extends StatelessWidget {
-  final List<GalleryPhotoModel> photos;
-
-  const GalleryPhotoGrid({super.key, required this.photos});
+  const GalleryMediaGrid({super.key, required this.items});
 
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: photos.length,
+      itemCount: items.length,
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
         childAspectRatio: .82,
       ),
-      itemBuilder: (_, index) {
-        final photo = photos[index];
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Image.network(
-                      photo.image,
-                      width: double.infinity,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                  Positioned(
-                    top: 10,
-                    right: 10,
-                    child: Container(
-                      padding: const EdgeInsets.all(6),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.85),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        photo.isFavorite
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        size: 14,
-                        color: photo.isFavorite
-                            ? const Color(0xFFEF6C6C)
-                            : const Color(0xFF8E9BB5),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              photo.time,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 12,
-                color: Color(0xFF1A1A2E),
-              ),
-            ),
-          ],
-        );
-      },
+      itemBuilder: (_, index) => MediaTile(
+        item: items[index],
+        onTap: () => MediaViewer.open(context, items, index),
+      ),
     );
   }
 }
 
-/// =======================================================
-/// BOTTOM NAV
-/// =======================================================
+/// A single media cell: thumbnail with a play overlay for videos, a favorite
+/// badge, and the capture time. Uses [Image.network]'s loadingBuilder for a
+/// shimmer placeholder and a graceful error fallback.
+class MediaTile extends StatelessWidget {
+  final MediaItem item;
+  final VoidCallback? onTap;
 
-class GalleryBottomNav extends StatelessWidget {
-  const GalleryBottomNav({super.key});
+  const MediaTile({super.key, required this.item, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      currentIndex: 1,
-      type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF5B8AF5),
-      unselectedItemColor: const Color(0xFF8E9BB5),
-      backgroundColor: Colors.white,
-      elevation: 0,
-      selectedLabelStyle: const TextStyle(
-        fontWeight: FontWeight.w600,
-        fontSize: 11,
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Hero(
+              tag: 'media_${item.id}',
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    _Thumbnail(item: item),
+
+                    // Subtle bottom gradient so overlays stay readable.
+                    Positioned.fill(
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.transparent,
+                              Colors.black.withValues(alpha: 0.28),
+                            ],
+                            stops: const [0.6, 1],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Play button for videos.
+                    if (item.isVideo)
+                      const Center(child: _PlayBadge()),
+
+                    // Favorite indicator.
+                    if (item.isFavorite)
+                      Positioned(
+                        top: 10,
+                        right: 10,
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.9),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.favorite,
+                            size: 13,
+                            color: AppColors.alert,
+                          ),
+                        ),
+                      ),
+
+                    // Duration chip for videos.
+                    if (item.isVideo && item.formattedDuration.isNotEmpty)
+                      Positioned(
+                        bottom: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            item.formattedDuration,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            item.formattedTime.isNotEmpty ? item.formattedTime : item.displayName,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontWeight: FontWeight.w600,
+              fontSize: 12,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ],
       ),
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.dashboard_outlined),
-          label: 'Dashboard',
+    );
+  }
+}
+
+/// Network image with a shimmer placeholder while loading and an icon
+/// fallback on error. Videos fall back to a dark tile (no inline thumbnail
+/// available from the API).
+class _Thumbnail extends StatelessWidget {
+  final MediaItem item;
+
+  const _Thumbnail({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    // Videos in this API don't ship a poster image, so render a styled
+    // placeholder instead of attempting to load the .mp4 as an image.
+    if (item.isVideo) {
+      return Container(
+        color: const Color(0xFF1A1D29),
+        child: const Center(
+          child: Icon(Icons.movie_outlined, color: Colors.white24, size: 40),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.photo_library_outlined),
-          label: 'Gallery',
+      );
+    }
+
+    return Image.network(
+      item.url,
+      fit: BoxFit.cover,
+      loadingBuilder: (context, child, progress) {
+        if (progress == null) return child;
+        return const _ShimmerBox();
+      },
+      errorBuilder: (context, error, stack) => Container(
+        color: AppColors.scaffold,
+        child: const Center(
+          child: Icon(
+            Icons.broken_image_outlined,
+            color: AppColors.textSecondary,
+            size: 32,
+          ),
         ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.notifications_none),
-          label: 'Alerts',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bar_chart_outlined),
-          label: 'Reports',
-        ),
-        BottomNavigationBarItem(icon: Icon(Icons.menu), label: 'More'),
-      ],
+      ),
+    );
+  }
+}
+
+class _PlayBadge extends StatelessWidget {
+  const _PlayBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 46,
+      height: 46,
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.45),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white70, width: 1.5),
+      ),
+      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
     );
   }
 }
 
 /// =======================================================
-/// EXAMPLE SCREEN USAGE
+/// SHIMMER PLACEHOLDERS
 /// =======================================================
 
-/// Use GalleryAppBar as the appBar of your Scaffold:
-///
-/// Scaffold(
-///   backgroundColor: const Color(0xFFF7F8FC),
-///   appBar: GalleryAppBar(
-///     title: "Gallery",
-///     onBack: () => Navigator.of(context).pop(),
-///     actions: [
-///       IconButton(
-///         icon: const Icon(Icons.search, color: Color(0xFF1A1A2E)),
-///         onPressed: () {},
-///       ),
-///     ],
-///   ),
-///   body: SingleChildScrollView(...),
-///   bottomNavigationBar: const GalleryBottomNav(),
-/// )
+class _ShimmerBox extends StatelessWidget {
+  const _ShimmerBox();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: const Color(0xFFE9ECF2),
+      highlightColor: const Color(0xFFF6F8FB),
+      child: Container(color: const Color(0xFFE9ECF2)),
+    );
+  }
+}
+
+/// Full grid of shimmer tiles shown while the first page loads.
+class GalleryGridShimmer extends StatelessWidget {
+  final int count;
+
+  const GalleryGridShimmer({super.key, this.count = 6});
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: count,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: .82,
+      ),
+      itemBuilder: (_, _) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: const _ShimmerBox(),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Shimmer.fromColors(
+            baseColor: const Color(0xFFE9ECF2),
+            highlightColor: const Color(0xFFF6F8FB),
+            child: Container(
+              width: 60,
+              height: 11,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE9ECF2),
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

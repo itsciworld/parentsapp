@@ -1,130 +1,109 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:vigil_parents_app/features/gallery/models/gallery_child_model.dart';
+import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
+import 'package:vigil_parents_app/features/child/repo/child_repo.dart';
+import 'package:vigil_parents_app/features/gallery/models/media_model.dart';
+import 'package:vigil_parents_app/network/api_intercptor.dart';
 
-import 'package:vigil_parents_app/features/gallery/models/gallery_model.dart';
-import 'package:vigil_parents_app/features/gallery/models/gallery_state_model.dart';
+/// Identifiers needed to query media for a child.
+class GalleryContext {
+  final String parentId;
+  final String childId;
+  const GalleryContext({required this.parentId, required this.childId});
 
-/// =======================================================
-/// REPOSITORY
-/// =======================================================
-
-abstract class GalleryRepository {
-  Future<GalleryChildModel> getChild();
-
-  Future<List<GalleryPhotoModel>> getRecentPhotos();
-
-  Future<List<GalleryPhotoModel>> getTodayPhotos();
-
-  Future<List<GalleryPhotoModel>> getYesterdayPhotos();
-
-  Future<GalleryStatsModel> getStats();
+  bool get isValid => parentId.isNotEmpty && childId.isNotEmpty;
 }
 
-/// =======================================================
-/// LOCAL SOURCE
-/// =======================================================
+/// Talks to `/api/files/get_files` for the gallery / media-access feature.
+class GalleryRepository {
+  GalleryRepository({ApiClient? client, ChildRepository? childRepository})
+    : _apiClient = client ?? ApiClient(),
+      _childRepository = childRepository ?? ChildRepository();
 
-class GalleryLocalSource {
-  Future<GalleryChildModel> getChild() async {
-    return GalleryChildModel(
-      id: '1',
-      name: 'Aarav Sharma',
-      image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e',
-    );
+  final ApiClient _apiClient;
+  final ChildRepository _childRepository;
+
+  /// Resolves the parent + child ids from storage. If no child is selected
+  /// yet, it fetches the children list, picks the first, and remembers it
+  /// (id + device key) so the background service can run headless.
+  /// Mirrors [SmsRepository.resolveContext] so both stay in sync.
+  Future<GalleryContext> resolveContext() async {
+    // No session → don't hit the API (avoids 401 spam from the background
+    // isolate before the user has signed in).
+    final token = await SecureDeviceService.getToken() ?? '';
+    if (token.isEmpty) {
+      return const GalleryContext(parentId: '', childId: '');
+    }
+
+    final parentId = await SecureDeviceService.getParentId() ?? '';
+    var childId = await SecureDeviceService.getSelectedChildId() ?? '';
+
+    try {
+      final children = await _childRepository.fetchChildren();
+      if (children.isEmpty) {
+        return GalleryContext(parentId: parentId, childId: '');
+      }
+
+      if (childId.isNotEmpty) {
+        final selected = children.where((c) => c.id == childId).firstOrNull;
+        if (selected != null) {
+          await SecureDeviceService.saveSelectedChildDeviceKey(
+            selected.deviceKey,
+          );
+        } else {
+          final first = children.first;
+          childId = first.id;
+          await SecureDeviceService.saveSelectedChildId(first.id);
+          await SecureDeviceService.saveSelectedChildDeviceKey(first.deviceKey);
+        }
+      } else {
+        final first = children.first;
+        childId = first.id;
+        await SecureDeviceService.saveSelectedChildId(first.id);
+        await SecureDeviceService.saveSelectedChildDeviceKey(first.deviceKey);
+      }
+    } catch (_) {
+      // If the fetch fails, fall back to whatever is stored. The caller
+      // handles an invalid context when childId ends up empty.
+    }
+
+    return GalleryContext(parentId: parentId, childId: childId);
   }
 
-  Future<List<GalleryPhotoModel>> getRecentPhotos() async {
-    return dummyPhotos;
-  }
+  /// Fetches a page of media for a child, optionally filtered by [filter].
+  /// `x-device-key` is attached automatically by [ApiInterceptor].
+  Future<MediaResponse> getFiles({
+    required String childId,
+    required String parentId,
+    MediaFilter filter = MediaFilter.all,
+    int page = 1,
+    int limit = 20,
+  }) async {
+    try {
+      final query = <String, dynamic>{
+        'child_id': childId,
+        'parent_id': parentId,
+        'page': page,
+        'limit': limit,
+      };
+      final fileType = filter.queryValue;
+      if (fileType != null) query['file_type'] = fileType;
 
-  Future<List<GalleryPhotoModel>> getTodayPhotos() async {
-    return dummyPhotos;
-  }
+      final response = await _apiClient.get('/api/files/get_files', query: query);
 
-  Future<List<GalleryPhotoModel>> getYesterdayPhotos() async {
-    return dummyPhotos;
-  }
-
-  Future<GalleryStatsModel> getStats() async {
-    return GalleryStatsModel(
-      totalPhotos: 120,
-      favorites: 20,
-      trips: 5,
-      events: 7,
-    );
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return MediaResponse.fromJson(data);
+      }
+      return MediaResponse.empty;
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
   }
 }
-
-/// =======================================================
-/// REPOSITORY IMPL
-/// =======================================================
-
-class GalleryRepositoryImpl implements GalleryRepository {
-  GalleryRepositoryImpl(this.localSource);
-
-  final GalleryLocalSource localSource;
-
-  @override
-  Future<GalleryChildModel> getChild() {
-    return localSource.getChild();
-  }
-
-  @override
-  Future<List<GalleryPhotoModel>> getRecentPhotos() {
-    return localSource.getRecentPhotos();
-  }
-
-  @override
-  Future<List<GalleryPhotoModel>> getTodayPhotos() {
-    return localSource.getTodayPhotos();
-  }
-
-  @override
-  Future<List<GalleryPhotoModel>> getYesterdayPhotos() {
-    return localSource.getYesterdayPhotos();
-  }
-
-  @override
-  Future<GalleryStatsModel> getStats() {
-    return localSource.getStats();
-  }
-}
-
-/// =======================================================
-/// PROVIDER
-/// =======================================================
 
 final galleryRepositoryProvider = Provider<GalleryRepository>((ref) {
-  return GalleryRepositoryImpl(GalleryLocalSource());
+  return GalleryRepository();
 });
-
-/// =======================================================
-/// DUMMY DATA
-/// =======================================================
-
-final List<GalleryPhotoModel> dummyPhotos = [
-  GalleryPhotoModel(
-    id: '1',
-    image: 'https://images.unsplash.com/photo-1517841905240-472988babdf9',
-    time: '10:15 AM',
-    isFavorite: true,
-  ),
-  GalleryPhotoModel(
-    id: '2',
-    image: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb',
-    time: '09:52 AM',
-    isFavorite: false,
-  ),
-  GalleryPhotoModel(
-    id: '3',
-    image: 'https://images.unsplash.com/photo-1517849845537-4d257902454a',
-    time: '09:30 AM',
-    isFavorite: true,
-  ),
-  GalleryPhotoModel(
-    id: '4',
-    image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e',
-    time: '08:47 AM',
-    isFavorite: false,
-  ),
-];
