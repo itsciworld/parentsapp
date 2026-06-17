@@ -13,21 +13,20 @@ class LocationViewModel extends ChangeNotifier {
 
   final LocationRepository _repository;
 
-  List<ChildLocation> locations = const [];
+  /// The child's most recent fix, refreshed in place from
+  /// `/api/locations/latest/{childId}`.
+  ChildLocation? latest;
   bool loading = false;
   String? error;
 
-  /// The child the current [locations] belong to.
+  /// The child the current [latest] fix belongs to.
   String? _childId;
   String? get childId => _childId;
 
-  /// The most recent fix (locations are sorted newest-first by the repo).
-  ChildLocation? get latest => locations.isNotEmpty ? locations.first : null;
-
   Future<void> load(String childId, {bool showLoader = true}) async {
-    // Switching child clears stale points so we never flash the wrong marker.
+    // Switching child clears the stale fix so we never flash the wrong marker.
     if (_childId != childId) {
-      locations = const [];
+      latest = null;
       error = null;
     }
     _childId = childId;
@@ -39,10 +38,10 @@ class LocationViewModel extends ChangeNotifier {
     }
 
     try {
-      final res = await _repository.getLocations(childId: childId);
+      final res = await _repository.getLatestLocation(childId: childId);
       // Ignore a stale response if the selection changed while in flight.
       if (_childId != childId) return;
-      locations = res;
+      latest = res;
       error = null;
     } catch (e) {
       if (_childId != childId) return;

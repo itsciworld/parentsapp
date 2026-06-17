@@ -11,6 +11,7 @@ import 'package:vigil_parents_app/features/child/presentation/view_model/selecte
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/location/models/location_model.dart';
 import 'package:vigil_parents_app/features/location/presentation/view_model/location_viewmodel.dart';
+import 'package:vigil_parents_app/features/location/presentation/view/location_history_view.dart';
 import 'package:vigil_parents_app/features/location/presentation/widgets/home_location_card.dart'
     show kMapTileUrl, kMapSubdomains, kMapUserAgent;
 import 'package:vigil_parents_app/features/location/presentation/widgets/location_marker.dart';
@@ -48,7 +49,7 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
       final vm = ref.read(locationViewModelProvider);
       final id = ref.read(selectedChildProvider).selectedId;
       if (id == null) return;
-      if (vm.childId == id && vm.locations.isNotEmpty) {
+      if (vm.childId == id && vm.latest != null) {
         vm.refresh(); // keep the current pin visible while updating
       } else {
         vm.load(id);
@@ -163,6 +164,19 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
                     const Center(child: CircularProgressIndicator())
                   else if (latest == null)
                     _EmptyOverlay(error: vm.error),
+
+                  // History entry — opens the recent-trail screen.
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: _HistoryButton(
+                      onTap: () => Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const LocationHistoryScreen(),
+                        ),
+                      ),
+                    ),
+                  ),
 
                   if (latest != null)
                     Positioned(
@@ -298,6 +312,44 @@ class _TitleBar extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A pill button overlaid on the map that opens the location history screen.
+class _HistoryButton extends StatelessWidget {
+  final VoidCallback onTap;
+  const _HistoryButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white.withValues(alpha: 0.95),
+      borderRadius: BorderRadius.circular(20),
+      elevation: 3,
+      shadowColor: Colors.black.withValues(alpha: 0.2),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: const Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.history_rounded, size: 18, color: AppColors.primary),
+              SizedBox(width: 6),
+              Text(
+                'History',
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

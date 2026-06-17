@@ -1,5 +1,4 @@
 import 'package:dio/dio.dart';
-import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
 import 'package:vigil_parents_app/network/api_intercptor.dart';
 
 import '../models/location_model.dart';
@@ -9,36 +8,50 @@ class LocationRepository {
 
   final ApiClient _apiClient;
 
-  /// GET /api/locations/get_locations — every recorded location point for the
-  /// child, newest first. `x-device-key` is attached automatically by
+  /// GET /api/locations/latest/{childId} — the child's single most recent fix,
+  /// updated in place server-side as new locations arrive. Returns `null` when
+  /// nothing has been recorded yet. `x-device-key` is attached automatically by
   /// [ApiInterceptor] from the selected child's stored device key.
-  Future<List<ChildLocation>> getLocations({
-    required String childId,
-    int page = 1,
-    int limit = 20,
-  }) async {
-    final parentId = await SecureDeviceService.getParentId() ?? '';
+  Future<ChildLocation?> getLatestLocation({required String childId}) async {
+    try {
+      final response = await _apiClient.get('/api/locations/latest/$childId');
 
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        return LatestLocationResponse.fromJson(data).location;
+      }
+      return null;
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  /// GET /api/locations/history/{childId}?hours=N — every fix recorded within
+  /// the last [hours] hours (server caps the window at 48h), newest first.
+  /// `x-device-key` is attached automatically by [ApiInterceptor].
+  Future<LocationHistoryResponse> getLocationHistory({
+    required String childId,
+    int hours = 48,
+  }) async {
     try {
       final response = await _apiClient.get(
-        '/api/locations/get_locations',
-        query: {
-          'child_id': childId,
-          'parent_id': parentId,
-          'page': page,
-          'limit': limit,
-        },
+        '/api/locations/history/$childId',
+        query: {'hours': hours},
       );
 
       final data = response.data;
       if (data is Map<String, dynamic>) {
-        final locations = LocationsResponse.fromJson(data).locations;
-        // The Mongo `_id` encodes creation time, so sorting it descending puts
-        // the most recent fix first regardless of the array order returned.
-        locations.sort((a, b) => b.id.compareTo(a.id));
-        return locations;
+        return LocationHistoryResponse.fromJson(data);
       }
-      return const [];
+      return const LocationHistoryResponse(
+        status: 200,
+        windowHours: 0,
+        since: null,
+        total: 0,
+        locations: [],
+      );
     } on DioException catch (e) {
       throw Exception(e.error.toString());
     } catch (e) {
