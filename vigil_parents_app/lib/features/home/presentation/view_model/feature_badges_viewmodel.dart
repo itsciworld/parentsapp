@@ -61,7 +61,10 @@ class FeatureBadgesViewModel extends ChangeNotifier {
     _childId = ctx.childId;
 
     try {
-      // limit:1 — we only need the totals, not the rows.
+      // limit:1 — we only need the totals, not the rows. Events are the
+      // exception: the backend returns duplicate events, so we fetch the full
+      // list and de-duplicate it (the same way the Events screen does) to keep
+      // the badge count consistent with what the user sees there.
       final results = await Future.wait([
         _sms.getSms(
           childId: ctx.childId,
@@ -81,18 +84,16 @@ class FeatureBadgesViewModel extends ChangeNotifier {
           page: 1,
           limit: 1,
         ),
-        _events.getEvents(
+        _events.fetchAllEvents(
           childId: ctx.childId,
           parentId: ctx.parentId,
-          page: 1,
-          limit: 1,
         ),
       ]);
 
       _smsTotal = (results[0] as SmsResponse).total;
       _contactsTotal = (results[1] as ContactsResponse).total;
       _callsTotal = (results[2] as CallLogsResponse).total;
-      _eventsTotal = (results[3] as EventsResponse).total;
+      _eventsTotal = EventModel.dedupe(results[3] as List<EventModel>).length;
     } catch (_) {
       return; // keep previous values on a transient failure
     }

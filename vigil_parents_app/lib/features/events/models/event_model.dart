@@ -158,6 +158,26 @@ class EventModel {
     if (v == null) return null;
     return DateTime.tryParse(v.toString())?.toLocal();
   }
+
+  /// Collapses events that are effectively the same (identical title, dates,
+  /// location and description) but arrive with different `_id`s. The backend
+  /// can return the same event many times, so the calendar, list and the home
+  /// badge all rely on this to avoid double-counting.
+  static List<EventModel> dedupe(List<EventModel> events) {
+    final seen = <String>{};
+    final out = <EventModel>[];
+    for (final e in events) {
+      final key = [
+        e.displayTitle.toLowerCase(),
+        e.start.toIso8601String(),
+        e.end?.toIso8601String() ?? '',
+        (e.location ?? '').trim().toLowerCase(),
+        (e.description ?? '').trim().toLowerCase(),
+      ].join('|');
+      if (seen.add(key)) out.add(e);
+    }
+    return out;
+  }
 }
 
 class EventsResponse {

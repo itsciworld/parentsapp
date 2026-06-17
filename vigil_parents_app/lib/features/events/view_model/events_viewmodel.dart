@@ -82,25 +82,6 @@ class EventsViewModel extends ChangeNotifier {
     return list;
   }
 
-  /// The backend can return the same event many times (identical title/date,
-  /// different `_id`). Collapse those into one so the calendar and list aren't
-  /// flooded with duplicates.
-  List<EventModel> _dedupe(List<EventModel> events) {
-    final seen = <String>{};
-    final out = <EventModel>[];
-    for (final e in events) {
-      final key = [
-        e.displayTitle.toLowerCase(),
-        e.start.toIso8601String(),
-        e.end?.toIso8601String() ?? '',
-        (e.location ?? '').trim().toLowerCase(),
-        (e.description ?? '').trim().toLowerCase(),
-      ].join('|');
-      if (seen.add(key)) out.add(e);
-    }
-    return out;
-  }
-
   Future<void> loadEvents({bool showLoader = true}) async {
     if (showLoader) {
       loading = true;
@@ -120,7 +101,7 @@ class EventsViewModel extends ChangeNotifier {
           childId: ctx.childId,
           parentId: ctx.parentId,
         );
-        _all = _dedupe(fetched);
+        _all = EventModel.dedupe(fetched);
         error = null;
       }
     } catch (e) {
