@@ -108,6 +108,10 @@ class HomeViewModel extends ChangeNotifier {
           context,
           MaterialPageRoute(builder: (_) => const EventsScreen()),
         );
+        return Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ContactsPage()),
+        );
 
       case 'device_info':
         return Navigator.push(
