@@ -13,10 +13,6 @@ import 'package:vigil_parents_app/features/location/presentation/widgets/home_lo
     show kMapTileUrl, kMapSubdomains, kMapUserAgent;
 import 'package:vigil_parents_app/features/location/presentation/widgets/location_marker.dart';
 
-/// Full-screen location history: a trail of the child's recent whereabouts for
-/// a chosen time window. The map renders immediately, then the points load in;
-/// tapping a pin or list row focuses that point and reveals its address + time.
-/// On-demand only — re-fetches on open and on each window change, no polling.
 class LocationHistoryScreen extends ConsumerStatefulWidget {
   const LocationHistoryScreen({super.key});
 
@@ -88,17 +84,24 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen>
       return;
     }
     final camera = _mapController.camera;
-    final latTween =
-        Tween<double>(begin: camera.center.latitude, end: dest.latitude);
-    final lngTween =
-        Tween<double>(begin: camera.center.longitude, end: dest.longitude);
+    final latTween = Tween<double>(
+      begin: camera.center.latitude,
+      end: dest.latitude,
+    );
+    final lngTween = Tween<double>(
+      begin: camera.center.longitude,
+      end: dest.longitude,
+    );
     final zoomTween = Tween<double>(begin: camera.zoom, end: zoom);
 
     final controller = AnimationController(
       duration: const Duration(milliseconds: 550),
       vsync: this,
     );
-    final anim = CurvedAnimation(parent: controller, curve: Curves.easeInOutCubic);
+    final anim = CurvedAnimation(
+      parent: controller,
+      curve: Curves.easeInOutCubic,
+    );
     controller.addListener(() {
       _mapController.move(
         LatLng(latTween.evaluate(anim), lngTween.evaluate(anim)),
@@ -159,9 +162,8 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen>
             _HoursSelector(
               selected: vm.hours,
               enabled: !vm.loading,
-              onSelected: (h) => ref
-                  .read(locationHistoryViewModelProvider)
-                  .setHours(h),
+              onSelected: (h) =>
+                  ref.read(locationHistoryViewModelProvider).setHours(h),
             ),
 
             // ---- Map (renders first) + overlays --------------------------
@@ -183,7 +185,12 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen>
                   ),
 
                   if (vm.loading)
-                    const Positioned(top: 12, left: 0, right: 0, child: _LoadingPill()),
+                    const Positioned(
+                      top: 12,
+                      left: 0,
+                      right: 0,
+                      child: _LoadingPill(),
+                    ),
 
                   if (!vm.loading && points.isEmpty)
                     _EmptyOverlay(error: vm.error, hours: vm.hours),
@@ -358,8 +365,8 @@ class _TitleBar extends StatelessWidget {
     final subtitle = loading
         ? 'Loading…'
         : (count == 0
-            ? 'No movement in the last ${hours}h'
-            : '$count ${count == 1 ? 'point' : 'points'} · last ${hours}h');
+              ? 'No movement in the last ${hours}h'
+              : '$count ${count == 1 ? 'point' : 'points'} · last ${hours}h');
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 4, 14, 8),
@@ -489,7 +496,11 @@ class _HistoryList extends StatelessWidget {
         color: AppColors.surface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
         boxShadow: [
-          BoxShadow(color: Colors.black12, blurRadius: 18, offset: Offset(0, -4)),
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 18,
+            offset: Offset(0, -4),
+          ),
         ],
       ),
       child: Column(
@@ -539,34 +550,34 @@ class _HistoryList extends StatelessWidget {
             child: (loading && points.isEmpty)
                 ? const Center(child: CircularProgressIndicator())
                 : points.isEmpty
-                    ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(24),
-                          child: Text(
-                            'No location points to show for this window.',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
+                ? const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(24),
+                      child: Text(
+                        'No location points to show for this window.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.textSecondary,
                         ),
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                        itemCount: points.length,
-                        itemBuilder: (context, i) {
-                          final p = points[i];
-                          return _TimelineTile(
-                            location: p,
-                            isFirst: i == 0,
-                            isLast: i == points.length - 1,
-                            isLatest: i == 0,
-                            selected: p.id == selectedId,
-                            onTap: () => onTap(p),
-                          );
-                        },
                       ),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    itemCount: points.length,
+                    itemBuilder: (context, i) {
+                      final p = points[i];
+                      return _TimelineTile(
+                        location: p,
+                        isFirst: i == 0,
+                        isLast: i == points.length - 1,
+                        isLatest: i == 0,
+                        selected: p.id == selectedId,
+                        onTap: () => onTap(p),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
@@ -783,7 +794,10 @@ class _LoadingPill extends StatelessWidget {
           color: Colors.white.withValues(alpha: 0.95),
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 10),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 10,
+            ),
           ],
         ),
         child: const Row(
@@ -825,7 +839,10 @@ class _EmptyOverlay extends StatelessWidget {
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 18),
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.08),
+              blurRadius: 18,
+            ),
           ],
         ),
         child: Column(

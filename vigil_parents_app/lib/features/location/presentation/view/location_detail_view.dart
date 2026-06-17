@@ -57,7 +57,7 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
     });
 
     // Keep the pin live while the screen is open.
-    _pollTimer = Timer.periodic(const Duration(seconds: 8), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 18), (_) {
       ref.read(locationViewModelProvider).refresh();
     });
   }
@@ -81,10 +81,14 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
       return;
     }
     final camera = _mapController.camera;
-    final latTween =
-        Tween<double>(begin: camera.center.latitude, end: dest.latitude);
-    final lngTween =
-        Tween<double>(begin: camera.center.longitude, end: dest.longitude);
+    final latTween = Tween<double>(
+      begin: camera.center.latitude,
+      end: dest.latitude,
+    );
+    final lngTween = Tween<double>(
+      begin: camera.center.longitude,
+      end: dest.longitude,
+    );
     final zoomTween = Tween<double>(begin: camera.zoom, end: zoom);
 
     final controller = AnimationController(
@@ -404,7 +408,10 @@ class _LatestCardState extends State<_LatestCard>
         final t = Curves.easeOutCubic.transform(_c.value);
         return Opacity(
           opacity: t,
-          child: Transform.translate(offset: Offset(0, (1 - t) * 40), child: child),
+          child: Transform.translate(
+            offset: Offset(0, (1 - t) * 40),
+            child: child,
+          ),
         );
       },
       child: Container(
