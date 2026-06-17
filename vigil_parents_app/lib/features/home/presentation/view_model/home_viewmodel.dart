@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/features/calls/presentation/view_model/view/calls_view.dart';
 import 'package:vigil_parents_app/features/contact/view/contact_view.dart';
-import 'package:vigil_parents_app/features/contact/view/contact_view.dart';
 import 'package:vigil_parents_app/features/device_info/presentation/view/device_info_view.dart';
 import 'package:vigil_parents_app/features/events/view/events_view.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view/gallery_view.dart';
@@ -98,19 +97,11 @@ class HomeViewModel extends ChangeNotifier {
           context,
           MaterialPageRoute(builder: (_) => const ContactsPage()),
         );
-        return Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ContactsPage()),
-        );
 
       case 'events':
         return Navigator.push(
           context,
           MaterialPageRoute(builder: (_) => const EventsScreen()),
-        );
-        return Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ContactsPage()),
         );
 
       case 'device_info':
