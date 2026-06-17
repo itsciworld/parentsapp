@@ -167,10 +167,10 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
     }
 
     final visible = vm.sortedEvents;
-    final selectedDay = _selectedDay ?? vm.focusDate;
-    final dayEvents = selectedDay == null
-        ? const <EventModel>[]
-        : vm.eventsOn(selectedDay);
+    // Open on — and highlight — today by default; tapping any day overrides it.
+    final now = DateTime.now();
+    final selectedDay = _selectedDay ?? DateTime(now.year, now.month, now.day);
+    final dayEvents = vm.eventsOn(selectedDay);
 
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -179,33 +179,30 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
         SliverToBoxAdapter(
           child: _CalendarCard(
             events: vm.allEvents,
-            focusDate: vm.focusDate,
             selectedDate: selectedDay,
             onDateSelected: (d) => setState(() => _selectedDay = d),
           ),
         ),
 
         // ── Selected day's events (in the page scroll, no inner scroll) ───
-        if (selectedDay != null) ...[
-          SliverToBoxAdapter(
-            child: _SelectedDayHeader(
-              day: selectedDay,
-              count: dayEvents.length,
+        SliverToBoxAdapter(
+          child: _SelectedDayHeader(
+            day: selectedDay,
+            count: dayEvents.length,
+          ),
+        ),
+        if (dayEvents.isEmpty)
+          const SliverToBoxAdapter(child: _NoEventsOnDay())
+        else
+          SliverList.separated(
+            itemCount: dayEvents.length,
+            separatorBuilder: (_, _) => const SizedBox(height: 8),
+            itemBuilder: (_, i) => _DayEventTile(
+              event: dayEvents[i],
+              onTap: () => _openDetail(dayEvents[i]),
             ),
           ),
-          if (dayEvents.isEmpty)
-            const SliverToBoxAdapter(child: _NoEventsOnDay())
-          else
-            SliverList.separated(
-              itemCount: dayEvents.length,
-              separatorBuilder: (_, _) => const SizedBox(height: 8),
-              itemBuilder: (_, i) => _DayEventTile(
-                event: dayEvents[i],
-                onTap: () => _openDetail(dayEvents[i]),
-              ),
-            ),
-          const SliverToBoxAdapter(child: SizedBox(height: 18)),
-        ],
+        const SliverToBoxAdapter(child: SizedBox(height: 18)),
 
         // ── All-events list header ───────────────────────────────────────
         SliverToBoxAdapter(child: _ListHeader(count: visible.length)),
@@ -283,13 +280,11 @@ String _categoryLabel(EventCategory c) => switch (c) {
 /// ──────────────────────────────────────────────────────────────────────────
 class _CalendarCard extends StatefulWidget {
   final List<EventModel> events;
-  final DateTime? focusDate;
   final DateTime? selectedDate;
   final ValueChanged<DateTime> onDateSelected;
 
   const _CalendarCard({
     required this.events,
-    required this.focusDate,
     required this.selectedDate,
     required this.onDateSelected,
   });
@@ -356,8 +351,8 @@ class _CalendarCardState extends State<_CalendarCard> {
             child: SfCalendar(
               view: CalendarView.month,
               dataSource: _dataSource,
-              initialDisplayDate: widget.focusDate ?? DateTime.now(),
-              initialSelectedDate: widget.selectedDate ?? widget.focusDate,
+              initialDisplayDate: widget.selectedDate ?? DateTime.now(),
+              initialSelectedDate: widget.selectedDate ?? DateTime.now(),
               showNavigationArrow: true,
               showDatePickerButton: true,
               showTodayButton: true,

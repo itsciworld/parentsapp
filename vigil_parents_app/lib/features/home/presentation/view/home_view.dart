@@ -59,7 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
 
     // Keep the home map's "latest location" fresh while the screen is visible.
-    _locationTimer = Timer.periodic(const Duration(seconds: 15), (_) {
+    _locationTimer = Timer.periodic(const Duration(seconds: 55), (_) {
       ref.read(locationViewModelProvider).refresh();
     });
   }

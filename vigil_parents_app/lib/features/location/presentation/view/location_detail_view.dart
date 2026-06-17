@@ -57,7 +57,7 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
     });
 
     // Keep the pin live while the screen is open.
-    _pollTimer = Timer.periodic(const Duration(seconds: 18), (_) {
+    _pollTimer = Timer.periodic(const Duration(seconds: 48), (_) {
       ref.read(locationViewModelProvider).refresh();
     });
   }

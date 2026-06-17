@@ -38,7 +38,6 @@ class EventsViewModel extends ChangeNotifier {
   ///   3. [day] falls within the local start→end range (multi-day events).
   List<EventModel> eventsOn(DateTime day) {
     final d = DateTime(day.year, day.month, day.day);
-    final dEnd = d.add(const Duration(days: 1));
     final list = _all.where((e) {
       // Local-time start day
       final startLocal = DateTime(e.start.year, e.start.month, e.start.day);
@@ -65,14 +64,6 @@ class EventsViewModel extends ChangeNotifier {
     }).toList()
       ..sort((a, b) => a.start.compareTo(b.start));
     return list;
-  }
-
-  /// The month the calendar should open on: the day of the nearest/most-recent
-  /// event. The backend's events can be far from "today", so without this the
-  /// calendar would open on the current (empty) month and look broken.
-  DateTime? get focusDate {
-    if (_all.isEmpty) return null;
-    return _sortedNearestFirst(_all).first.start;
   }
 
   /// Upcoming events first (soonest → latest), then past events (most recent
