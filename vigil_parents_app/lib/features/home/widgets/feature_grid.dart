@@ -27,7 +27,6 @@ class FeatureGrid extends StatelessWidget {
           tile: tile,
           onTap: () {
             if (tile.isLocked) {
-              // 🔒 Coming soon toast
               showAppToast(
                 context: context,
                 title: 'Coming Soon',
