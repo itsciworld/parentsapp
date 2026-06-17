@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
-import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
 import 'package:vigil_parents_app/features/auth/repo/auth_repo.dart';
@@ -9,7 +8,6 @@ import 'package:vigil_parents_app/features/child/models/child_permissions_model.
 import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/profile/models/profile_model.dart';
-import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view_model/profile_viewmodel.dart';
 
 class ProfileView extends ConsumerStatefulWidget {
@@ -127,51 +125,17 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
       children: [
         _ProfileHeader(profile: profile),
         const SizedBox(height: 20),
         _InfoSection(
-          title: 'Contact Information',
-          icon: Icons.contacts_rounded,
-          rows: [
-            _InfoRow(
-              icon: Icons.email_outlined,
-              label: 'Email',
-              value: profile.email,
-            ),
-            _InfoRow(
-              icon: Icons.phone_outlined,
-              label: 'Mobile',
-              value: profile.mobile,
-            ),
-            _InfoRow(
-              icon: Icons.phone_forwarded_outlined,
-              label: 'Alternate Mobile',
-              value: profile.alternateMobile,
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-        _InfoSection(
           title: 'Location',
           icon: Icons.location_on_outlined,
           rows: [
-            _InfoRow(
-              icon: Icons.public_rounded,
-              label: 'Country',
-              value: profile.country,
-            ),
-            _InfoRow(
-              icon: Icons.location_city_rounded,
-              label: 'City',
-              value: profile.city,
-            ),
-            _InfoRow(
-              icon: Icons.home_outlined,
-              label: 'Address',
-              value: profile.address,
-            ),
+            _InfoRow(label: 'Country', value: profile.country),
+            _InfoRow(label: 'City', value: profile.city),
+            _InfoRow(label: 'Address', value: profile.address),
           ],
         ),
         const SizedBox(height: 16),
@@ -179,23 +143,16 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
           title: 'Account',
           icon: Icons.shield_outlined,
           rows: [
+            _InfoRow(label: 'Status', value: _capitalize(profile.status)),
             _InfoRow(
-              icon: Icons.verified_user_outlined,
-              label: 'Status',
-              value: _capitalize(profile.status),
-            ),
-            _InfoRow(
-              icon: Icons.app_registration_rounded,
               label: 'Registered Via',
               value: _capitalize(profile.registeredVia),
             ),
             _InfoRow(
-              icon: Icons.calendar_today_outlined,
               label: 'Member Since',
               value: _formatDate(profile.createdAt),
             ),
             _InfoRow(
-              icon: Icons.login_rounded,
               label: 'Last Login',
               value: _formatDateTime(profile.lastLogin),
             ),
@@ -211,12 +168,17 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
           ),
         ],
         const SizedBox(height: 24),
-        CustomButton(
-          label: 'Log out',
+        _LogoutButton(
           isLoading: _isLoggingOut,
-          arrowIcon: false,
-          gradient: AppGradients.danger,
           onTap: _confirmAndLogout,
+        ),
+        const SizedBox(height: 16),
+        const Center(
+          child: Text(
+            // Mirrors pubspec.yaml `version: 1.0.0+1`.
+            'Version 1.0.0 (Build 1)',
+            style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+          ),
         ),
       ],
     );
@@ -274,120 +236,86 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
   }
 }
 
-// ── Header card ───────────────────────────────────────────────────────────────
+// ── Header (centered, sits on the scaffold background) ───────────────────────────
 class _ProfileHeader extends StatelessWidget {
   final ProfileModel profile;
   const _ProfileHeader({required this.profile});
 
   @override
   Widget build(BuildContext context) {
-    final isActive = profile.status.toLowerCase() == 'active';
-
-    final statusColor = isActive ? AppColors.online : AppColors.warning;
-
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.cardBorder),
-        boxShadow: const [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 16,
-            offset: Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          // Avatar with a soft ring + verified badge
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(4),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primaryLight,
-                ),
-                child: CircleAvatar(
-                  radius: 40,
-                  backgroundColor: AppColors.primary,
-                  child: Text(
-                    _initialsFor(profile.name),
-                    style: const TextStyle(
-                      color: AppColors.textOnDark,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 28,
-                    ),
+    return Column(
+      children: [
+        // Avatar with a soft ring + verified badge
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.surface,
+                boxShadow: const [
+                  BoxShadow(
+                    color: AppColors.shadow,
+                    blurRadius: 16,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: CircleAvatar(
+                radius: 44,
+                backgroundColor: AppColors.primary,
+                child: Text(
+                  _initialsFor(profile.name),
+                  style: const TextStyle(
+                    color: AppColors.textOnDark,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 30,
                   ),
                 ),
               ),
-              if (profile.isVerified)
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: AppColors.surface,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.verified_rounded,
-                      color: AppColors.online,
-                      size: 22,
-                    ),
+            ),
+            if (profile.isVerified)
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.surface, width: 2),
+                  ),
+                  child: const Icon(
+                    Icons.verified_rounded,
+                    color: AppColors.textOnDark,
+                    size: 16,
                   ),
                 ),
-            ],
+              ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          profile.name.isEmpty ? 'Unnamed' : profile.name,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.w800,
+            fontSize: 22,
+            letterSpacing: -0.2,
           ),
-          const SizedBox(height: 16),
-          Text(
-            profile.name.isEmpty ? 'Unnamed' : profile.name,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.w800,
-              fontSize: 21,
-              letterSpacing: -0.2,
-            ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          profile.email,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13.5,
           ),
-          const SizedBox(height: 4),
-          Text(
-            profile.email,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
-              fontSize: 13,
-            ),
-          ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-            decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.10),
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: statusColor.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(Icons.circle, size: 8, color: statusColor),
-                const SizedBox(width: 6),
-                Text(
-                  isActive ? 'Active' : _capitalize(profile.status),
-                  style: TextStyle(
-                    color: statusColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -421,10 +349,10 @@ class _InfoSection extends StatelessWidget {
     if (visibleRows.isEmpty) return const SizedBox.shrink();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.cardBorder),
         boxShadow: const [
           BoxShadow(
@@ -439,19 +367,19 @@ class _InfoSection extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 18, color: AppColors.primary),
-              const SizedBox(width: 8),
+              Icon(icon, size: 20, color: AppColors.primary),
+              const SizedBox(width: 10),
               Text(
                 title,
                 style: const TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           for (int i = 0; i < visibleRows.length; i++) ...[
             if (i > 0) const Divider(height: 1, color: AppColors.cardBorder),
             visibleRows[i],
@@ -463,47 +391,35 @@ class _InfoSection extends StatelessWidget {
 }
 
 class _InfoRow extends StatelessWidget {
-  final IconData icon;
   final String label;
   final String value;
 
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
+  const _InfoRow({required this.label, required this.value});
 
   @override
   Widget build(BuildContext context) {
     final display = value.trim().isEmpty ? '—' : value;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: AppColors.textSecondary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  display,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
-                  ),
-                ),
-              ],
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 11,
+              letterSpacing: 0.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            display,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
             ),
           ),
         ],
@@ -512,7 +428,7 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-// ── Child permissions card ──────────────────────────────────────────────────────
+// ── Child permissions card (grid of toggle tiles) ────────────────────────────────
 class _PermissionsSection extends StatelessWidget {
   final String childName;
   final ChildPermissions? permissions;
@@ -532,7 +448,7 @@ class _PermissionsSection extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: AppColors.cardBorder),
         boxShadow: const [
           BoxShadow(
@@ -548,15 +464,15 @@ class _PermissionsSection extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.admin_panel_settings_outlined,
-                size: 18,
+                Icons.vpn_key_outlined,
+                size: 20,
                 color: AppColors.primary,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               const Text(
-                'Child Permissions',
+                'App Permissions',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 16,
                   fontWeight: FontWeight.w800,
                   color: AppColors.textPrimary,
                 ),
@@ -573,7 +489,7 @@ class _PermissionsSection extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           _buildContent(),
         ],
       ),
@@ -618,69 +534,156 @@ class _PermissionsSection extends StatelessWidget {
       );
     }
 
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: items.map((item) {
-        final color = item.granted ? AppColors.online : AppColors.textSecondary;
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          decoration: BoxDecoration(
-            color: item.granted
-                ? AppColors.online.withValues(alpha: 0.14)
-                : AppColors.surface,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: color.withValues(alpha: 0.25)),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                item.icon,
-                size: 16,
-                color: item.granted
-                    ? AppColors.online
-                    : AppColors.textSecondary,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                item.label,
-                style: TextStyle(
-                  color: item.granted
-                      ? AppColors.online
-                      : AppColors.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        const spacing = 10.0;
+        final tileWidth = (constraints.maxWidth - spacing * 2) / 3;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: items
+              .map(
+                (item) => SizedBox(
+                  width: tileWidth,
+                  child: _PermissionTile(item: item),
                 ),
-              ),
-              if (!item.granted) ...[
-                const SizedBox(width: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(
-                      color: AppColors.textSecondary.withValues(alpha: 0.2),
-                    ),
-                  ),
-                  child: const Text(
-                    'Off',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
+              )
+              .toList(),
         );
-      }).toList(),
+      },
+    );
+  }
+}
+
+class _PermissionTile extends StatelessWidget {
+  final PermissionItem item;
+  const _PermissionTile({required this.item});
+
+  @override
+  Widget build(BuildContext context) {
+    final granted = item.granted;
+    final accent = granted ? AppColors.primary : AppColors.textSecondary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+      decoration: BoxDecoration(
+        color: AppColors.scaffold,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(9),
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(item.icon, size: 18, color: accent),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            height: 30,
+            child: Center(
+              child: Text(
+                item.label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  fontSize: 11,
+                  height: 1.2,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          _MiniToggle(on: granted),
+        ],
+      ),
+    );
+  }
+}
+
+/// A read-only switch-style indicator showing a permission's on/off state.
+class _MiniToggle extends StatelessWidget {
+  final bool on;
+  const _MiniToggle({required this.on});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 22,
+      padding: const EdgeInsets.all(2),
+      decoration: BoxDecoration(
+        color: on ? AppColors.primary : const Color(0xFFCBD2DD),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Align(
+        alignment: on ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          width: 18,
+          height: 18,
+          decoration: const BoxDecoration(
+            color: AppColors.surface,
+            shape: BoxShape.circle,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Logout button (soft red, matching the reference) ─────────────────────────────
+class _LogoutButton extends StatelessWidget {
+  final bool isLoading;
+  final VoidCallback onTap;
+
+  const _LogoutButton({required this.isLoading, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(14),
+        onTap: isLoading ? null : onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: AppColors.alert.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Center(
+            child: isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.alert,
+                    ),
+                  )
+                : const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.logout_rounded, size: 20, color: AppColors.alert),
+                      SizedBox(width: 10),
+                      Text(
+                        'Log out',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.alert,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
     );
   }
 }
