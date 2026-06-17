@@ -276,18 +276,35 @@ class _LoadedView extends ConsumerWidget {
                     ),
                     const SizedBox(height: 26),
 
-                    // ---- Activity overview --------------------------------
+                    // ---- Live location ------------------------------------
                     _Reveal(
-                      delayMs: 240,
+                      delayMs: 205,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SectionTitle(title: 'Activity Overview'),
-                          const SizedBox(height: 14),
-                          ActivitySummaryCard(
-                            activity: data.activity,
-                            onViewAllAlerts: vm.onViewAllAlerts,
+                        children: const [
+                          _SectionTitle(
+                            title: 'Live Location',
+                            subtitle: 'Tap the map for full history',
                           ),
+                          SizedBox(height: 14),
+                          HomeLocationCard(),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+
+                    // ---- App usage ----------------------------------------
+                    _Reveal(
+                      delayMs: 205,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          _SectionTitle(
+                            title: 'App Usage',
+                            subtitle: 'Tap to see screen-time details',
+                          ),
+                          SizedBox(height: 14),
+                          ActivityOverviewCard(),
                         ],
                       ),
                     ),

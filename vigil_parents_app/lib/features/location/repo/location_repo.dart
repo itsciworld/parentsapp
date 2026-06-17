@@ -1,7 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:vigil_parents_app/network/api_intercptor.dart';
-
-import '../models/location_model.dart';
+import 'package:vigil_parents_app/features/location/models/location_model.dart';
 
 class LocationRepository {
   LocationRepository({ApiClient? client}) : _apiClient = client ?? ApiClient();
