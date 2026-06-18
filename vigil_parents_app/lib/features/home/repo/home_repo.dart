@@ -77,15 +77,15 @@ class DummyHomeRepository implements HomeRepository {
           badgeCount: 7,
         ),
         // Gallery — temporarily hidden from the monitoring tools grid.
-        FeatureTile(
-          id: 'gallery',
-          title: 'Gallery',
-          subtitle: 'Photos & videos',
-          icon: Icons.photo_library_rounded,
-          iconColor: AppColors.orangeIcon,
-          iconBackground: AppColors.orangeSoft,
-          badgeCount: 24,
-        ),
+        // FeatureTile(
+        //   id: 'gallery',
+        //   title: 'Gallery',
+        //   subtitle: 'Photos & videos',
+        //   icon: Icons.photo_library_rounded,
+        //   iconColor: AppColors.orangeIcon,
+        //   iconBackground: AppColors.orangeSoft,
+        //   badgeCount: 24,
+        // ),
 
         // FeatureTile(
         //   id: 'whatsapp',
@@ -122,15 +122,15 @@ class DummyHomeRepository implements HomeRepository {
           iconBackground: AppColors.orangeSoft,
           badgeCount: 24,
         ),
-        FeatureTile(
-          id: 'events',
-          title: 'Events',
-          subtitle: 'Calendar & events',
-          icon: Icons.event_rounded,
-          iconColor: AppColors.blueIcon,
-          iconBackground: AppColors.blueSoft,
-          badgeCount: 7,
-        ),
+        // FeatureTile(
+        //   id: 'events',
+        //   title: 'Events',
+        //   subtitle: 'Calendar & events',
+        //   icon: Icons.event_rounded,
+        //   iconColor: AppColors.blueIcon,
+        //   iconBackground: AppColors.blueSoft,
+        //   badgeCount: 7,
+        // ),
         // FeatureTile(
         //   id: 'location',
         //   title: 'Live Location',

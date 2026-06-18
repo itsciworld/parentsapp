@@ -291,23 +291,23 @@ class _LoadedView extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 26),
+                    // const SizedBox(height: 26),
 
                     // ---- App usage ----------------------------------------
-                    _Reveal(
-                      delayMs: 205,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          _SectionTitle(
-                            title: 'App Usage',
-                            subtitle: 'Tap to see screen-time details',
-                          ),
-                          SizedBox(height: 14),
-                          ActivityOverviewCard(),
-                        ],
-                      ),
-                    ),
+                    // _Reveal(
+                    //   delayMs: 205,
+                    //   child: Column(
+                    //     crossAxisAlignment: CrossAxisAlignment.start,
+                    //     children: const [
+                    //       _SectionTitle(
+                    //         title: 'App Usage',
+                    //         subtitle: 'Tap to see screen-time details',
+                    //       ),
+                    //       SizedBox(height: 14),
+                    //       ActivityOverviewCard(),
+                    //     ],
+                    //   ),
+                    // ),
                     const SizedBox(height: 26),
 
                     // ---- Foundation ---------------------------------------
