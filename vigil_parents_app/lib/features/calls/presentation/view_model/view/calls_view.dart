@@ -6,6 +6,7 @@ import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/components/app_search_field.dart';
 import 'package:vigil_parents_app/components/app_shimmer.dart';
+import 'package:vigil_parents_app/components/day_window_selector.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/calls/models/calls_model.dart';
 import 'package:vigil_parents_app/features/calls/presentation/view_model/calls_viewmodel.dart';
@@ -143,13 +144,18 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
                   },
                 ),
                 const SizedBox(height: 12),
-                _SummaryCard(summary: vm.summary),
-                const SizedBox(height: 12),
                 _FilterTabs(
                   active: vm.activeFilter,
-                  missedCount: vm.missedCallCount,
+                  summary: vm.windowedSummary,
                   onSelect: (f) =>
                       ref.read(callLogViewModelProvider).setFilter(f),
+                ),
+                const SizedBox(height: 10),
+                DayWindowSelector(
+                  selected: vm.activeWindow,
+                  enabled: !vm.loading,
+                  onSelected: (w) =>
+                      ref.read(callLogViewModelProvider).setWindow(w),
                 ),
                 const SizedBox(height: 8),
                 Expanded(
@@ -261,99 +267,15 @@ class _Row {
   _Row.tile(this.log) : isHeader = false, label = null, count = 0;
 }
 
-// ── Summary card ─────────────────────────────────────────────────────────────
-class _SummaryCard extends StatelessWidget {
-  final CallSummaryModel summary;
-  const _SummaryCard({required this.summary});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      child: Row(
-        children: [
-          _item(
-            Icons.phone_rounded,
-            AppColors.primary,
-            summary.totalCalls,
-            'Total',
-          ),
-          _divider(),
-          _item(
-            Icons.call_received_rounded,
-            _incomingColor,
-            summary.incomingCalls,
-            'Incoming',
-          ),
-          _divider(),
-          _item(
-            Icons.call_made_rounded,
-            _outgoingColor,
-            summary.outgoingCalls,
-            'Outgoing',
-          ),
-          _divider(),
-          _item(
-            Icons.call_missed_rounded,
-            _missedColor,
-            summary.missedCalls,
-            'Missed',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _item(IconData icon, Color color, int count, String label) {
-    return Expanded(
-      child: Column(
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, color: color, size: 17),
-              const SizedBox(width: 5),
-              Text(
-                '$count',
-                style: const TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 10.5,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _divider() =>
-      Container(width: 1, height: 32, color: AppColors.cardBorder);
-}
-
-// ── Filter tabs ──────────────────────────────────────────────────────────────
+// ── Filter tabs (with per-type counts) ───────────────────────────────────────
 class _FilterTabs extends StatelessWidget {
   final CallFilter active;
-  final int missedCount;
+  final CallSummaryModel summary;
   final ValueChanged<CallFilter> onSelect;
 
   const _FilterTabs({
     required this.active,
-    required this.missedCount,
+    required this.summary,
     required this.onSelect,
   });
 
@@ -361,67 +283,65 @@ class _FilterTabs extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        _tab('All', CallFilter.all),
+        _tab('All', CallFilter.all, summary.totalCalls, AppColors.primary),
         const SizedBox(width: 8),
-        _tab('Incoming', CallFilter.incoming),
+        _tab(
+          'Incoming',
+          CallFilter.incoming,
+          summary.incomingCalls,
+          _incomingColor,
+        ),
         const SizedBox(width: 8),
-        _tab('Outgoing', CallFilter.outgoing),
+        _tab(
+          'Outgoing',
+          CallFilter.outgoing,
+          summary.outgoingCalls,
+          _outgoingColor,
+        ),
         const SizedBox(width: 8),
-        _tab('Missed', CallFilter.missed, badge: missedCount),
+        _tab('Missed', CallFilter.missed, summary.missedCalls, _missedColor),
       ],
     );
   }
 
-  Widget _tab(String label, CallFilter filter, {int badge = 0}) {
+  Widget _tab(String label, CallFilter filter, int count, Color accent) {
     final isActive = active == filter;
     return Expanded(
       child: GestureDetector(
         onTap: () => onSelect(filter),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          height: 38,
+          padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
           decoration: BoxDecoration(
-            color: isActive ? AppColors.headerBottom : AppColors.scaffold,
+            color: isActive ? accent : AppColors.scaffold,
             borderRadius: BorderRadius.circular(10),
-          ),
-          child: Center(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: isActive ? Colors.white : AppColors.textSecondary,
-                    ),
-                  ),
-                ),
-                if (badge > 0) ...[
-                  const SizedBox(width: 4),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 5,
-                      vertical: 1,
-                    ),
-                    decoration: const BoxDecoration(
-                      color: _missedColor,
-                      shape: BoxShape.circle,
-                    ),
-                    child: Text(
-                      '$badge',
-                      style: const TextStyle(
-                        fontSize: 9,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
+            border: Border.all(
+              color: isActive ? accent : AppColors.cardBorder,
             ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                  color: isActive ? Colors.white : accent,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w600,
+                  color: isActive ? Colors.white : AppColors.textSecondary,
+                ),
+              ),
+            ],
           ),
         ),
       ),

@@ -1,7 +1,9 @@
+import 'dart:math';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
@@ -9,9 +11,6 @@ import 'package:vigil_parents_app/features/child/presentation/view_model/selecte
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/location/models/location_model.dart';
 import 'package:vigil_parents_app/features/location/presentation/view_model/location_history_viewmodel.dart';
-import 'package:vigil_parents_app/features/location/presentation/widgets/home_location_card.dart'
-    show kMapTileUrl, kMapSubdomains, kMapUserAgent;
-import 'package:vigil_parents_app/features/location/presentation/widgets/location_marker.dart';
 
 class LocationHistoryScreen extends ConsumerStatefulWidget {
   const LocationHistoryScreen({super.key});
@@ -21,16 +20,20 @@ class LocationHistoryScreen extends ConsumerStatefulWidget {
       _LocationHistoryScreenState();
 }
 
-class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen>
-    with TickerProviderStateMixin {
-  final MapController _mapController = MapController();
-  bool _mapReady = false;
+class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen> {
+  GoogleMapController? _mapController;
 
   // Tracks which dataset the camera has already framed, so we fit-to-bounds
   // once per fetch rather than on every rebuild.
   String? _fittedKey;
   // The point the camera last animated to (avoids re-animating on rebuilds).
   String? _focusedId;
+
+  // Time-labelled pin bitmaps for the current points, rebuilt whenever the
+  // trail or the selected point changes. Signature guards against rebuilding
+  // the same set every frame.
+  Set<Marker> _markers = {};
+  String? _markersSig;
 
   @override
   void initState() {
@@ -45,7 +48,7 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen>
 
   @override
   void dispose() {
-    _mapController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -63,62 +66,156 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen>
 
   /// Frame the whole trail in view (or center on a single point).
   void _fitTrail(List<ChildLocation> pts) {
-    if (!_mapReady || pts.isEmpty) return;
-    if (pts.length == 1) {
-      _mapController.move(pts.first.latLng, 16);
+    final controller = _mapController;
+    if (controller == null || pts.isEmpty) return;
+
+    final bounds = _boundsFor(pts);
+    // Total lat+lng spread of the trail, in degrees (~0.0005° ≈ 55 m).
+    final span =
+        (bounds.northeast.latitude - bounds.southwest.latitude).abs() +
+        (bounds.northeast.longitude - bounds.southwest.longitude).abs();
+
+    // One point, or the child barely moved (all fixes in ~one place): just
+    // centre on it. Fitting a near-zero bounds would over-zoom or throw.
+    if (pts.length == 1 || span < 0.0005) {
+      controller.animateCamera(
+        CameraUpdate.newLatLngZoom(
+          LatLng(pts.first.latitude, pts.first.longitude),
+          16,
+        ),
+      );
       return;
     }
-    _mapController.fitCamera(
-      CameraFit.coordinates(
-        coordinates: pts.map((p) => p.latLng).toList(),
-        padding: const EdgeInsets.all(56),
-        maxZoom: 16.5,
-      ),
+    controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 56));
+  }
+
+  /// Smoothly animate the camera to [lat]/[lng]. Google Maps tweens natively.
+  void _animatedMove(double lat, double lng, double zoom) {
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(LatLng(lat, lng), zoom),
     );
   }
 
-  /// Smoothly tween the camera to [dest].
-  void _animatedMove(LatLng dest, double zoom) {
-    if (!_mapReady) {
-      _mapController.move(dest, zoom);
-      return;
+  /// The bounding box that contains every point in [pts].
+  LatLngBounds _boundsFor(List<ChildLocation> pts) {
+    var minLat = pts.first.latitude, maxLat = pts.first.latitude;
+    var minLng = pts.first.longitude, maxLng = pts.first.longitude;
+    for (final p in pts) {
+      minLat = min(minLat, p.latitude);
+      maxLat = max(maxLat, p.latitude);
+      minLng = min(minLng, p.longitude);
+      maxLng = max(maxLng, p.longitude);
     }
-    final camera = _mapController.camera;
-    final latTween = Tween<double>(
-      begin: camera.center.latitude,
-      end: dest.latitude,
+    return LatLngBounds(
+      southwest: LatLng(minLat, minLng),
+      northeast: LatLng(maxLat, maxLng),
     );
-    final lngTween = Tween<double>(
-      begin: camera.center.longitude,
-      end: dest.longitude,
-    );
-    final zoomTween = Tween<double>(begin: camera.zoom, end: zoom);
-
-    final controller = AnimationController(
-      duration: const Duration(milliseconds: 550),
-      vsync: this,
-    );
-    final anim = CurvedAnimation(
-      parent: controller,
-      curve: Curves.easeInOutCubic,
-    );
-    controller.addListener(() {
-      _mapController.move(
-        LatLng(latTween.evaluate(anim), lngTween.evaluate(anim)),
-        zoomTween.evaluate(anim),
-      );
-    });
-    controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed ||
-          status == AnimationStatus.dismissed) {
-        controller.dispose();
-      }
-    });
-    controller.forward();
   }
 
   void _onPointTap(ChildLocation loc) {
     ref.read(locationHistoryViewModelProvider).select(loc);
+  }
+
+  /// Rebuilds the time-labelled pin set for [pts]. Each pin is a pill showing
+  /// the clock time of that fix (latest in green, the rest in blue, the
+  /// selected one highlighted), so the map reads "which time → which place" at
+  /// a glance. The full address stays in the tap-to-open info window.
+  Future<void> _buildMarkers(List<ChildLocation> pts, String? selectedId) async {
+    final markers = <Marker>{};
+    for (var i = 0; i < pts.length; i++) {
+      final p = pts[i];
+      final isLatest = i == 0;
+      final number = pts.length - i; // oldest = 1, chronological
+      final selected = p.id == selectedId;
+      final icon = await _numberMarkerBitmap(
+        number: number,
+        isLatest: isLatest,
+        selected: selected,
+      );
+      markers.add(
+        Marker(
+          markerId: MarkerId(p.id),
+          position: LatLng(p.latitude, p.longitude),
+          icon: icon,
+          // Circle pin — anchor at its centre on the coordinate.
+          anchor: const Offset(0.5, 0.5),
+          // Higher zIndex for the latest / selected so they sit above the rest.
+          zIndexInt: isLatest ? 2 : (selected ? 1 : 0),
+          infoWindow: InfoWindow(
+            title: isLatest
+                ? 'Stop $number · Now · ${p.timeLabel}'
+                : 'Stop $number · ${p.timeLabel}',
+            snippet: p.address.isNotEmpty ? p.address : p.coordinates,
+          ),
+          onTap: () => _onPointTap(p),
+        ),
+      );
+    }
+    if (mounted) setState(() => _markers = markers);
+  }
+
+  /// Draws a small numbered circle to a [BitmapDescriptor] for use as a Google
+  /// Maps marker icon. The number matches the stop's position in the timeline
+  /// list below (oldest = 1). Latest = green, selected = navy + larger, the
+  /// rest = blue.
+  Future<BitmapDescriptor> _numberMarkerBitmap({
+    required int number,
+    required bool isLatest,
+    required bool selected,
+  }) async {
+    final dpr = MediaQuery.of(context).devicePixelRatio;
+    final Color fill = isLatest
+        ? AppColors.primary
+        : (selected ? AppColors.headerBottom : AppColors.blueIcon);
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: '$number',
+        style: const TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w800,
+          color: Colors.white,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+
+    const border = 2.5;
+    // Diameter grows a touch for the selected/latest pins so they stand out.
+    final diameter = (selected || isLatest) ? 32.0 : 27.0;
+    final total = diameter + border * 2;
+    final center = Offset(total / 2, total / 2);
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+    canvas.scale(dpr);
+
+    // Soft drop shadow.
+    canvas.drawCircle(
+      center.translate(0, 1.5),
+      diameter / 2 + border,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.18)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+    );
+    // White ring + coloured fill.
+    canvas.drawCircle(center, diameter / 2 + border, Paint()..color = Colors.white);
+    canvas.drawCircle(center, diameter / 2, Paint()..color = fill);
+    // Centred number.
+    textPainter.paint(
+      canvas,
+      center - Offset(textPainter.width / 2, textPainter.height / 2),
+    );
+
+    final image = await recorder.endRecording().toImage(
+      (total * dpr).ceil(),
+      (total * dpr).ceil(),
+    );
+    final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
+    return BitmapDescriptor.bytes(
+      bytes!.buffer.asUint8List(),
+      imagePixelRatio: dpr,
+    );
   }
 
   @override
@@ -141,7 +238,16 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen>
     if (sel != null && sel.id != _focusedId && key == _fittedKey) {
       _focusedId = sel.id;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _mapReady) _animatedMove(sel.latLng, 16.5);
+        if (mounted) _animatedMove(sel.latitude, sel.longitude, 16.5);
+      });
+    }
+
+    // (Re)build the time-pill markers when the trail or selection changes.
+    final markersSig = '$key|${sel?.id}';
+    if (markersSig != _markersSig) {
+      _markersSig = markersSig;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _buildMarkers(points, sel?.id);
       });
     }
 
@@ -173,14 +279,12 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen>
                 children: [
                   Positioned.fill(
                     child: _Map(
-                      controller: _mapController,
                       points: points,
-                      selectedId: vm.selected?.id,
-                      onReady: () {
-                        _mapReady = true;
+                      markers: _markers,
+                      onMapCreated: (controller) {
+                        _mapController = controller;
                         if (points.isNotEmpty) _fitTrail(points);
                       },
-                      onPointTap: _onPointTap,
                     ),
                   ),
 
@@ -219,127 +323,49 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen>
 /// Map — trail polyline + numbered pins.
 /// ----------------------------------------------------------------------------
 class _Map extends StatelessWidget {
-  final MapController controller;
   final List<ChildLocation> points;
-  final String? selectedId;
-  final VoidCallback onReady;
-  final ValueChanged<ChildLocation> onPointTap;
+  final Set<Marker> markers;
+  final ValueChanged<GoogleMapController> onMapCreated;
 
   const _Map({
-    required this.controller,
     required this.points,
-    required this.selectedId,
-    required this.onReady,
-    required this.onPointTap,
+    required this.markers,
+    required this.onMapCreated,
   });
 
   @override
   Widget build(BuildContext context) {
     final center = points.isNotEmpty
-        ? points.first.latLng
+        ? LatLng(points.first.latitude, points.first.longitude)
         : const LatLng(20.5937, 78.9629);
 
-    return FlutterMap(
-      mapController: controller,
-      options: MapOptions(
-        initialCenter: center,
-        initialZoom: points.isNotEmpty ? 14 : 4,
-        minZoom: 3,
-        maxZoom: 18,
-        onMapReady: onReady,
-      ),
-      children: [
-        TileLayer(
-          urlTemplate: kMapTileUrl,
-          subdomains: kMapSubdomains,
-          userAgentPackageName: kMapUserAgent,
-        ),
-        if (points.length > 1)
-          PolylineLayer(
-            polylines: [
-              Polyline(
-                points: points.map((p) => p.latLng).toList(),
-                strokeWidth: 4,
-                color: AppColors.primary.withValues(alpha: 0.75),
-                borderStrokeWidth: 2,
-                borderColor: Colors.white.withValues(alpha: 0.9),
-              ),
-            ],
-          ),
-        MarkerLayer(
-          markers: [
-            for (var i = 0; i < points.length; i++)
-              Marker(
-                point: points[i].latLng,
-                width: 80,
-                height: 80,
-                alignment: i == 0 ? Alignment.topCenter : Alignment.center,
-                child: i == 0
-                    ? LocationPin(
-                        latest: true,
-                        onTap: () => onPointTap(points[i]),
-                      )
-                    : _NumberPin(
-                        // Number from the oldest (1) to newest so the path reads
-                        // chronologically; index 0 is the live pin above.
-                        number: points.length - i,
-                        selected: points[i].id == selectedId,
-                        onTap: () => onPointTap(points[i]),
-                      ),
-              ),
+    // The trail line, drawn oldest → newest as a dotted path so it reads as
+    // "the child moved from stop ① → ② → ③…". The numbered pins + timeline
+    // tell you the time at each stop.
+    final polylines = <Polyline>{
+      if (points.length > 1)
+        Polyline(
+          polylineId: const PolylineId('trail'),
+          points: [
+            for (final p in points) LatLng(p.latitude, p.longitude),
           ],
+          color: AppColors.headerBottom,
+          width: 3,
+          patterns: [PatternItem.dot, PatternItem.gap(10)],
         ),
-      ],
-    );
-  }
-}
+    };
 
-/// A small numbered dot for a historical fix.
-class _NumberPin extends StatelessWidget {
-  final int number;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _NumberPin({
-    required this.number,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final size = selected ? 34.0 : 26.0;
-    return GestureDetector(
-      onTap: onTap,
-      child: Center(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: size,
-          height: size,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: selected ? AppColors.primary : AppColors.blueIcon,
-            border: Border.all(color: Colors.white, width: 2.5),
-            boxShadow: [
-              BoxShadow(
-                color: (selected ? AppColors.primary : AppColors.blueIcon)
-                    .withValues(alpha: 0.45),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '$number',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              fontSize: selected ? 13 : 11,
-            ),
-          ),
-        ),
+    return GoogleMap(
+      onMapCreated: onMapCreated,
+      initialCameraPosition: CameraPosition(
+        target: center,
+        zoom: points.isNotEmpty ? 14 : 4,
       ),
+      polylines: polylines,
+      markers: markers,
+      myLocationButtonEnabled: false,
+      zoomControlsEnabled: false,
+      mapToolbarEnabled: false,
     );
   }
 }
@@ -570,6 +596,7 @@ class _HistoryList extends StatelessWidget {
                       final p = points[i];
                       return _TimelineTile(
                         location: p,
+                        number: points.length - i, // matches the map pin
                         isFirst: i == 0,
                         isLast: i == points.length - 1,
                         isLatest: i == 0,
@@ -587,6 +614,7 @@ class _HistoryList extends StatelessWidget {
 
 class _TimelineTile extends StatelessWidget {
   final ChildLocation location;
+  final int number;
   final bool isFirst;
   final bool isLast;
   final bool isLatest;
@@ -595,6 +623,7 @@ class _TimelineTile extends StatelessWidget {
 
   const _TimelineTile({
     required this.location,
+    required this.number,
     required this.isFirst,
     required this.isLast,
     required this.isLatest,
@@ -604,7 +633,9 @@ class _TimelineTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent = isLatest ? AppColors.primary : AppColors.blueIcon;
+    final accent = isLatest
+        ? AppColors.primary
+        : (selected ? AppColors.headerBottom : AppColors.blueIcon);
 
     return IntrinsicHeight(
       child: Row(
@@ -628,9 +659,9 @@ class _TimelineTile extends StatelessWidget {
             ),
           ),
 
-          // ---- Connector track + dot -----------------------------------
+          // ---- Connector track + numbered dot --------------------------
           SizedBox(
-            width: 22,
+            width: 30,
             child: Column(
               children: [
                 // top segment
@@ -645,16 +676,17 @@ class _TimelineTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                // dot
+                // numbered dot — same number as the map pin
                 Container(
-                  width: isLatest ? 16 : 13,
-                  height: isLatest ? 16 : 13,
+                  width: 26,
+                  height: 26,
+                  alignment: Alignment.center,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: accent,
                     border: Border.all(
-                      color: selected ? accent : Colors.white,
-                      width: selected ? 3 : 2.5,
+                      color: Colors.white,
+                      width: selected ? 3 : 2,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -662,6 +694,14 @@ class _TimelineTile extends StatelessWidget {
                         blurRadius: 6,
                       ),
                     ],
+                  ),
+                  child: Text(
+                    '$number',
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
                 // bottom segment (fills remaining height)

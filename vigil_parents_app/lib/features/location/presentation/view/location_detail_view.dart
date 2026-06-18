@@ -1,9 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:latlong2/latlong.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
@@ -12,9 +11,7 @@ import 'package:vigil_parents_app/features/child/presentation/widgets/child_sele
 import 'package:vigil_parents_app/features/location/models/location_model.dart';
 import 'package:vigil_parents_app/features/location/presentation/view_model/location_viewmodel.dart';
 import 'package:vigil_parents_app/features/location/presentation/view/location_history_view.dart';
-import 'package:vigil_parents_app/features/location/presentation/widgets/home_location_card.dart'
-    show kMapTileUrl, kMapSubdomains, kMapUserAgent;
-import 'package:vigil_parents_app/features/location/presentation/widgets/location_marker.dart';
+import 'package:vigil_parents_app/features/location/presentation/widgets/person_marker.dart';
 
 /// Full-screen view of the child's current (latest) location: a clean
 /// interactive map with a single live pin, a child picker that matches the SMS
@@ -28,16 +25,27 @@ class LocationDetailScreen extends ConsumerStatefulWidget {
       _LocationDetailScreenState();
 }
 
-class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
-    with TickerProviderStateMixin {
-  final MapController _mapController = MapController();
-  bool _mapReady = false;
+class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
+  GoogleMapController? _mapController;
+
+  // Person-pin bitmap for the live marker, loaded once the context is ready.
+  BitmapDescriptor? _personIcon;
 
   // Id of the fix the camera is currently centered on, so we recenter once when
   // a new latest location arrives rather than on every rebuild.
   String? _centeredId;
 
   Timer? _pollTimer;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_personIcon == null) {
+      PersonMarker.icon(context).then((b) {
+        if (mounted) setState(() => _personIcon = b);
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -65,7 +73,7 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
   @override
   void dispose() {
     _pollTimer?.cancel();
-    _mapController.dispose();
+    _mapController?.dispose();
     super.dispose();
   }
 
@@ -74,47 +82,16 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
     ref.read(locationViewModelProvider).load(childId);
   }
 
-  /// Smoothly tweens the camera (center + zoom) to [dest].
-  void _animatedMove(LatLng dest, double zoom) {
-    if (!_mapReady) {
-      _mapController.move(dest, zoom);
-      return;
-    }
-    final camera = _mapController.camera;
-    final latTween = Tween<double>(
-      begin: camera.center.latitude,
-      end: dest.latitude,
+  /// Smoothly animates the camera (center + zoom) to [lat]/[lng]. Google Maps
+  /// handles the tweening natively.
+  void _animatedMove(double lat, double lng, double zoom) {
+    _mapController?.animateCamera(
+      CameraUpdate.newLatLngZoom(LatLng(lat, lng), zoom),
     );
-    final lngTween = Tween<double>(
-      begin: camera.center.longitude,
-      end: dest.longitude,
-    );
-    final zoomTween = Tween<double>(begin: camera.zoom, end: zoom);
-
-    final controller = AnimationController(
-      duration: const Duration(milliseconds: 650),
-      vsync: this,
-    );
-    final anim = CurvedAnimation(
-      parent: controller,
-      curve: Curves.easeInOutCubic,
-    );
-    controller.addListener(() {
-      _mapController.move(
-        LatLng(latTween.evaluate(anim), lngTween.evaluate(anim)),
-        zoomTween.evaluate(anim),
-      );
-    });
-    controller.addStatusListener((status) {
-      if (status == AnimationStatus.completed ||
-          status == AnimationStatus.dismissed) {
-        controller.dispose();
-      }
-    });
-    controller.forward();
   }
 
-  void _recenter(ChildLocation latest) => _animatedMove(latest.latLng, 16.5);
+  void _recenter(ChildLocation latest) =>
+      _animatedMove(latest.latitude, latest.longitude, 16.5);
 
   @override
   Widget build(BuildContext context) {
@@ -126,7 +103,7 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
     if (latest != null && latest.id != _centeredId) {
       _centeredId = latest.id;
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _mapReady) _animatedMove(latest.latLng, 16);
+        if (mounted) _animatedMove(latest.latitude, latest.longitude, 16);
       });
     }
 
@@ -153,12 +130,16 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
                 children: [
                   Positioned.fill(
                     child: _Map(
-                      controller: _mapController,
                       latest: latest,
-                      onReady: () {
-                        _mapReady = true;
+                      personIcon: _personIcon,
+                      onMapCreated: (controller) {
+                        _mapController = controller;
                         if (latest != null) {
-                          _mapController.move(latest.latLng, 16);
+                          _animatedMove(
+                            latest.latitude,
+                            latest.longitude,
+                            16,
+                          );
                         }
                       },
                     ),
@@ -207,48 +188,37 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
 /// Map — a single live pin for the latest fix.
 /// ----------------------------------------------------------------------------
 class _Map extends StatelessWidget {
-  final MapController controller;
   final ChildLocation? latest;
-  final VoidCallback onReady;
+  final BitmapDescriptor? personIcon;
+  final ValueChanged<GoogleMapController> onMapCreated;
 
   const _Map({
-    required this.controller,
     required this.latest,
-    required this.onReady,
+    required this.personIcon,
+    required this.onMapCreated,
   });
 
   @override
   Widget build(BuildContext context) {
-    final center = latest?.latLng ?? const LatLng(20.5937, 78.9629);
+    final center = latest != null
+        ? LatLng(latest!.latitude, latest!.longitude)
+        : const LatLng(20.5937, 78.9629);
 
-    return FlutterMap(
-      mapController: controller,
-      options: MapOptions(
-        initialCenter: center,
-        initialZoom: 16,
-        minZoom: 3,
-        maxZoom: 18,
-        onMapReady: onReady,
-      ),
-      children: [
-        TileLayer(
-          urlTemplate: kMapTileUrl,
-          subdomains: kMapSubdomains,
-          userAgentPackageName: kMapUserAgent,
-        ),
+    return GoogleMap(
+      onMapCreated: onMapCreated,
+      initialCameraPosition: CameraPosition(target: center, zoom: 16),
+      markers: {
         if (latest != null)
-          MarkerLayer(
-            markers: [
-              Marker(
-                point: latest!.latLng,
-                width: 80,
-                height: 80,
-                alignment: Alignment.topCenter,
-                child: const LocationPin(latest: true),
-              ),
-            ],
+          Marker(
+            markerId: const MarkerId('latest'),
+            position: LatLng(latest!.latitude, latest!.longitude),
+            anchor: const Offset(0.5, 1.0),
+            icon: personIcon ?? BitmapDescriptor.defaultMarker,
           ),
-      ],
+      },
+      myLocationButtonEnabled: false,
+      zoomControlsEnabled: false,
+      mapToolbarEnabled: false,
     );
   }
 }

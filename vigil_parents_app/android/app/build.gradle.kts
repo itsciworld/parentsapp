@@ -1,8 +1,21 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+// Single source of truth for the Google Maps key: read it from the project's
+// .env (the same file the Dart side uses). Keeps the key out of git and out of
+// the committed manifest. Injected below as the ${MAPS_API_KEY} placeholder.
+val googleMapsApiKey: String = run {
+    val envFile = rootProject.file("../.env")
+    if (!envFile.exists()) return@run ""
+    val props = Properties()
+    envFile.inputStream().use { props.load(it) }
+    (props.getProperty("GOOGLE_MAPS_API_KEY") ?: "").trim()
 }
 
 android {
@@ -30,6 +43,9 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Exposes the Maps key to AndroidManifest.xml via ${MAPS_API_KEY}.
+        manifestPlaceholders["MAPS_API_KEY"] = googleMapsApiKey
     }
 
     buildTypes {

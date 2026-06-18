@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/components/day_window_selector.dart';
 import 'package:vigil_parents_app/features/calls/models/calls_model.dart';
 import 'package:vigil_parents_app/features/calls/repo/call_repo.dart';
 
@@ -19,17 +20,33 @@ class CallLogViewModel extends ChangeNotifier {
   String? error;
   String _query = '';
   CallFilter _filter = CallFilter.all;
+  DayWindow _window = DayWindow.all;
 
   String get query => _query;
   CallFilter get activeFilter => _filter;
+  DayWindow get activeWindow => _window;
 
   /// Summary counts computed from the full (unfiltered) set.
   CallSummaryModel get summary => CallSummaryModel.fromLogs(_all);
   int get missedCallCount => summary.missedCalls;
 
-  /// Logs after applying the active filter + search query, newest first.
+  /// Per-type counts within the active day window only (ignores the type filter
+  /// and search), so the filter tabs show how many of each you'd see for the
+  /// chosen window.
+  CallSummaryModel get windowedSummary {
+    final list = _window == DayWindow.all
+        ? _all
+        : _all.where((l) => _window.includes(l.timestamp)).toList();
+    return CallSummaryModel.fromLogs(list);
+  }
+
+  /// Logs after applying the active day window + filter + search query,
+  /// newest first.
   List<CallLogModel> get logs {
     var list = _all;
+    if (_window != DayWindow.all) {
+      list = list.where((l) => _window.includes(l.timestamp)).toList();
+    }
     if (_filter != CallFilter.all) {
       final type = switch (_filter) {
         CallFilter.incoming => CallType.incoming,
@@ -144,6 +161,12 @@ class CallLogViewModel extends ChangeNotifier {
   void setFilter(CallFilter filter) {
     if (_filter == filter) return;
     _filter = filter;
+    notifyListeners();
+  }
+
+  void setWindow(DayWindow window) {
+    if (_window == window) return;
+    _window = window;
     notifyListeners();
   }
 

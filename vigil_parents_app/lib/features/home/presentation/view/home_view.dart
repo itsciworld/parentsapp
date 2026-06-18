@@ -14,7 +14,6 @@ import 'package:vigil_parents_app/features/home/models/home_model.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/feature_badges_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/home_viewmodel.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/view_model/app_usage_viewmodel.dart';
-import 'package:vigil_parents_app/features/app_usage/presentation/widgets/activity_overview_card.dart';
 import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
 import 'package:vigil_parents_app/features/live_status/models/live_status_model.dart';

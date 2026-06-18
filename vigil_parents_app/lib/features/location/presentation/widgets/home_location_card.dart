@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
@@ -7,14 +7,7 @@ import 'package:vigil_parents_app/features/child/presentation/view_model/selecte
 import 'package:vigil_parents_app/features/location/models/location_model.dart';
 import 'package:vigil_parents_app/features/location/presentation/view/location_detail_view.dart';
 import 'package:vigil_parents_app/features/location/presentation/view_model/location_viewmodel.dart';
-import 'package:vigil_parents_app/features/location/presentation/widgets/location_marker.dart';
-
-/// Standard OpenStreetMap raster basemap — detailed and colorful. Free to use
-/// with attribution; no subdomains needed. Shared by the home card and the
-/// detail view.
-const String kMapTileUrl = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
-const List<String> kMapSubdomains = <String>[];
-const String kMapUserAgent = 'com.vigil.parents';
+import 'package:vigil_parents_app/features/location/presentation/widgets/person_marker.dart';
 
 /// Home-page "Live Location" card: a live OpenStreetMap preview centered on the
 /// selected child's most recent fix, with an expand icon that opens the full
@@ -129,14 +122,33 @@ class HomeLocationCard extends ConsumerWidget {
 }
 
 /// The map itself, or a placeholder while there's no fix yet.
-class _MapBody extends StatelessWidget {
+class _MapBody extends StatefulWidget {
   final LocationViewModel vm;
   final ChildLocation? latest;
 
   const _MapBody({required this.vm, required this.latest});
 
   @override
+  State<_MapBody> createState() => _MapBodyState();
+}
+
+class _MapBodyState extends State<_MapBody> {
+  BitmapDescriptor? _personIcon;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_personIcon == null) {
+      PersonMarker.icon(context).then((b) {
+        if (mounted) setState(() => _personIcon = b);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final vm = widget.vm;
+    final latest = widget.latest;
     if (latest == null) {
       if (vm.loading) {
         return Shimmer.fromColors(
@@ -171,34 +183,28 @@ class _MapBody extends StatelessWidget {
       );
     }
 
-    final point = latest!.latLng;
-    return FlutterMap(
-      options: MapOptions(
-        initialCenter: point,
-        initialZoom: 15,
-        // Preview only — the full map handles interaction.
-        interactionOptions: const InteractionOptions(
-          flags: InteractiveFlag.none,
+    final point = LatLng(latest.latitude, latest.longitude);
+    return GoogleMap(
+      initialCameraPosition: CameraPosition(target: point, zoom: 15),
+      markers: {
+        Marker(
+          markerId: const MarkerId('latest'),
+          position: point,
+          anchor: const Offset(0.5, 1.0),
+          icon: _personIcon ?? BitmapDescriptor.defaultMarker,
         ),
-      ),
-      children: [
-        TileLayer(
-          urlTemplate: kMapTileUrl,
-          subdomains: kMapSubdomains,
-          userAgentPackageName: kMapUserAgent,
-        ),
-        MarkerLayer(
-          markers: [
-            Marker(
-              point: point,
-              width: 70,
-              height: 70,
-              alignment: Alignment.topCenter,
-              child: const LocationPin(latest: true),
-            ),
-          ],
-        ),
-      ],
+      },
+      // Preview only — the full detail map handles interaction. Lite mode keeps
+      // the card a cheap static snapshot on Android.
+      liteModeEnabled: true,
+      zoomControlsEnabled: false,
+      myLocationButtonEnabled: false,
+      mapToolbarEnabled: false,
+      compassEnabled: false,
+      scrollGesturesEnabled: false,
+      zoomGesturesEnabled: false,
+      tiltGesturesEnabled: false,
+      rotateGesturesEnabled: false,
     );
   }
 }

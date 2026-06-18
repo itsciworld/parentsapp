@@ -54,11 +54,10 @@ dependencies:
   # conflicts with flutter_local_notifications ^19.4.0 (timezone ^0.10.0) used by
   # the background service. 32.1.23 is the latest that resolves with it.
   syncfusion_flutter_calendar: 32.1.23
-  flutter_map: ^8.3.0
-  latlong2: ^0.9.1
   fl_chart: ^1.2.0
   video_player: ^2.9.2
   chewie: ^1.8.5
+  google_maps_flutter: ^2.17.1
 
 dev_dependencies:
   flutter_test:

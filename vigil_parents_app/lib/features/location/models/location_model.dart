@@ -1,5 +1,3 @@
-import 'package:latlong2/latlong.dart';
-
 /// A single recorded location point for a child.
 ///
 /// The API returns `latitude`/`longitude` as strings, so they're parsed to
@@ -22,8 +20,6 @@ class ChildLocation {
     required this.parentId,
     this.date,
   });
-
-  LatLng get latLng => LatLng(latitude, longitude);
 
   /// "22.7608, 75.8975" — a compact, fixed-precision coordinate label.
   String get coordinates =>

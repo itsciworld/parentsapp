@@ -11,6 +11,11 @@
         android:label="Vigil-Parents"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
+        <!-- Google Maps SDK key, injected from .env (GOOGLE_MAPS_API_KEY) by
+             build.gradle.kts as the ${MAPS_API_KEY} placeholder. -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
         <!-- Declare the foreground service type for Android 14+ -->
         <service
             android:name="id.flutter.flutter_background_service.BackgroundService"

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vigil_parents_app/components/day_window_selector.dart';
 import 'package:vigil_parents_app/features/sms/models/sms_thread_model.dart';
 import 'package:vigil_parents_app/features/sms/repo/sms_repo.dart';
 
@@ -20,12 +21,14 @@ class SmsViewModel extends ChangeNotifier {
   bool loading = false;
   String? error;
   String _query = '';
+  DayWindow _window = DayWindow.all;
 
   // threadId -> message count already viewed. Loaded per child.
   Map<String, int> _seen = {};
   String _childId = '';
 
   String get query => _query;
+  DayWindow get activeWindow => _window;
 
   static String _seenKey(String childId) => 'sms_thread_seen_$childId';
 
@@ -61,12 +64,16 @@ class SmsViewModel extends ChangeNotifier {
     }
   }
 
-  /// Threads after applying the current search query (by address or any
-  /// message body within the thread).
+  /// Threads after applying the active day window (by last activity) and the
+  /// current search query (by address or any message body within the thread).
   List<SmsThread> get threads {
-    if (_query.trim().isEmpty) return _threads;
+    var list = _threads;
+    if (_window != DayWindow.all) {
+      list = list.where((t) => _window.includes(t.lastMessageAt)).toList();
+    }
+    if (_query.trim().isEmpty) return list;
     final q = _query.toLowerCase();
-    return _threads
+    return list
         .where(
           (t) =>
               t.address.toLowerCase().contains(q) ||
@@ -113,6 +120,12 @@ class SmsViewModel extends ChangeNotifier {
 
   void setQuery(String value) {
     _query = value;
+    notifyListeners();
+  }
+
+  void setWindow(DayWindow window) {
+    if (_window == window) return;
+    _window = window;
     notifyListeners();
   }
 

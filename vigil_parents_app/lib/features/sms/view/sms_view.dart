@@ -6,6 +6,7 @@ import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/components/app_search_field.dart';
 import 'package:vigil_parents_app/components/app_shimmer.dart';
+import 'package:vigil_parents_app/components/day_window_selector.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
@@ -198,6 +199,15 @@ class _SmsScreenState extends ConsumerState<SmsScreen> {
                 SmsStateCard(
                   threads: vm.totalThreads,
                   messages: vm.totalMessages,
+                ),
+
+                const SizedBox(height: 12),
+
+                DayWindowSelector(
+                  selected: vm.activeWindow,
+                  enabled: !vm.loading,
+                  onSelected: (w) =>
+                      ref.read(smsViewModelProvider).setWindow(w),
                 ),
 
                 const SizedBox(height: 12),
