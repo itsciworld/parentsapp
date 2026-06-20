@@ -2,16 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
 
-/// ============================================================================
-/// HOME REPOSITORY
-/// ----------------------------------------------------------------------------
-/// Abstraction over the data source. Right now it returns hard-coded dummy data
-/// after a short simulated delay.
-///
-/// LATER: implement [ApiHomeRepository] that calls your real backend and parses
-/// JSON into the same models. The ViewModel depends on the abstract type, so
-/// nothing else in the app changes.
-/// ============================================================================
 abstract class HomeRepository {
   Future<HomeDashboardData> fetchDashboard();
 }
@@ -58,15 +48,6 @@ class DummyHomeRepository implements HomeRepository {
         ),
       ],
       features: [
-        // FeatureTile(
-        //   id: 'messages',
-        //   title: 'Messages',
-        //   subtitle: 'View all chats',
-        //   icon: Icons.chat_bubble_rounded,
-        //   iconColor: AppColors.blueIcon,
-        //   iconBackground: AppColors.blueSoft,
-        //   badgeCount: 12,
-        // ),
         FeatureTile(
           id: 'sms',
           title: 'SMS',
@@ -77,15 +58,15 @@ class DummyHomeRepository implements HomeRepository {
           badgeCount: 7,
         ),
         // Gallery — temporarily hidden from the monitoring tools grid.
-        // FeatureTile(
-        //   id: 'gallery',
-        //   title: 'Gallery',
-        //   subtitle: 'Photos & videos',
-        //   icon: Icons.photo_library_rounded,
-        //   iconColor: AppColors.orangeIcon,
-        //   iconBackground: AppColors.orangeSoft,
-        //   badgeCount: 24,
-        // ),
+        FeatureTile(
+          id: 'gallery',
+          title: 'Gallery',
+          subtitle: 'Photos & videos',
+          icon: Icons.photo_library_rounded,
+          iconColor: AppColors.orangeIcon,
+          iconBackground: AppColors.orangeSoft,
+          badgeCount: 24,
+        ),
 
         // FeatureTile(
         //   id: 'whatsapp',
@@ -131,15 +112,7 @@ class DummyHomeRepository implements HomeRepository {
         //   iconBackground: AppColors.blueSoft,
         //   badgeCount: 7,
         // ),
-        // FeatureTile(
-        //   id: 'location',
-        //   title: 'Live Location',
-        //   subtitle: 'Real-time tracking',
-        //   icon: Icons.location_on_rounded,
-        //   iconColor: AppColors.blueIcon,
-        //   iconBackground: AppColors.blueSoft,
-        //   isLocked: true,
-        // ),
+
         // FeatureTile(
         //   id: 'social',
         //   title: 'Social Media',

@@ -16,7 +16,7 @@ class LiveStatusViewModel extends ChangeNotifier {
   final LiveStatusRepository _repository;
 
   /// How often the screen re-polls the endpoint while it is in the foreground.
-  static const Duration _pollInterval = Duration(seconds: 30);
+  static const Duration _pollInterval = Duration(seconds: 25);
 
   LiveStatusResponse? status;
   bool loading = false;
@@ -105,7 +105,8 @@ final liveStatusRepositoryProvider = Provider<LiveStatusRepository>((ref) {
   return LiveStatusRepository();
 });
 
-final liveStatusViewModelProvider =
-    ChangeNotifierProvider<LiveStatusViewModel>((ref) {
-      return LiveStatusViewModel(ref.read(liveStatusRepositoryProvider));
-    });
+final liveStatusViewModelProvider = ChangeNotifierProvider<LiveStatusViewModel>(
+  (ref) {
+    return LiveStatusViewModel(ref.read(liveStatusRepositoryProvider));
+  },
+);

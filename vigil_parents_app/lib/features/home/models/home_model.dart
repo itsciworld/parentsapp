@@ -1,14 +1,5 @@
 import 'package:flutter/material.dart';
 
-/// ============================================================================
-/// MODELS
-/// ----------------------------------------------------------------------------
-/// Plain immutable data classes. When the real API is wired in later, only the
-/// repository's `fromJson` mapping needs to change — the UI and ViewModel stay
-/// untouched.
-/// ============================================================================
-
-/// The parent currently logged in (shown in the app bar).
 class ParentProfile {
   final String name;
   final String initials;
@@ -16,7 +7,6 @@ class ParentProfile {
   const ParentProfile({required this.name, required this.initials});
 }
 
-/// The child device being monitored (header card).
 class ChildProfile {
   final String name;
   final String avatarUrl;
@@ -35,7 +25,6 @@ class ChildProfile {
   });
 }
 
-/// One of the three small status chips under the child header.
 class StatusIndicator {
   final IconData icon;
   final String title;
@@ -50,7 +39,6 @@ class StatusIndicator {
   });
 }
 
-/// A feature tile in the 4x2 grid (Messages, SMS, Gallery, ...).
 class FeatureTile {
   final String id;
   final String title;
@@ -60,7 +48,7 @@ class FeatureTile {
   final Color iconBackground;
   final int? badgeCount;
   final List<IconData>? clusterIcons;
-  final bool isLocked; // 👈 add
+  final bool isLocked;
 
   const FeatureTile({
     required this.id,
@@ -71,7 +59,7 @@ class FeatureTile {
     required this.iconBackground,
     this.badgeCount,
     this.clusterIcons,
-    this.isLocked = false, // 👈 default false
+    this.isLocked = false,
   });
 
   /// Returns a copy with the badge overridden. Pass `clearBadge: true` to
@@ -106,13 +94,11 @@ class LiveLocation {
   });
 }
 
-/// "Today's Activity Summary" dark panel.
 class ActivitySummary {
   final String screenTime;
-  final double screenTimeDeltaPercent; // +ve = up vs yesterday
+  final double screenTimeDeltaPercent;
   final int alertCount;
 
-  /// Normalized 0..1 points for the little sparkline.
   final List<double> sparkline;
 
   const ActivitySummary({

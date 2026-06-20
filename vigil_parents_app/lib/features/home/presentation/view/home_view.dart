@@ -37,6 +37,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with WidgetsBindingObserver {
   late final HomeViewModel _vm;
   Timer? _locationTimer;
+  LiveStatusViewModel? _liveStatusVm; // Save reference for dispose
 
   @override
   void initState() {
@@ -51,7 +52,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       if (id != null) {
         ref.read(deviceInfoViewModelProvider).load(id);
         // Begin live battery/connectivity polling for the selected child.
-        ref.read(liveStatusViewModelProvider).startPolling(id);
+        _liveStatusVm = ref.read(liveStatusViewModelProvider);
+        _liveStatusVm!.startPolling(id);
         ref.read(locationViewModelProvider).load(id);
         ref.read(appUsageViewModelProvider).load(id);
       }
@@ -59,7 +61,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
 
     // Keep the home map's "latest location" fresh while the screen is visible.
-    _locationTimer = Timer.periodic(const Duration(seconds: 55), (_) {
+    _locationTimer = Timer.periodic(const Duration(seconds: 40), (_) {
       ref.read(locationViewModelProvider).refresh();
     });
   }
@@ -80,7 +82,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (state == AppLifecycleState.resumed) {
       final id = ref.read(selectedChildProvider).selectedId;
       if (id != null) vm.startPolling(id);
-      // Pull fresh location + app-usage the moment we return to the foreground.
+
       ref.read(locationViewModelProvider).refresh();
       ref.read(appUsageViewModelProvider).refresh();
     } else {
@@ -92,7 +94,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _locationTimer?.cancel();
-    ref.read(liveStatusViewModelProvider).stopPolling();
+    // Use saved reference instead of ref.read() during dispose
+    _liveStatusVm?.stopPolling();
     _vm.dispose();
     super.dispose();
   }
