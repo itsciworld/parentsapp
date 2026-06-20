@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
+import 'package:vigil_parents_app/features/app_usage/presentation/widgets/activity_overview_card.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
@@ -290,23 +291,23 @@ class _LoadedView extends ConsumerWidget {
                         ],
                       ),
                     ),
-                    // const SizedBox(height: 26),
+                    const SizedBox(height: 26),
 
                     // ---- App usage ----------------------------------------
-                    // _Reveal(
-                    //   delayMs: 205,
-                    //   child: Column(
-                    //     crossAxisAlignment: CrossAxisAlignment.start,
-                    //     children: const [
-                    //       _SectionTitle(
-                    //         title: 'App Usage',
-                    //         subtitle: 'Tap to see screen-time details',
-                    //       ),
-                    //       SizedBox(height: 14),
-                    //       ActivityOverviewCard(),
-                    //     ],
-                    //   ),
-                    // ),
+                    _Reveal(
+                      delayMs: 205,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          _SectionTitle(
+                            title: 'App Usage',
+                            subtitle: 'Tap to see screen-time details',
+                          ),
+                          SizedBox(height: 14),
+                          ActivityOverviewCard(),
+                        ],
+                      ),
+                    ),
                     const SizedBox(height: 26),
 
                     // ---- Foundation ---------------------------------------

@@ -31,17 +31,14 @@ class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Always fetch fresh stats on open.
+    // Always fetch fresh stats on open - default to today's history.
     Future.microtask(() async {
       await ref.read(selectedChildProvider).load();
       final vm = ref.read(appUsageViewModelProvider);
       final id = ref.read(selectedChildProvider).selectedId;
       if (id == null) return;
-      if (vm.childId == id && vm.apps.isNotEmpty) {
-        vm.refresh();
-      } else {
-        vm.load(id);
-      }
+      // Load today's history by default
+      await vm.loadHistory(id, AppUsageDateRange.today);
     });
 
     _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
@@ -57,7 +54,9 @@ class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen> {
 
   void _onChildSelected(String childId) {
     setState(() => _showAll = false);
-    ref.read(appUsageViewModelProvider).load(childId);
+    final vm = ref.read(appUsageViewModelProvider);
+    // Load history with current date range
+    vm.loadHistory(childId, vm.dateRange);
   }
 
   @override
@@ -77,6 +76,13 @@ class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen> {
             // VIGIL logo header (same as SMS / other views).
             const AppHeader(),
             _TitleBar(onChildSelected: _onChildSelected),
+            // Date range selector
+            _DateRangeSelector(
+              selected: vm.dateRange,
+              enabled: !vm.loading,
+              onSelected: (range) =>
+                  ref.read(appUsageViewModelProvider).setDateRange(range),
+            ),
             Expanded(
               child: RefreshIndicator(
                 color: AppColors.primary,
@@ -108,7 +114,10 @@ class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: [
-        _Reveal(delayMs: 0, child: _TotalHero(vm: vm, childName: childName)),
+        _Reveal(
+          delayMs: 0,
+          child: _TotalHero(vm: vm, childName: childName),
+        ),
         const SizedBox(height: 18),
         _Reveal(
           delayMs: 90,
@@ -144,22 +153,27 @@ class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen> {
 /// ----------------------------------------------------------------------------
 /// Title + shared child dropdown, shown under the VIGIL logo header.
 /// ----------------------------------------------------------------------------
-class _TitleBar extends StatelessWidget {
+class _TitleBar extends ConsumerWidget {
   final ValueChanged<String> onChildSelected;
 
   const _TitleBar({required this.onChildSelected});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final vm = ref.watch(appUsageViewModelProvider);
+    final subtitle = vm.isHistoryMode
+        ? 'Usage for ${vm.dateRange.label.toLowerCase()}'
+        : 'Screen time by app';
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 2, 14, 10),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   'App Usage',
                   style: TextStyle(
                     fontSize: 17,
@@ -168,10 +182,10 @@ class _TitleBar extends StatelessWidget {
                     letterSpacing: -0.3,
                   ),
                 ),
-                SizedBox(height: 1),
+                const SizedBox(height: 1),
                 Text(
-                  'Screen time by app',
-                  style: TextStyle(
+                  subtitle,
+                  style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.textSecondary,
                     fontWeight: FontWeight.w600,
@@ -226,7 +240,11 @@ class _TotalHero extends StatelessWidget {
         ),
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
-          BoxShadow(color: AppColors.shadow, blurRadius: 20, offset: Offset(0, 8)),
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 20,
+            offset: Offset(0, 8),
+          ),
         ],
       ),
       child: Row(
@@ -443,9 +461,8 @@ class _PieCardState extends State<_PieCard> {
                                 _touched = -1;
                                 return;
                               }
-                              _touched = response!
-                                  .touchedSection!
-                                  .touchedSectionIndex;
+                              _touched =
+                                  response!.touchedSection!.touchedSectionIndex;
                             });
                           },
                         ),
@@ -641,7 +658,10 @@ class _AppsHeader extends StatelessWidget {
               onTap: onToggle,
               borderRadius: BorderRadius.circular(20),
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 7,
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -775,6 +795,61 @@ class _AppRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// ----------------------------------------------------------------------------
+/// Date range selector chips (Today / Yesterday / Last 3 Days / Last Week).
+/// ----------------------------------------------------------------------------
+class _DateRangeSelector extends StatelessWidget {
+  final AppUsageDateRange selected;
+  final bool enabled;
+  final ValueChanged<AppUsageDateRange> onSelected;
+
+  const _DateRangeSelector({
+    required this.selected,
+    required this.enabled,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
+        itemCount: AppUsageDateRange.values.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, i) {
+          final range = AppUsageDateRange.values[i];
+          final active = range == selected;
+          return GestureDetector(
+            onTap: enabled && !active ? () => onSelected(range) : null,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: active ? AppColors.primary : AppColors.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: active ? AppColors.primary : AppColors.cardBorder,
+                ),
+              ),
+              child: Text(
+                range.label,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: active ? Colors.white : AppColors.textSecondary,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

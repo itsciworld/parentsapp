@@ -100,4 +100,43 @@ class AppUsageRepository {
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
+
+  /// GET /api/apps/history — the child's app usage history for a date range.
+  /// Returns apps sorted by usage time (most-used first).
+  Future<List<AppUsage>> getAppHistory({
+    required String childId,
+    String? parentId,
+    required String fromDate,
+    required String toDate,
+    int page = 1,
+    int limit = 200,
+  }) async {
+    final pid = parentId ?? await SecureDeviceService.getParentId() ?? '';
+
+    try {
+      final response = await _apiClient.get(
+        '/api/apps/history',
+        query: {
+          'child_id': childId,
+          'parent_id': pid,
+          'from': fromDate,
+          'to': toDate,
+          'page': page,
+          'limit': limit,
+        },
+      );
+
+      final data = response.data;
+      if (data is Map<String, dynamic>) {
+        final apps = AppUsageResponse.fromJson(data).apps;
+        apps.sort((a, b) => b.usageMinutes.compareTo(a.usageMinutes));
+        return apps;
+      }
+      return const [];
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
 }

@@ -4,6 +4,51 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:vigil_parents_app/features/app_usage/models/app_usage_model.dart';
 import 'package:vigil_parents_app/features/app_usage/repo/app_usage_repo.dart';
 
+/// Date range preset for app usage history filters.
+enum AppUsageDateRange {
+  today,
+  yesterday,
+  last3Days,
+  lastWeek;
+
+  String get label {
+    switch (this) {
+      case AppUsageDateRange.today:
+        return 'Today';
+      case AppUsageDateRange.yesterday:
+        return 'Yesterday';
+      case AppUsageDateRange.last3Days:
+        return 'Last 3 Days';
+      case AppUsageDateRange.lastWeek:
+        return 'Last Week';
+    }
+  }
+
+  /// Returns the date range as [fromDate, toDate] in 'yyyy-MM-dd' format.
+  List<String> getDateRange() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    String formatDate(DateTime date) {
+      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    }
+
+    switch (this) {
+      case AppUsageDateRange.today:
+        return [formatDate(today), formatDate(today)];
+      case AppUsageDateRange.yesterday:
+        final yesterday = today.subtract(const Duration(days: 1));
+        return [formatDate(yesterday), formatDate(yesterday)];
+      case AppUsageDateRange.last3Days:
+        final threeDaysAgo = today.subtract(const Duration(days: 2));
+        return [formatDate(threeDaysAgo), formatDate(today)];
+      case AppUsageDateRange.lastWeek:
+        final weekAgo = today.subtract(const Duration(days: 6));
+        return [formatDate(weekAgo), formatDate(today)];
+    }
+  }
+}
+
 /// Loads app-usage stats for the selected child. Shared between the Home
 /// "Activity Overview" card and the full-screen detail view, so switching child
 /// in one reflects in the other. Apps are kept sorted by usage (most first).
@@ -20,6 +65,14 @@ class AppUsageViewModel extends ChangeNotifier {
   String? _childId;
   String? get childId => _childId;
 
+  /// Currently selected date range for history view.
+  AppUsageDateRange _dateRange = AppUsageDateRange.today;
+  AppUsageDateRange get dateRange => _dateRange;
+
+  /// Whether we're viewing history (vs. current day stats).
+  bool _isHistoryMode = false;
+  bool get isHistoryMode => _isHistoryMode;
+
   /// Total tracked screen time across all apps, in minutes.
   int get totalMinutes => apps.fold(0, (sum, a) => sum + a.usageMinutes);
 
@@ -27,8 +80,9 @@ class AppUsageViewModel extends ChangeNotifier {
   String get totalLabel => AppUsage.formatMinutes(totalMinutes);
 
   /// Highest usage among apps (for chart scaling), at least 1.
-  int get maxMinutes =>
-      apps.isEmpty ? 1 : apps.map((a) => a.usageMinutes).reduce((a, b) => a > b ? a : b);
+  int get maxMinutes => apps.isEmpty
+      ? 1
+      : apps.map((a) => a.usageMinutes).reduce((a, b) => a > b ? a : b);
 
   /// The most-used apps, capped at [n].
   List<AppUsage> top([int n = 5]) =>
@@ -38,6 +92,7 @@ class AppUsageViewModel extends ChangeNotifier {
     if (_childId != childId) {
       apps = const [];
       error = null;
+      _isHistoryMode = false;
     }
     _childId = childId;
 
@@ -64,11 +119,83 @@ class AppUsageViewModel extends ChangeNotifier {
     }
   }
 
+  /// Load app usage history for the selected date range.
+  Future<void> loadHistory(
+    String childId,
+    AppUsageDateRange range, {
+    bool showLoader = true,
+  }) async {
+    if (_childId != childId) {
+      apps = const [];
+      error = null;
+    }
+    _childId = childId;
+    _dateRange = range;
+    _isHistoryMode = true;
+
+    if (showLoader) {
+      loading = true;
+      error = null;
+      notifyListeners();
+    }
+
+    try {
+      final dates = range.getDateRange();
+      if (kDebugMode) {
+        print('═══════════════════════════════════════════════════════');
+        print('📅 [AppUsage] Date Range Changed: ${range.label}');
+        print('   From: ${dates[0]}');
+        print('   To: ${dates[1]}');
+        print('═══════════════════════════════════════════════════════');
+      }
+      final res = await _repository.getAppHistory(
+        childId: childId,
+        fromDate: dates[0],
+        toDate: dates[1],
+      );
+      if (_childId != childId) return; // selection changed mid-flight
+      apps = res;
+      error = null;
+      if (kDebugMode) {
+        print('✅ [AppUsage] Loaded ${apps.length} apps for ${range.label}');
+      }
+    } catch (e) {
+      if (_childId != childId) return;
+      error = e.toString().replaceAll('Exception: ', '');
+      if (kDebugMode) print('❌ [AppUsage] History load error: $error');
+    } finally {
+      if (_childId == childId) {
+        loading = false;
+        notifyListeners();
+      }
+    }
+  }
+
+  /// Change the date range filter and reload history.
+  Future<void> setDateRange(AppUsageDateRange range) async {
+    final id = _childId;
+    if (id == null) return;
+    await loadHistory(id, range);
+  }
+
   /// Silent reload of the current child — used for pull-to-refresh / polling.
   Future<void> refresh() async {
     final id = _childId;
     if (id == null) return;
-    await load(id, showLoader: false);
+    if (_isHistoryMode) {
+      await loadHistory(id, _dateRange, showLoader: false);
+    } else {
+      await load(id, showLoader: false);
+    }
+  }
+
+  /// Exit history mode and return to current stats.
+  void exitHistoryMode() {
+    _isHistoryMode = false;
+    final id = _childId;
+    if (id != null) {
+      load(id);
+    }
   }
 }
 
