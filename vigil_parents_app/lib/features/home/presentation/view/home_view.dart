@@ -707,7 +707,7 @@ class _ChildHeroCard extends StatelessWidget {
                 child: _InfoStat(
                   icon: online ? Icons.wifi_rounded : Icons.wifi_off_rounded,
                   color: online ? AppColors.online : AppColors.textSecondary,
-                  value: online ? 'Online' : 'Offline',
+                  value: online ? 'Active' : 'Inactive',
                   label: 'Status',
                 ),
               ),

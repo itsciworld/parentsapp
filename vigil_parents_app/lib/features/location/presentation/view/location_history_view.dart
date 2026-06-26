@@ -35,6 +35,12 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen> {
   Set<Marker> _markers = {};
   String? _markersSig;
 
+  // Cache for marker bitmaps to avoid regenerating them on every rebuild
+  final Map<String, BitmapDescriptor> _markerCache = {};
+
+  // Flag to prevent multiple simultaneous marker builds
+  bool _buildingMarkers = false;
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +55,7 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen> {
   @override
   void dispose() {
     _mapController?.dispose();
+    _markerCache.clear();
     super.dispose();
   }
 
@@ -56,6 +63,7 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen> {
     setState(() {
       _fittedKey = null;
       _focusedId = null;
+      _markerCache.clear(); // Clear cache when switching children
     });
     ref.read(locationHistoryViewModelProvider).load(childId);
   }
@@ -120,50 +128,87 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen> {
   /// the clock time of that fix (latest in green, the rest in blue, the
   /// selected one highlighted), so the map reads "which time → which place" at
   /// a glance. The full address stays in the tap-to-open info window.
-  Future<void> _buildMarkers(List<ChildLocation> pts, String? selectedId) async {
-    final markers = <Marker>{};
-    for (var i = 0; i < pts.length; i++) {
-      final p = pts[i];
-      final isLatest = i == 0;
-      final number = pts.length - i; // oldest = 1, chronological
-      final selected = p.id == selectedId;
-      final icon = await _numberMarkerBitmap(
-        number: number,
-        isLatest: isLatest,
-        selected: selected,
-      );
-      markers.add(
-        Marker(
-          markerId: MarkerId(p.id),
-          position: LatLng(p.latitude, p.longitude),
-          icon: icon,
-          // Circle pin — anchor at its centre on the coordinate.
-          anchor: const Offset(0.5, 0.5),
-          // Higher zIndex for the latest / selected so they sit above the rest.
-          zIndexInt: isLatest ? 2 : (selected ? 1 : 0),
-          infoWindow: InfoWindow(
-            title: isLatest
-                ? 'Stop $number · Now · ${p.timeLabel}'
-                : 'Stop $number · ${p.timeLabel}',
-            snippet: p.address.isNotEmpty ? p.address : p.coordinates,
-          ),
-          onTap: () => _onPointTap(p),
-        ),
-      );
+  Future<void> _buildMarkers(
+    List<ChildLocation> pts,
+    String? selectedId,
+  ) async {
+    // Prevent multiple simultaneous builds
+    if (_buildingMarkers) return;
+    _buildingMarkers = true;
+
+    try {
+      final markers = <Marker>{};
+
+      // Build markers in batches to avoid blocking the UI
+      const batchSize = 10;
+      for (var startIdx = 0; startIdx < pts.length; startIdx += batchSize) {
+        final endIdx = (startIdx + batchSize).clamp(0, pts.length);
+
+        for (var i = startIdx; i < endIdx; i++) {
+          final p = pts[i];
+          final isLatest = i == 0;
+          final number = pts.length - i; // oldest = 1, chronological
+          final selected = p.id == selectedId;
+
+          // Create cache key based on marker properties
+          final cacheKey = 'n${number}_l$isLatest\_s$selected';
+
+          // Try to get from cache first
+          BitmapDescriptor icon;
+          if (_markerCache.containsKey(cacheKey)) {
+            icon = _markerCache[cacheKey]!;
+          } else {
+            icon = await _numberMarkerBitmap(
+              number: number,
+              isLatest: isLatest,
+              selected: selected,
+            );
+            _markerCache[cacheKey] = icon;
+          }
+
+          markers.add(
+            Marker(
+              markerId: MarkerId(p.id),
+              position: LatLng(p.latitude, p.longitude),
+              icon: icon,
+              // Circle pin — anchor at its centre on the coordinate.
+              anchor: const Offset(0.5, 0.5),
+              // Higher zIndex for the latest / selected so they sit above the rest.
+              zIndexInt: isLatest ? 2 : (selected ? 1 : 0),
+              infoWindow: InfoWindow(
+                title: isLatest
+                    ? 'Stop $number · Now · ${p.timeLabel}'
+                    : 'Stop $number · ${p.timeLabel}',
+                snippet: p.address.isNotEmpty ? p.address : p.coordinates,
+              ),
+              onTap: () => _onPointTap(p),
+            ),
+          );
+        }
+
+        // Yield to UI thread between batches
+        await Future.delayed(Duration.zero);
+      }
+
+      if (mounted) setState(() => _markers = markers);
+    } finally {
+      _buildingMarkers = false;
     }
-    if (mounted) setState(() => _markers = markers);
   }
 
   /// Draws a small numbered circle to a [BitmapDescriptor] for use as a Google
   /// Maps marker icon. The number matches the stop's position in the timeline
   /// list below (oldest = 1). Latest = green, selected = navy + larger, the
   /// rest = blue.
+  ///
+  /// Optimized for iOS and Android performance.
   Future<BitmapDescriptor> _numberMarkerBitmap({
     required int number,
     required bool isLatest,
     required bool selected,
   }) async {
-    final dpr = MediaQuery.of(context).devicePixelRatio;
+    // Limit DPR to prevent excessive memory usage on high-DPI devices
+    final dpr = MediaQuery.of(context).devicePixelRatio.clamp(1.0, 3.0);
     final Color fill = isLatest
         ? AppColors.primary
         : (selected ? AppColors.headerBottom : AppColors.blueIcon);
@@ -190,16 +235,20 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen> {
     final canvas = Canvas(recorder);
     canvas.scale(dpr);
 
-    // Soft drop shadow.
+    // Soft drop shadow - simplified for better performance
     canvas.drawCircle(
       center.translate(0, 1.5),
       diameter / 2 + border,
       Paint()
         ..color = Colors.black.withValues(alpha: 0.18)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 1.5),
     );
     // White ring + coloured fill.
-    canvas.drawCircle(center, diameter / 2 + border, Paint()..color = Colors.white);
+    canvas.drawCircle(
+      center,
+      diameter / 2 + border,
+      Paint()..color = Colors.white,
+    );
     canvas.drawCircle(center, diameter / 2, Paint()..color = fill);
     // Centred number.
     textPainter.paint(
@@ -346,9 +395,7 @@ class _Map extends StatelessWidget {
       if (points.length > 1)
         Polyline(
           polylineId: const PolylineId('trail'),
-          points: [
-            for (final p in points) LatLng(p.latitude, p.longitude),
-          ],
+          points: [for (final p in points) LatLng(p.latitude, p.longitude)],
           color: AppColors.headerBottom,
           width: 3,
           patterns: [PatternItem.dot, PatternItem.gap(10)],
@@ -366,6 +413,15 @@ class _Map extends StatelessWidget {
       myLocationButtonEnabled: false,
       zoomControlsEnabled: false,
       mapToolbarEnabled: false,
+      // Performance optimizations for smooth rendering on iOS and Android
+      compassEnabled: false,
+      tiltGesturesEnabled: false,
+      rotateGesturesEnabled: false,
+      buildingsEnabled: false,
+      indoorViewEnabled: false,
+      trafficEnabled: false,
+      // Lite mode for better performance (Android only, ignored on iOS)
+      liteModeEnabled: false,
     );
   }
 }
@@ -592,6 +648,9 @@ class _HistoryList extends StatelessWidget {
                 : ListView.builder(
                     padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                     itemCount: points.length,
+                    // Performance optimizations for smooth scrolling
+                    physics: const BouncingScrollPhysics(),
+                    cacheExtent: 200,
                     itemBuilder: (context, i) {
                       final p = points[i];
                       return _TimelineTile(
@@ -637,183 +696,190 @@ class _TimelineTile extends StatelessWidget {
         ? AppColors.primary
         : (selected ? AppColors.headerBottom : AppColors.blueIcon);
 
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // ---- Time column ---------------------------------------------
-          SizedBox(
-            width: 58,
-            child: Padding(
-              padding: const EdgeInsets.only(top: 14, right: 8),
-              child: Text(
-                location.timeLabel,
-                textAlign: TextAlign.right,
-                style: TextStyle(
-                  fontSize: 12,
-                  height: 1.2,
-                  fontWeight: FontWeight.w700,
-                  color: isLatest ? AppColors.primary : AppColors.textPrimary,
+    // RepaintBoundary isolates each tile's repaints for better performance
+    return RepaintBoundary(
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // ---- Time column ---------------------------------------------
+            SizedBox(
+              width: 58,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 14, right: 8),
+                child: Text(
+                  location.timeLabel,
+                  textAlign: TextAlign.right,
+                  style: TextStyle(
+                    fontSize: 12,
+                    height: 1.2,
+                    fontWeight: FontWeight.w700,
+                    color: isLatest ? AppColors.primary : AppColors.textPrimary,
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // ---- Connector track + numbered dot --------------------------
-          SizedBox(
-            width: 30,
-            child: Column(
-              children: [
-                // top segment
-                SizedBox(
-                  height: 14,
-                  child: Center(
-                    child: Container(
-                      width: 2,
-                      color: isFirst
-                          ? Colors.transparent
-                          : AppColors.cardBorder,
-                    ),
-                  ),
-                ),
-                // numbered dot — same number as the map pin
-                Container(
-                  width: 26,
-                  height: 26,
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: accent,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: selected ? 3 : 2,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: accent.withValues(alpha: 0.35),
-                        blurRadius: 6,
-                      ),
-                    ],
-                  ),
-                  child: Text(
-                    '$number',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-                // bottom segment (fills remaining height)
-                Expanded(
-                  child: Center(
-                    child: Container(
-                      width: 2,
-                      color: isLast ? Colors.transparent : AppColors.cardBorder,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ---- Content card --------------------------------------------
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(left: 6, top: 6, bottom: 6),
-              child: Material(
-                color: selected ? AppColors.primaryLight : AppColors.scaffold,
-                borderRadius: BorderRadius.circular(14),
-                child: InkWell(
-                  onTap: onTap,
-                  borderRadius: BorderRadius.circular(14),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: selected
-                            ? AppColors.primary
+            // ---- Connector track + numbered dot --------------------------
+            SizedBox(
+              width: 30,
+              child: Column(
+                children: [
+                  // top segment
+                  SizedBox(
+                    height: 14,
+                    child: Center(
+                      child: Container(
+                        width: 2,
+                        color: isFirst
+                            ? Colors.transparent
                             : AppColors.cardBorder,
-                        width: selected ? 1.4 : 1,
                       ),
                     ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Flexible(
-                                    child: Text(
-                                      location.address.isNotEmpty
-                                          ? location.address
-                                          : 'Unknown place',
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 13.5,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.textPrimary,
-                                      ),
-                                    ),
-                                  ),
-                                  if (isLatest) ...[
-                                    const SizedBox(width: 6),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 7,
-                                        vertical: 2,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.primary,
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: const Text(
-                                        'Now',
-                                        style: TextStyle(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w800,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ],
-                              ),
-                              const SizedBox(height: 3),
-                              Text(
-                                location.relativeLabel,
-                                style: const TextStyle(
-                                  fontSize: 11.5,
-                                  color: AppColors.textSecondary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Icon(
-                          Icons.near_me_rounded,
-                          size: 16,
-                          color: selected
-                              ? AppColors.primary
-                              : AppColors.textSecondary,
+                  ),
+                  // numbered dot — same number as the map pin
+                  Container(
+                    width: 26,
+                    height: 26,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: accent,
+                      border: Border.all(
+                        color: Colors.white,
+                        width: selected ? 3 : 2,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: accent.withValues(alpha: 0.35),
+                          blurRadius: 6,
                         ),
                       ],
                     ),
+                    child: Text(
+                      '$number',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  // bottom segment (fills remaining height)
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        width: 2,
+                        color: isLast
+                            ? Colors.transparent
+                            : AppColors.cardBorder,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ---- Content card --------------------------------------------
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.only(left: 6, top: 6, bottom: 6),
+                child: Material(
+                  color: selected ? AppColors.primaryLight : AppColors.scaffold,
+                  borderRadius: BorderRadius.circular(14),
+                  child: InkWell(
+                    onTap: onTap,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 10,
+                      ),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: selected
+                              ? AppColors.primary
+                              : AppColors.cardBorder,
+                          width: selected ? 1.4 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Flexible(
+                                      child: Text(
+                                        location.address.isNotEmpty
+                                            ? location.address
+                                            : 'Unknown place',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 13.5,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textPrimary,
+                                        ),
+                                      ),
+                                    ),
+                                    if (isLatest) ...[
+                                      const SizedBox(width: 6),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 7,
+                                          vertical: 2,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(
+                                            20,
+                                          ),
+                                        ),
+                                        child: const Text(
+                                          'Now',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            fontWeight: FontWeight.w800,
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                                const SizedBox(height: 3),
+                                Text(
+                                  location.relativeLabel,
+                                  style: const TextStyle(
+                                    fontSize: 11.5,
+                                    color: AppColors.textSecondary,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.near_me_rounded,
+                            size: 16,
+                            color: selected
+                                ? AppColors.primary
+                                : AppColors.textSecondary,
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

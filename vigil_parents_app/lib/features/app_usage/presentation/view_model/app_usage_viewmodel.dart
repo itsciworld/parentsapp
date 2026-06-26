@@ -140,19 +140,31 @@ class AppUsageViewModel extends ChangeNotifier {
     }
 
     try {
-      final dates = range.getDateRange();
-      if (kDebugMode) {
-        print('═══════════════════════════════════════════════════════');
-        print('📅 [AppUsage] Date Range Changed: ${range.label}');
-        print('   From: ${dates[0]}');
-        print('   To: ${dates[1]}');
-        print('═══════════════════════════════════════════════════════');
+      late final List<AppUsage> res;
+      if (range == AppUsageDateRange.today) {
+        // "Today" uses the same /api/apps/get_apps endpoint as the home card.
+        if (kDebugMode) {
+          print('═══════════════════════════════════════════════════════');
+          print('📅 [AppUsage] Date Range Changed: ${range.label}');
+          print('   Using get_apps (today)');
+          print('═══════════════════════════════════════════════════════');
+        }
+        res = await _repository.getApps(childId: childId);
+      } else {
+        final dates = range.getDateRange();
+        if (kDebugMode) {
+          print('═══════════════════════════════════════════════════════');
+          print('📅 [AppUsage] Date Range Changed: ${range.label}');
+          print('   From: ${dates[0]}');
+          print('   To: ${dates[1]}');
+          print('═══════════════════════════════════════════════════════');
+        }
+        res = await _repository.getAppHistory(
+          childId: childId,
+          fromDate: dates[0],
+          toDate: dates[1],
+        );
       }
-      final res = await _repository.getAppHistory(
-        childId: childId,
-        fromDate: dates[0],
-        toDate: dates[1],
-      );
       if (_childId != childId) return; // selection changed mid-flight
       apps = res;
       error = null;

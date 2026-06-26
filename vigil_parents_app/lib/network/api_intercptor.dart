@@ -81,13 +81,19 @@ class ApiInterceptor extends Interceptor {
     } else {
       // Network / timeout
       if (err.type == DioExceptionType.connectionTimeout) {
-        message = "Connection timeout";
-      } else if (err.type == DioExceptionType.receiveTimeout) {
-        message = "Server not responding";
+        message = "Connection timeout. Please check your internet connection.";
+      } else if (err.type == DioExceptionType.receiveTimeout || err.type == DioExceptionType.sendTimeout) {
+        message = "Server not responding. Please try again later.";
+      } else if (err.type == DioExceptionType.connectionError) {
+        message = "No internet connection. Please check your network and try again.";
       } else if (err.type == DioExceptionType.unknown) {
-        message = "No internet connection";
+        if (err.error != null && err.error.toString().contains('Failed host lookup')) {
+          message = "No internet connection. Please check your network and try again.";
+        } else {
+          message = "Something went wrong with the network connection.";
+        }
       } else {
-        message = err.message ?? "Unexpected error";
+        message = "Unexpected error occurred.";
       }
 
       debugPrint("❌ NETWORK ERROR => $message");

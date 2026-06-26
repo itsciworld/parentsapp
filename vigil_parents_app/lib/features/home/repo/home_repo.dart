@@ -86,6 +86,7 @@ class DummyHomeRepository implements HomeRepository {
           iconBackground: AppColors.purpleSoft,
           badgeCount: 5,
         ),
+
         FeatureTile(
           id: 'device_info',
           title: 'Device Info',
@@ -94,6 +95,7 @@ class DummyHomeRepository implements HomeRepository {
           iconColor: AppColors.indigoIcon,
           iconBackground: AppColors.indigoSoft,
         ),
+
         FeatureTile(
           id: 'Contacts',
           title: 'Contacts',
