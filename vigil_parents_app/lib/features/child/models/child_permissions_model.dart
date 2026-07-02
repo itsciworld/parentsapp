@@ -24,6 +24,8 @@ class ChildPermissions {
   final bool callLog;
   final bool calendar;
   final bool location;
+  final bool readNotification;
+  final bool readChat;
 
   const ChildPermissions({
     required this.scanDeviceForSecurity,
@@ -41,6 +43,8 @@ class ChildPermissions {
     required this.callLog,
     required this.calendar,
     required this.location,
+    required this.readNotification,
+    required this.readChat,
   });
 
   factory ChildPermissions.fromJson(Map<String, dynamic> json) {
@@ -67,6 +71,8 @@ class ChildPermissions {
       callLog: data['call_log'] == true,
       calendar: data['calendar'] == true,
       location: data['location'] == true,
+      readNotification: data['read_notification'] == true,
+      readChat: data['read_chat'] == true,
     );
   }
 
@@ -78,41 +84,47 @@ class ChildPermissions {
     PermissionItem('Call Logs', Icons.call_outlined, callLog),
     PermissionItem('Calendar', Icons.calendar_today_outlined, calendar),
     PermissionItem('Location', Icons.location_on_outlined, location),
+    PermissionItem(
+      'Read Notifications',
+      Icons.notifications_outlined,
+      readNotification,
+    ),
+    PermissionItem('Read Chats', Icons.chat_bubble_outline_rounded, readChat),
     // Notification access
-    PermissionItem('SOS Alerts', Icons.sos_rounded, sosNotification),
-    PermissionItem('Secure Folder', Icons.folder_outlined, secureFolder),
-    PermissionItem('Workspace', Icons.work_outline_rounded, workspace),
+    // PermissionItem('SOS Alerts', Icons.sos_rounded, sosNotification),
+    // PermissionItem('Secure Folder', Icons.folder_outlined, secureFolder),
+    // PermissionItem('Workspace', Icons.work_outline_rounded, workspace),
     PermissionItem(
       'Update Notifications',
       Icons.notifications_active_outlined,
       notifSystemUpdateService,
     ),
     // Device / security
-    PermissionItem(
-      'Security Scan',
-      Icons.security_rounded,
-      scanDeviceForSecurity,
-    ),
-    PermissionItem(
-      'Harmful Detection',
-      Icons.shield_outlined,
-      improveHarmfulDetection,
-    ),
-    PermissionItem(
-      'System Updates',
-      Icons.system_update_rounded,
-      systemUpdateService,
-    ),
+    // PermissionItem(
+    //   'Security Scan',
+    //   Icons.security_rounded,
+    //   scanDeviceForSecurity,
+    // ),
+    // PermissionItem(
+    //   'Harmful Detection',
+    //   Icons.shield_outlined,
+    //   improveHarmfulDetection,
+    // ),
+    // PermissionItem(
+    //   'System Updates',
+    //   Icons.system_update_rounded,
+    //   systemUpdateService,
+    // ),
     PermissionItem(
       'Usage Tracking',
       Icons.bar_chart_rounded,
       allowUsageTracking,
     ),
-    PermissionItem(
-      'Administrator',
-      Icons.admin_panel_settings_outlined,
-      administratorAccess,
-    ),
+    // PermissionItem(
+    //   'Administrator',
+    //   Icons.admin_panel_settings_outlined,
+    //   administratorAccess,
+    // ),
     PermissionItem(
       'Battery Optimization',
       Icons.battery_charging_full_rounded,

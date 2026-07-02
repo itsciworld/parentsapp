@@ -29,6 +29,21 @@ class HomeViewModel extends ChangeNotifier {
 
   final HomeRepository _repository;
 
+  /// Set once [dispose] runs, so async work that finishes afterwards doesn't
+  /// call [notifyListeners] on a disposed notifier.
+  bool _disposed = false;
+
+  @override
+  void dispose() {
+    _disposed = true;
+    super.dispose();
+  }
+
+  /// Notify listeners only while this notifier is still alive.
+  void _safeNotify() {
+    if (!_disposed) notifyListeners();
+  }
+
   // --- State ----------------------------------------------------------------
   HomeViewState _state = HomeViewState.loading;
   HomeViewState get state => _state;
@@ -57,7 +72,7 @@ class HomeViewModel extends ChangeNotifier {
   Future<void> _load({bool showSpinner = true}) async {
     if (showSpinner) {
       _state = HomeViewState.loading;
-      notifyListeners();
+      _safeNotify();
     }
     try {
       _data = await _repository.fetchDashboard();
@@ -67,7 +82,7 @@ class HomeViewModel extends ChangeNotifier {
       _state = HomeViewState.error;
       _errorMessage = 'Could not load dashboard. Pull to retry.';
     }
-    notifyListeners();
+    _safeNotify();
   }
 
   // --- Navigation / tap intents --------------------------------------------

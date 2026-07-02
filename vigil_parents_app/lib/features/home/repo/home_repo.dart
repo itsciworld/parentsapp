@@ -105,15 +105,16 @@ class DummyHomeRepository implements HomeRepository {
           iconBackground: AppColors.orangeSoft,
           badgeCount: 24,
         ),
-        // FeatureTile(
-        //   id: 'events',
-        //   title: 'Events',
-        //   subtitle: 'Calendar & events',
-        //   icon: Icons.event_rounded,
-        //   iconColor: AppColors.blueIcon,
-        //   iconBackground: AppColors.blueSoft,
-        //   badgeCount: 7,
-        // ),
+
+        FeatureTile(
+          id: 'events',
+          title: 'Events',
+          subtitle: 'Calendar & events',
+          icon: Icons.event_rounded,
+          iconColor: AppColors.blueIcon,
+          iconBackground: AppColors.blueSoft,
+          badgeCount: 7,
+        ),
 
         // FeatureTile(
         //   id: 'social',

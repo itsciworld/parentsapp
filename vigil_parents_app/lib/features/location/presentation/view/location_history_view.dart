@@ -151,7 +151,7 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen> {
           final selected = p.id == selectedId;
 
           // Create cache key based on marker properties
-          final cacheKey = 'n${number}_l$isLatest\_s$selected';
+          final cacheKey = 'n${number}_l${isLatest}_s$selected';
 
           // Try to get from cache first
           BitmapDescriptor icon;

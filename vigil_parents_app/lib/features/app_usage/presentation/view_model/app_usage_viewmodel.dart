@@ -24,27 +24,18 @@ enum AppUsageDateRange {
     }
   }
 
-  /// Returns the date range as [fromDate, toDate] in 'yyyy-MM-dd' format.
-  List<String> getDateRange() {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    String formatDate(DateTime date) {
-      return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-    }
-
+  /// The `period` query value understood by `/api/apps/history`. "today" is
+  /// served by `/api/apps/get_apps` instead, so it has no history period.
+  String? get historyPeriod {
     switch (this) {
       case AppUsageDateRange.today:
-        return [formatDate(today), formatDate(today)];
+        return null;
       case AppUsageDateRange.yesterday:
-        final yesterday = today.subtract(const Duration(days: 1));
-        return [formatDate(yesterday), formatDate(yesterday)];
+        return 'yesterday';
       case AppUsageDateRange.last3Days:
-        final threeDaysAgo = today.subtract(const Duration(days: 2));
-        return [formatDate(threeDaysAgo), formatDate(today)];
+        return '3days';
       case AppUsageDateRange.lastWeek:
-        final weekAgo = today.subtract(const Duration(days: 6));
-        return [formatDate(weekAgo), formatDate(today)];
+        return '7days';
     }
   }
 }
@@ -141,28 +132,20 @@ class AppUsageViewModel extends ChangeNotifier {
 
     try {
       late final List<AppUsage> res;
-      if (range == AppUsageDateRange.today) {
+      final period = range.historyPeriod;
+      if (period == null) {
         // "Today" uses the same /api/apps/get_apps endpoint as the home card.
         if (kDebugMode) {
-          print('═══════════════════════════════════════════════════════');
-          print('📅 [AppUsage] Date Range Changed: ${range.label}');
-          print('   Using get_apps (today)');
-          print('═══════════════════════════════════════════════════════');
+          print('📅 [AppUsage] ${range.label} → get_apps (today)');
         }
         res = await _repository.getApps(childId: childId);
       } else {
-        final dates = range.getDateRange();
         if (kDebugMode) {
-          print('═══════════════════════════════════════════════════════');
-          print('📅 [AppUsage] Date Range Changed: ${range.label}');
-          print('   From: ${dates[0]}');
-          print('   To: ${dates[1]}');
-          print('═══════════════════════════════════════════════════════');
+          print('📅 [AppUsage] ${range.label} → history?period=$period');
         }
         res = await _repository.getAppHistory(
           childId: childId,
-          fromDate: dates[0],
-          toDate: dates[1],
+          period: period,
         );
       }
       if (_childId != childId) return; // selection changed mid-flight

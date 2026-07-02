@@ -46,8 +46,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _vm = HomeViewModel();
     _vm.init();
     Future.microtask(() async {
+      if (!mounted) return;
       ref.read(profileViewModelProvider).loadProfile();
       await ref.read(selectedChildProvider).load();
+      // The widget may have been unmounted while the child list loaded.
+      if (!mounted) return;
       final id = ref.read(selectedChildProvider).selectedId;
       if (id != null) {
         ref.read(deviceInfoViewModelProvider).load(id);

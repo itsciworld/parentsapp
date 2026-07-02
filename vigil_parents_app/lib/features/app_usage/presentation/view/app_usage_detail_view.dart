@@ -822,7 +822,7 @@ class _DateRangeSelector extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
         itemCount: AppUsageDateRange.values.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final range = AppUsageDateRange.values[i];
           final active = range == selected;

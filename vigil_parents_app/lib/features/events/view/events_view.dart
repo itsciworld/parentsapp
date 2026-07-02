@@ -186,10 +186,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
 
         // ── Selected day's events (in the page scroll, no inner scroll) ───
         SliverToBoxAdapter(
-          child: _SelectedDayHeader(
-            day: selectedDay,
-            count: dayEvents.length,
-          ),
+          child: _SelectedDayHeader(day: selectedDay, count: dayEvents.length),
         ),
         if (dayEvents.isEmpty)
           const SliverToBoxAdapter(child: _NoEventsOnDay())
@@ -333,7 +330,6 @@ class _CalendarCardState extends State<_CalendarCard> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Gradient accent bar at top
           Container(
             height: 4,
             decoration: const BoxDecoration(

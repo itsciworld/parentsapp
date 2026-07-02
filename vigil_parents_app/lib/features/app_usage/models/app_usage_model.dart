@@ -4,6 +4,9 @@ class AppUsage {
   final String appName;
   final String packageName;
   final int usageMinutes;
+
+  /// The app's share of the day's total screen time, as sent by the API.
+  final int percentage;
   final DateTime? lastTimeUsed;
 
   const AppUsage({
@@ -11,17 +14,25 @@ class AppUsage {
     required this.appName,
     required this.packageName,
     required this.usageMinutes,
+    required this.percentage,
     required this.lastTimeUsed,
   });
 
   factory AppUsage.fromJson(Map<String, dynamic> json) {
     final usage = json['usageInfo'];
     final info = usage is Map<String, dynamic> ? usage : const {};
+    // `displayMinutes` is the value the API wants shown; fall back to the raw
+    // `usageMinutes` for older payloads that omit it.
+    final minutes =
+        (info['displayMinutes'] as num?)?.toInt() ??
+        (info['usageMinutes'] as num?)?.toInt() ??
+        0;
     return AppUsage(
       id: json['_id']?.toString() ?? '',
       appName: json['appName']?.toString() ?? 'Unknown app',
       packageName: json['packageName']?.toString() ?? '',
-      usageMinutes: (info['usageMinutes'] as num?)?.toInt() ?? 0,
+      usageMinutes: minutes,
+      percentage: (info['percentage'] as num?)?.toInt() ?? 0,
       lastTimeUsed: DateTime.tryParse(info['lastTimeUsed']?.toString() ?? ''),
     );
   }
@@ -46,6 +57,9 @@ class AppUsageResponse {
   final int page;
   final int limit;
   final int pages;
+
+  /// Total screen time for the day/period across all apps, in minutes.
+  final int totalScreenTimeMinutes;
   final List<AppUsage> apps;
 
   const AppUsageResponse({
@@ -54,6 +68,7 @@ class AppUsageResponse {
     required this.page,
     required this.limit,
     required this.pages,
+    required this.totalScreenTimeMinutes,
     required this.apps,
   });
 
@@ -69,6 +84,9 @@ class AppUsageResponse {
       page: (json['page'] as num?)?.toInt() ?? 1,
       limit: (json['limit'] as num?)?.toInt() ?? list.length,
       pages: (json['pages'] as num?)?.toInt() ?? 1,
+      totalScreenTimeMinutes:
+          (json['totalScreenTimeMinutes'] as num?)?.toInt() ??
+          list.fold<int>(0, (sum, a) => sum + a.usageMinutes),
       apps: list,
     );
   }
