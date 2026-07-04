@@ -45,6 +45,7 @@ class SecureDeviceService {
   }
 
   static const _tokenKey = "token";
+  static const _refreshTokenKey = "refresh_token";
   static const _emailKey = "email";
   static const _parentIdKey = "parentId";
   static const _parentNameKey = "parent_name";
@@ -56,16 +57,33 @@ class SecureDeviceService {
   static Future<void> saveAuthData({
     required String token,
     required String email,
+    String? refreshToken,
     String? parentId,
     String? parentName,
   }) async {
     await _write(_tokenKey, token);
     await _write(_emailKey, email);
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await _write(_refreshTokenKey, refreshToken);
+    }
     if (parentId != null) await _write(_parentIdKey, parentId);
     if (parentName != null) await _write(_parentNameKey, parentName);
   }
 
+  /// Replaces just the access (and optionally refresh) token after a silent
+  /// refresh, leaving the rest of the session intact.
+  static Future<void> updateTokens({
+    required String token,
+    String? refreshToken,
+  }) async {
+    await _write(_tokenKey, token);
+    if (refreshToken != null && refreshToken.isNotEmpty) {
+      await _write(_refreshTokenKey, refreshToken);
+    }
+  }
+
   static Future<String?> getToken() async => _read(_tokenKey);
+  static Future<String?> getRefreshToken() async => _read(_refreshTokenKey);
   static Future<String?> getEmail() async => _read(_emailKey);
   static Future<String?> getParentId() async => _read(_parentIdKey);
   static Future<String?> getParentName() async => _read(_parentNameKey);
@@ -85,6 +103,7 @@ class SecureDeviceService {
 
   static Future<void> clearAuthData() async {
     await _delete(_tokenKey);
+    await _delete(_refreshTokenKey);
     await _delete(_emailKey);
     await _delete(_parentIdKey);
     await _delete(_parentNameKey);
@@ -98,6 +117,7 @@ class SecureDeviceService {
   static Future<void> syncMirrorFromSecure() async {
     const keys = [
       _tokenKey,
+      _refreshTokenKey,
       _emailKey,
       _parentIdKey,
       _parentNameKey,

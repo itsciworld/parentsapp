@@ -11,6 +11,7 @@ class AuthRepository {
     final data = response.data;
 
     final String? token = data['token'];
+    final String? refreshToken = data['refreshToken'];
     final String? parentId = data['userId'];
     final String? parentName = data['userName'];
 
@@ -18,6 +19,7 @@ class AuthRepository {
       await SecureDeviceService.saveAuthData(
         token: token,
         email: email,
+        refreshToken: refreshToken,
         parentId: parentId,
         parentName: parentName,
       );
