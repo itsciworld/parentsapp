@@ -19,6 +19,10 @@ class AiInsightsRepository {
     required String childId,
     required String date,
   }) async {
+    if (kDebugMode) {
+      print('➡️  [AiInsights] POST /api/ai/children/$childId/analyze ($date)');
+    }
+
     try {
       final response = await _apiClient.post(
         '/api/ai/children/$childId/analyze',
@@ -27,10 +31,23 @@ class AiInsightsRepository {
 
       final data = response.data;
       if (data is Map<String, dynamic>) {
-        return AiAnalysisResponse.fromJson(data);
+        final parsed = AiAnalysisResponse.fromJson(data);
+        if (kDebugMode) {
+          // One-line summary only — the full payload is huge and stays out
+          // of the logs (the interceptor silences /api/ai/ bodies).
+          print(
+            '✅  [AiInsights] analyze[${response.statusCode}] → '
+            'analyzed=${parsed.analyzed}, '
+            'wellness=${parsed.intelligence?.wellnessScore ?? '-'}, '
+            'sms=${parsed.smsCount}, calls=${parsed.callCount}',
+          );
+        }
+        return parsed;
       }
+      if (kDebugMode) print('⚠️  [AiInsights] analyze → unexpected response');
       throw Exception('Unexpected response from AI analysis');
     } catch (e) {
+      if (kDebugMode) print('❌  [AiInsights] analyze failed: $e');
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
@@ -41,6 +58,10 @@ class AiInsightsRepository {
     required String childId,
     required String date,
   }) async {
+    if (kDebugMode) {
+      print('➡️  [AiInsights] GET /api/ai/children/$childId/daily/$date/report');
+    }
+
     try {
       final response = await _apiClient.getBytes(
         '/api/ai/children/$childId/daily/$date/report',
@@ -48,10 +69,18 @@ class AiInsightsRepository {
 
       final bytes = response.data;
       if (bytes == null || bytes.isEmpty) {
+        if (kDebugMode) print('⚠️  [AiInsights] report → empty response');
         throw Exception('The report is not available yet');
+      }
+      if (kDebugMode) {
+        print(
+          '✅  [AiInsights] report[${response.statusCode}] → '
+          '${bytes.length} bytes',
+        );
       }
       return Uint8List.fromList(bytes);
     } catch (e) {
+      if (kDebugMode) print('❌  [AiInsights] report failed: $e');
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }

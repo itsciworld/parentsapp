@@ -227,6 +227,8 @@ class _LoadedView extends StatelessWidget {
         _StatsRow(data: data, intel: intel),
         const SizedBox(height: 14),
         _SummaryCard(intel: intel),
+        const SizedBox(height: 14),
+        _SentimentCard(intel: intel),
         if (intel.hasEmotionData) ...[
           const SizedBox(height: 14),
           _EmotionChartCard(emotions: intel.emotionBreakdown),
@@ -343,86 +345,82 @@ class _WellnessCard extends StatelessWidget {
     return _Card(
       child: Row(
         children: [
-          // Radial gauge with the score in the middle.
-          SizedBox(
-            width: 120,
-            height: 120,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                PieChart(
-                  PieChartData(
-                    startDegreeOffset: 270,
-                    sectionsSpace: 0,
-                    centerSpaceRadius: 44,
-                    sections: [
-                      PieChartSectionData(
-                        value: score.toDouble(),
-                        color: color,
-                        radius: 12,
-                        showTitle: false,
-                      ),
-                      PieChartSectionData(
-                        value: (100 - score).toDouble(),
-                        color: AppColors.cardBorder,
-                        radius: 12,
-                        showTitle: false,
-                      ),
-                    ],
+          // Animated arc gauge with the score in the middle.
+          TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: score / 100),
+            duration: const Duration(milliseconds: 900),
+            curve: Curves.easeOutCubic,
+            builder: (context, t, _) {
+              return SizedBox(
+                width: 118,
+                height: 118,
+                child: CustomPaint(
+                  painter: _GaugePainter(
+                    progress: t,
+                    color: color,
+                    track: AppColors.cardBorder,
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${(t * 100).round().clamp(0, score)}',
+                          style: const TextStyle(
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            color: AppColors.textPrimary,
+                            letterSpacing: -1,
+                            height: 1,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          intel.wellnessBand.isEmpty
+                              ? 'of 100'
+                              : _capitalize(intel.wellnessBand),
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            color: color,
+                            letterSpacing: 0.4,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      '$score',
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.textPrimary,
-                        height: 1,
-                      ),
-                    ),
-                    const Text(
-                      '/ 100',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              );
+            },
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 18),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Wellness Score',
-                  style: TextStyle(
-                    fontSize: 15,
+                const _EyebrowLabel('TODAY\'S WELLNESS'),
+                const SizedBox(height: 4),
+                Text(
+                  intel.wellnessBand.isEmpty
+                      ? 'Wellness Score'
+                      : '${_capitalize(intel.wellnessBand)} day overall',
+                  style: const TextStyle(
+                    fontSize: 16.5,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary,
+                    letterSpacing: -0.3,
+                    height: 1.2,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    _Chip(
-                      label: intel.wellnessBand.isEmpty
-                          ? '—'
-                          : _capitalize(intel.wellnessBand),
-                      color: color,
-                    ),
                     if (intel.overallEmotionalState.isNotEmpty)
                       _Chip(
                         label:
-                            'Mood: ${_capitalize(intel.overallEmotionalState)}',
+                            'Mood · ${_capitalize(intel.overallEmotionalState)}',
                         color: AppColors.blueIcon,
                       ),
                     if (intel.confidenceBand.isNotEmpty)
@@ -440,7 +438,7 @@ class _WellnessCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 12.5,
                       color: AppColors.textSecondary,
-                      height: 1.4,
+                      height: 1.5,
                     ),
                   ),
                 ],
@@ -448,6 +446,79 @@ class _WellnessCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A 270° arc gauge with rounded caps: light track + colored progress sweep.
+class _GaugePainter extends CustomPainter {
+  final double progress; // 0..1
+  final Color color;
+  final Color track;
+
+  _GaugePainter({
+    required this.progress,
+    required this.color,
+    required this.track,
+  });
+
+  static const double _startAngle = 135 * (3.1415926535 / 180);
+  static const double _sweepAngle = 270 * (3.1415926535 / 180);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    const stroke = 11.0;
+    final rect = Offset.zero & size;
+    final arcRect = rect.deflate(stroke / 2 + 1);
+
+    final trackPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round
+      ..color = track;
+    canvas.drawArc(arcRect, _startAngle, _sweepAngle, false, trackPaint);
+
+    if (progress <= 0) return;
+    final progressPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.round
+      ..shader = SweepGradient(
+        startAngle: _startAngle,
+        endAngle: _startAngle + _sweepAngle,
+        colors: [color.withValues(alpha: 0.45), color],
+        transform: const GradientRotation(0),
+      ).createShader(arcRect);
+    canvas.drawArc(
+      arcRect,
+      _startAngle,
+      _sweepAngle * progress.clamp(0.0, 1.0),
+      false,
+      progressPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_GaugePainter old) =>
+      old.progress != progress || old.color != color;
+}
+
+/// Small uppercase section label used inside cards.
+class _EyebrowLabel extends StatelessWidget {
+  final String text;
+
+  const _EyebrowLabel(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 10,
+        fontWeight: FontWeight.w800,
+        color: AppColors.textSecondary,
+        letterSpacing: 1.1,
       ),
     );
   }
@@ -465,10 +536,34 @@ class _StatsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final stats = [
-      (Icons.forum_outlined, '${intel.conversationCount}', 'Chats'),
-      (Icons.group_outlined, '${intel.contactCount}', 'Contacts'),
-      (Icons.sms_outlined, '${data.smsCount}', 'SMS'),
-      (Icons.call_outlined, '${data.callCount}', 'Calls'),
+      (
+        Icons.forum_rounded,
+        '${intel.conversationCount}',
+        'Chats',
+        AppColors.purpleIcon,
+        AppColors.purpleSoft,
+      ),
+      (
+        Icons.group_rounded,
+        '${intel.contactCount}',
+        'Contacts',
+        AppColors.blueIcon,
+        AppColors.blueSoft,
+      ),
+      (
+        Icons.sms_rounded,
+        '${data.smsCount}',
+        'SMS',
+        AppColors.greenIcon,
+        AppColors.greenSoft,
+      ),
+      (
+        Icons.call_rounded,
+        '${data.callCount}',
+        'Calls',
+        AppColors.orangeIcon,
+        AppColors.orangeSoft,
+      ),
     ];
 
     return Row(
@@ -485,22 +580,34 @@ class _StatsRow extends StatelessWidget {
               ),
               child: Column(
                 children: [
-                  Icon(stats[i].$1, size: 18, color: AppColors.blueIcon),
-                  const SizedBox(height: 6),
+                  Container(
+                    width: 30,
+                    height: 30,
+                    decoration: BoxDecoration(
+                      color: stats[i].$5,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Icon(stats[i].$1, size: 16, color: stats[i].$4),
+                  ),
+                  const SizedBox(height: 7),
                   Text(
                     stats[i].$2,
                     style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
                       color: AppColors.textPrimary,
+                      letterSpacing: -0.5,
+                      height: 1,
                     ),
                   ),
-                  const SizedBox(height: 1),
+                  const SizedBox(height: 4),
                   Text(
-                    stats[i].$3,
+                    stats[i].$3.toUpperCase(),
                     style: const TextStyle(
-                      fontSize: 10.5,
+                      fontSize: 8.5,
+                      fontWeight: FontWeight.w700,
                       color: AppColors.textSecondary,
+                      letterSpacing: 0.8,
                     ),
                   ),
                 ],
@@ -508,6 +615,118 @@ class _StatsRow extends StatelessWidget {
             ),
           ),
         ],
+      ],
+    );
+  }
+}
+
+/// ----------------------------------------------------------------------------
+/// Sentiment meters: positivity / negativity / volatility.
+/// ----------------------------------------------------------------------------
+class _SentimentCard extends StatelessWidget {
+  final DailyIntelligence intel;
+
+  const _SentimentCard({required this.intel});
+
+  @override
+  Widget build(BuildContext context) {
+    final s = intel.sentiment;
+    final meters = [
+      ('Positivity', s.positivity, AppColors.primary),
+      ('Negativity', s.negativity, AppColors.alert),
+      ('Volatility', s.volatility, AppColors.warning),
+    ];
+
+    return _Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: _CardTitle(
+                  icon: Icons.monitor_heart_outlined,
+                  iconColor: AppColors.greenIcon,
+                  title: 'Sentiment',
+                ),
+              ),
+              if (intel.overallSentiment.isNotEmpty)
+                _Chip(
+                  label: _capitalize(intel.overallSentiment),
+                  color: AppColors.blueIcon,
+                ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          for (var i = 0; i < meters.length; i++) ...[
+            if (i > 0) const SizedBox(height: 12),
+            _MeterRow(
+              label: meters[i].$1,
+              value: meters[i].$2.clamp(0.0, 1.0),
+              color: meters[i].$3,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MeterRow extends StatelessWidget {
+  final String label;
+  final double value; // 0..1
+  final Color color;
+
+  const _MeterRow({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 74,
+          child: Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            ),
+          ),
+        ),
+        Expanded(
+          child: TweenAnimationBuilder<double>(
+            tween: Tween(begin: 0, end: value),
+            duration: const Duration(milliseconds: 800),
+            curve: Curves.easeOutCubic,
+            builder: (context, t, _) => ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: t,
+                minHeight: 7,
+                backgroundColor: AppColors.cardBorder,
+                color: color,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        SizedBox(
+          width: 36,
+          child: Text(
+            '${(value * 100).round()}%',
+            textAlign: TextAlign.right,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -601,11 +820,16 @@ class _EmotionChartCard extends StatelessWidget {
     'disgust': 'Disgust',
   };
 
+  /// Trims trailing ".0" so counts read as whole numbers.
+  static String _fmt(double v) =>
+      v == v.roundToDouble() ? '${v.round()}' : v.toStringAsFixed(1);
+
   @override
   Widget build(BuildContext context) {
     final keys = _order.where(emotions.containsKey).toList()
       ..addAll(emotions.keys.where((k) => !_order.contains(k)));
     final maxValue = emotions.values.fold<double>(0, (m, v) => v > m ? v : m);
+    final maxY = maxValue <= 0 ? 1.0 : maxValue * 1.3;
 
     return _Card(
       child: Column(
@@ -616,71 +840,106 @@ class _EmotionChartCard extends StatelessWidget {
             iconColor: AppColors.blueIcon,
             title: 'Emotion Breakdown',
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 18),
           SizedBox(
-            height: 160,
-            child: BarChart(
-              BarChartData(
-                alignment: BarChartAlignment.spaceAround,
-                maxY: maxValue <= 0 ? 1 : maxValue * 1.2,
-                barTouchData: BarTouchData(
-                  touchTooltipData: BarTouchTooltipData(
-                    getTooltipItem: (group, _, rod, _) => BarTooltipItem(
-                      rod.toY.toStringAsFixed(1),
-                      const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
+            height: 170,
+            // Animate bars growing from the baseline on first build.
+            child: TweenAnimationBuilder<double>(
+              tween: Tween(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 700),
+              curve: Curves.easeOutCubic,
+              builder: (context, t, _) => BarChart(
+                BarChartData(
+                  alignment: BarChartAlignment.spaceAround,
+                  maxY: maxY,
+                  barTouchData: BarTouchData(
+                    touchTooltipData: BarTouchTooltipData(
+                      getTooltipItem: (group, _, rod, _) => BarTooltipItem(
+                        _fmt(rod.toY / (t == 0 ? 1 : t)),
+                        const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 12,
+                        ),
                       ),
                     ),
                   ),
-                ),
-                titlesData: FlTitlesData(
-                  leftTitles: const AxisTitles(),
-                  rightTitles: const AxisTitles(),
-                  topTitles: const AxisTitles(),
-                  bottomTitles: AxisTitles(
-                    sideTitles: SideTitles(
-                      showTitles: true,
-                      reservedSize: 24,
-                      getTitlesWidget: (value, meta) {
-                        final i = value.toInt();
-                        if (i < 0 || i >= keys.length) {
-                          return const SizedBox.shrink();
-                        }
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            _labels[keys[i]] ?? _capitalize(keys[i]),
-                            style: const TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.textSecondary,
+                  titlesData: FlTitlesData(
+                    leftTitles: const AxisTitles(),
+                    rightTitles: const AxisTitles(),
+                    topTitles: const AxisTitles(),
+                    bottomTitles: AxisTitles(
+                      sideTitles: SideTitles(
+                        showTitles: true,
+                        reservedSize: 26,
+                        getTitlesWidget: (value, meta) {
+                          final i = value.toInt();
+                          if (i < 0 || i >= keys.length) {
+                            return const SizedBox.shrink();
+                          }
+                          final active = (emotions[keys[i]] ?? 0) > 0;
+                          return Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              _labels[keys[i]] ?? _capitalize(keys[i]),
+                              style: TextStyle(
+                                fontSize: 9.5,
+                                fontWeight: active
+                                    ? FontWeight.w800
+                                    : FontWeight.w600,
+                                color: active
+                                    ? AppColors.textPrimary
+                                    : AppColors.textSecondary,
+                              ),
                             ),
-                          ),
-                        );
-                      },
+                          );
+                        },
+                      ),
                     ),
                   ),
-                ),
-                gridData: const FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                barGroups: [
-                  for (var i = 0; i < keys.length; i++)
-                    BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: emotions[keys[i]] ?? 0,
-                          width: 14,
-                          color: AppColors.blueIcon,
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(4),
-                          ),
-                        ),
-                      ],
+                  gridData: FlGridData(
+                    show: true,
+                    drawVerticalLine: false,
+                    horizontalInterval: maxY / 4,
+                    getDrawingHorizontalLine: (_) => const FlLine(
+                      color: AppColors.cardBorder,
+                      strokeWidth: 1,
+                      dashArray: [4, 4],
                     ),
-                ],
+                  ),
+                  borderData: FlBorderData(show: false),
+                  barGroups: [
+                    for (var i = 0; i < keys.length; i++)
+                      BarChartGroupData(
+                        x: i,
+                        // Value label above bars that actually have data —
+                        // zero bars stay unlabeled to reduce noise.
+                        showingTooltipIndicators: const [],
+                        barRods: [
+                          BarChartRodData(
+                            toY: (emotions[keys[i]] ?? 0) * t,
+                            width: 16,
+                            gradient: const LinearGradient(
+                              begin: Alignment.bottomCenter,
+                              end: Alignment.topCenter,
+                              colors: [
+                                AppColors.indigoIcon,
+                                AppColors.blueIcon,
+                              ],
+                            ),
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(5),
+                            ),
+                            backDrawRodData: BackgroundBarChartRodData(
+                              show: true,
+                              toY: maxY,
+                              color: AppColors.scaffold,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -1097,9 +1356,10 @@ class _CardTitle extends StatelessWidget {
           child: Text(
             title,
             style: const TextStyle(
-              fontSize: 14.5,
+              fontSize: 15,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
+              letterSpacing: -0.2,
             ),
           ),
         ),
@@ -1125,9 +1385,10 @@ class _Chip extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 10.5,
+          fontSize: 11,
           fontWeight: FontWeight.w700,
           color: color,
+          letterSpacing: 0.1,
         ),
       ),
     );
