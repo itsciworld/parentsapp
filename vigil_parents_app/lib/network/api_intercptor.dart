@@ -65,11 +65,14 @@ class ApiInterceptor extends Interceptor {
   }
 
   /// Endpoints whose request/response bodies should not be logged.
-  /// The AI daily report is raw PDF bytes — logging it would flood the console.
+  /// Calendar events carry huge meeting descriptions and the AI endpoints
+  /// return a large analysis payload / raw PDF bytes — logging any of them
+  /// floods the console.
   bool _isSilent(String path) =>
       path.contains('/api/sms/') ||
       path.contains('/api/files/') ||
-      path.endsWith('/report');
+      path.contains('/api/events/') ||
+      path.contains('/api/ai/');
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {

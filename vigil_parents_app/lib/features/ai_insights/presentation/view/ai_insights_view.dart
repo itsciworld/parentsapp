@@ -177,7 +177,12 @@ class _TitleBar extends StatelessWidget {
             ),
             const SizedBox(width: 2),
           ],
-          ChildSelectorDropdown(onChanged: onChildSelected),
+          // Bounded, or the dropdown's full-width shimmer placeholder gets
+          // infinite width inside this Row and blows up layout.
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 170),
+            child: ChildSelectorDropdown(onChanged: onChildSelected),
+          ),
         ],
       ),
     );

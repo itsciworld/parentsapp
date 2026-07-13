@@ -1,7 +1,8 @@
-import 'dart:typed_data';
+import 'dart:io';
 
 import 'package:file_saver/file_saver.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -22,6 +23,10 @@ class AiReportView extends ConsumerStatefulWidget {
 }
 
 class _AiReportViewState extends ConsumerState<AiReportView> {
+  /// Saves into the phone's public Downloads folder on Android (MediaStore),
+  /// so the report shows up in the Files/Downloads app.
+  static const _downloadsChannel = MethodChannel('vigil/downloads');
+
   Uint8List? _bytes;
   bool _loading = true;
   bool _saving = false;
@@ -69,19 +74,43 @@ class _AiReportViewState extends ConsumerState<AiReportView> {
           ? 'vigil_ai_report_${vm.date}'
           : 'vigil_ai_report_${childName.replaceAll(RegExp(r'\s+'), '_')}_${vm.date}';
 
-      final path = await FileSaver.instance.saveFile(
-        name: safeName,
-        bytes: bytes,
-        ext: 'pdf',
-        mimeType: MimeType.pdf,
-      );
+      final String location;
+      if (Platform.isAndroid) {
+        // Native MediaStore save → lands in the public Downloads folder.
+        final path = await _downloadsChannel.invokeMethod<String>(
+          'saveToDownloads',
+          {
+            'name': '$safeName.pdf',
+            'mimeType': 'application/pdf',
+            'bytes': bytes,
+          },
+        );
+        location = path ?? 'Downloads/$safeName.pdf';
+      } else {
+        // iOS & others: app documents, reachable from the Files app.
+        final path = await FileSaver.instance.saveFile(
+          name: safeName,
+          bytes: bytes,
+          ext: 'pdf',
+          mimeType: MimeType.pdf,
+        );
+        location = path.isEmpty ? '$safeName.pdf' : path;
+      }
 
       if (!mounted) return;
       showAppToast(
         context: context,
         title: 'Report downloaded',
-        subtitle: path.isEmpty ? 'Saved as $safeName.pdf' : 'Saved to $path',
+        subtitle: 'Saved to $location',
         type: ToastType.success,
+      );
+    } on PlatformException catch (e) {
+      if (!mounted) return;
+      showAppToast(
+        context: context,
+        title: 'Download failed',
+        subtitle: e.message ?? 'Could not save the report',
+        type: ToastType.error,
       );
     } catch (e) {
       if (!mounted) return;

@@ -49,7 +49,6 @@ class AiInsightsViewModel extends ChangeNotifier {
     } catch (e) {
       if (_childId != childId) return;
       error = e.toString().replaceAll('Exception: ', '');
-      if (kDebugMode) print('[AiInsights] Load error: $error');
     } finally {
       if (_childId == childId) {
         loading = false;

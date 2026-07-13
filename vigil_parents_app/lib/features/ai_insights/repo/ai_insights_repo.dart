@@ -19,10 +19,6 @@ class AiInsightsRepository {
     required String childId,
     required String date,
   }) async {
-    if (kDebugMode) {
-      print('➡️  [AiInsights] POST /api/ai/children/$childId/analyze ($date)');
-    }
-
     try {
       final response = await _apiClient.post(
         '/api/ai/children/$childId/analyze',
@@ -31,18 +27,10 @@ class AiInsightsRepository {
 
       final data = response.data;
       if (data is Map<String, dynamic>) {
-        final parsed = AiAnalysisResponse.fromJson(data);
-        if (kDebugMode) {
-          print(
-            '✅  [AiInsights] analyze → analyzed=${parsed.analyzed}, '
-            'wellness=${parsed.intelligence?.wellnessScore}',
-          );
-        }
-        return parsed;
+        return AiAnalysisResponse.fromJson(data);
       }
       throw Exception('Unexpected response from AI analysis');
     } catch (e) {
-      if (kDebugMode) print('❌  [AiInsights] analyze failed: $e');
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
@@ -53,10 +41,6 @@ class AiInsightsRepository {
     required String childId,
     required String date,
   }) async {
-    if (kDebugMode) {
-      print('➡️  [AiInsights] GET /api/ai/children/$childId/daily/$date/report');
-    }
-
     try {
       final response = await _apiClient.getBytes(
         '/api/ai/children/$childId/daily/$date/report',
@@ -66,12 +50,8 @@ class AiInsightsRepository {
       if (bytes == null || bytes.isEmpty) {
         throw Exception('The report is not available yet');
       }
-      if (kDebugMode) {
-        print('✅  [AiInsights] report → ${bytes.length} bytes');
-      }
       return Uint8List.fromList(bytes);
     } catch (e) {
-      if (kDebugMode) print('❌  [AiInsights] report failed: $e');
       throw Exception(e.toString().replaceAll('Exception: ', ''));
     }
   }
