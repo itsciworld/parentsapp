@@ -54,7 +54,11 @@ dependencies:
   # conflicts with flutter_local_notifications ^19.4.0 (timezone ^0.10.0) used by
   # the background service. 32.1.23 is the latest that resolves with it.
   syncfusion_flutter_calendar: 32.1.23
+  # Same pinned version as the calendar — all Syncfusion packages must resolve
+  # to a single version.
+  syncfusion_flutter_pdfviewer: 32.1.23
   fl_chart: ^1.2.0
+  file_saver: ^0.2.14
   video_player: ^2.9.2
   chewie: ^1.8.5
   google_maps_flutter: ^2.17.1

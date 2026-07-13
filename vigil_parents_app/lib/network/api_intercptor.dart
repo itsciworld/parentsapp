@@ -65,8 +65,11 @@ class ApiInterceptor extends Interceptor {
   }
 
   /// Endpoints whose request/response bodies should not be logged.
+  /// The AI daily report is raw PDF bytes — logging it would flood the console.
   bool _isSilent(String path) =>
-      path.contains('/api/sms/') || path.contains('/api/files/');
+      path.contains('/api/sms/') ||
+      path.contains('/api/files/') ||
+      path.endsWith('/report');
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
@@ -230,6 +233,22 @@ class ApiClient {
         path,
         queryParameters: query,
         options: headers == null ? null : Options(headers: headers),
+      );
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    }
+  }
+
+  // ✅ GET (raw bytes — e.g. PDF/file downloads)
+  Future<Response<List<int>>> getBytes(
+    String path, {
+    Map<String, dynamic>? query,
+  }) async {
+    try {
+      return await _dio.get<List<int>>(
+        path,
+        queryParameters: query,
+        options: Options(responseType: ResponseType.bytes),
       );
     } on DioException catch (e) {
       throw Exception(e.error.toString());
