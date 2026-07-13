@@ -21,6 +21,8 @@ import 'package:vigil_parents_app/features/live_status/models/live_status_model.
 import 'package:vigil_parents_app/features/live_status/presentation/view_model/live_status_viewmodel.dart';
 import 'package:vigil_parents_app/features/location/presentation/view_model/location_viewmodel.dart';
 import 'package:vigil_parents_app/features/location/presentation/widgets/home_location_card.dart';
+import 'package:vigil_parents_app/features/social_apps/presentation/view_model/social_screen_viewmodel.dart';
+import 'package:vigil_parents_app/features/social_apps/presentation/widgets/social_apps_card.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view_model/profile_viewmodel.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -59,6 +61,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         _liveStatusVm!.startPolling(id);
         ref.read(locationViewModelProvider).load(id);
         ref.read(appUsageViewModelProvider).load(id);
+        ref.read(socialScreenViewModelProvider).load(id);
       }
       ref.read(featureBadgesProvider).load();
     });
@@ -74,6 +77,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     ref.read(liveStatusViewModelProvider).startPolling(childId);
     ref.read(locationViewModelProvider).load(childId);
     ref.read(appUsageViewModelProvider).load(childId);
+    ref.read(socialScreenViewModelProvider).load(childId);
     ref.read(featureBadgesProvider).load();
   }
 
@@ -206,6 +210,7 @@ class _LoadedView extends ConsumerWidget {
                 ref.read(liveStatusViewModelProvider).refresh(),
                 ref.read(locationViewModelProvider).refresh(),
                 ref.read(appUsageViewModelProvider).refresh(),
+                ref.read(socialScreenViewModelProvider).refresh(),
                 ref.read(featureBadgesProvider).load(),
               ]);
             },
@@ -277,6 +282,23 @@ class _LoadedView extends ConsumerWidget {
                                   );
                             },
                           ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 26),
+
+                    // ---- Social apps --------------------------------------
+                    _Reveal(
+                      delayMs: 190,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          _SectionTitle(
+                            title: 'Social Apps',
+                            subtitle: 'Tap to view captured chat messages',
+                          ),
+                          SizedBox(height: 14),
+                          SocialAppsCard(),
                         ],
                       ),
                     ),

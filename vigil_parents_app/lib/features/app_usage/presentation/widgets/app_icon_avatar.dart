@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:vigil_parents_app/core/appimages/app_images.dart';
 
-/// A rounded-square "icon" for an app. The API doesn't provide real icons, so
-/// we render a branded color (for well-known apps) or a deterministic color
-/// derived from the package name, with the app's first letter on top.
+/// A rounded-square "icon" for an app. For well-known social apps we render the
+/// real brand logo bundled in assets; otherwise the API doesn't provide icons,
+/// so we fall back to a branded color (or a deterministic color derived from the
+/// package name) with the app's first letter on top.
 class AppIconAvatar extends StatelessWidget {
   final String appName;
   final String packageName;
@@ -14,6 +16,16 @@ class AppIconAvatar extends StatelessWidget {
     required this.packageName,
     this.size = 44,
   });
+
+  /// Real brand logos bundled in assets, keyed by package prefix. When a match
+  /// is found we show the actual logo instead of the letter fallback.
+  static const Map<String, String> _brandImage = {
+    'com.whatsapp': AppImages.whatsapp,
+    'com.instagram.android': AppImages.insta,
+    'com.snapchat.android': AppImages.snapchat,
+    'com.facebook.katana': AppImages.facebook,
+    'com.facebook.orca': AppImages.facebook,
+  };
 
   static const Map<String, Color> _brand = {
     'com.whatsapp': Color(0xFF25D366),
@@ -51,8 +63,38 @@ class AppIconAvatar extends StatelessWidget {
     return _palette[hash % _palette.length];
   }
 
+  /// Resolves the bundled brand logo for [packageName], or null if none.
+  String? get _image {
+    for (final entry in _brandImage.entries) {
+      if (packageName.startsWith(entry.key)) return entry.value;
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Prefer the real brand logo when we have one bundled.
+    final image = _image;
+    if (image != null) {
+      return Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(size * 0.28),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Image.asset(image, fit: BoxFit.cover),
+      );
+    }
+
     final color = _color;
     final letter = appName.trim().isNotEmpty
         ? appName.trim()[0].toUpperCase()

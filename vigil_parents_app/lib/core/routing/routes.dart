@@ -12,6 +12,7 @@ import 'package:vigil_parents_app/features/events/view/events_view.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view/gallery_view.dart';
 import 'package:vigil_parents_app/features/introduction/presentation/view/intro_view.dart';
 import 'package:vigil_parents_app/features/main_shell/main_shell.dart';
+import 'package:vigil_parents_app/features/notifications/presentation/view/social_notifications_view.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view/profile_view.dart';
 import 'package:vigil_parents_app/features/settings/presentation/view/settings_view.dart';
 import 'package:vigil_parents_app/features/sms/view/sms_view.dart';
@@ -33,6 +34,7 @@ class AppRoutesName {
   static const String childView = '/childView';
   static const String settingsView = '/settingsView';
   static const String profileView = '/profileView';
+  static const String notificationsView = '/notificationsView';
 }
 
 class AppRouteGenerator {
@@ -84,6 +86,10 @@ class AppRouteGenerator {
         return MaterialPageRoute(builder: (_) => AccessCallsScreen());
       case AppRoutesName.eventsView:
         return MaterialPageRoute(builder: (_) => const EventsScreen());
+      case AppRoutesName.notificationsView:
+        return MaterialPageRoute(
+          builder: (_) => const SocialNotificationsScreen(),
+        );
       default:
         return MaterialPageRoute(
           builder: (_) =>

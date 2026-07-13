@@ -28,6 +28,102 @@ enum DayWindow {
   }
 }
 
+/// A compact pill dropdown for picking a [DayWindow]. A space-saving
+/// alternative to [DayWindowSelector] when a full chip row doesn't fit.
+class DayWindowDropdown extends StatelessWidget {
+  final DayWindow selected;
+  final bool enabled;
+  final ValueChanged<DayWindow> onSelected;
+
+  const DayWindowDropdown({
+    super.key,
+    required this.selected,
+    required this.onSelected,
+    this.enabled = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Opacity(
+      opacity: enabled ? 1 : 0.5,
+      child: PopupMenuButton<DayWindow>(
+        enabled: enabled,
+        initialValue: selected,
+        tooltip: 'History window',
+        position: PopupMenuPosition.under,
+        color: AppColors.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        onSelected: onSelected,
+        itemBuilder: (context) => [
+          for (final w in DayWindow.values)
+            PopupMenuItem<DayWindow>(
+              value: w,
+              child: Row(
+                children: [
+                  Icon(
+                    w == selected
+                        ? Icons.radio_button_checked_rounded
+                        : Icons.radio_button_off_rounded,
+                    size: 18,
+                    color: w == selected
+                        ? AppColors.primary
+                        : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    w.label,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: w == selected
+                          ? FontWeight.w800
+                          : FontWeight.w600,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.cardBorder),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.history_rounded,
+                size: 16,
+                color: AppColors.textSecondary,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                selected.label,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 2),
+              const Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: AppColors.textSecondary,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Horizontal row of [DayWindow] chips. Pass the active window and a callback;
 /// the active chip is filled in the brand color, the rest outlined.
 class DayWindowSelector extends StatelessWidget {

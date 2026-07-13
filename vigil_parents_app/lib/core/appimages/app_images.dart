@@ -8,4 +8,8 @@ class AppImages {
 
   static const String appIcon = 'assets/logo/app_icon.png';
   static const String appIconForeground = 'assets/logo/app_icon_foreground.png';
+  static const String whatsapp = 'assets/images/whatsapp.png';
+  static const String insta = 'assets/images/insta.jpeg';
+  static const String snapchat = 'assets/images/snapchat.jpg';
+  static const String facebook = 'assets/images/facebook.png';
 }

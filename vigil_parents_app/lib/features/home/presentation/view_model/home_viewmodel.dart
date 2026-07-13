@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/features/calls/presentation/view_model/view/calls_view.dart';
 import 'package:vigil_parents_app/features/contact/view/contact_view.dart';
 import 'package:vigil_parents_app/features/device_info/presentation/view/device_info_view.dart';
@@ -7,6 +6,7 @@ import 'package:vigil_parents_app/features/events/view/events_view.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view/gallery_view.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
 import 'package:vigil_parents_app/features/home/repo/home_repo.dart';
+import 'package:vigil_parents_app/features/notifications/presentation/view/social_notifications_view.dart';
 import 'package:vigil_parents_app/features/sms/view/sms_view.dart';
 
 /// UI state phases for the home screen.
@@ -147,12 +147,9 @@ class HomeViewModel extends ChangeNotifier {
   }
 
   void onNotificationsTapped(BuildContext context) {
-    // Notifications are not built yet — let the user know it's coming.
-    showAppToast(
-      context: context,
-      title: 'Coming soon',
-      subtitle: 'Notifications will be available in a future update.',
-      type: ToastType.info,
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const SocialNotificationsScreen()),
     );
   }
 
