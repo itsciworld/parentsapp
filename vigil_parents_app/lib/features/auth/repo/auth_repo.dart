@@ -30,6 +30,37 @@ class AuthRepository {
     }
   }
 
+  // The single sentence the login screen shows when the email isn't registered,
+  // whichever wording the backend happens to use for it.
+  static const String _accountNotFoundMessage =
+      'No Account found with this email address. Please check and try again';
+
+  static final List<RegExp> _accountNotFoundPatterns = [
+    RegExp(r'(user|account|email|e-?mail)\s+not\s+found', caseSensitive: false),
+    RegExp(
+      r"(user|account|email|e-?mail)\s+(does\s*n[o']?t|doesn't)\s+exist",
+      caseSensitive: false,
+    ),
+    RegExp(r'no\s+(such\s+)?(user|account)', caseSensitive: false),
+    RegExp(r'not\s+registered', caseSensitive: false),
+    RegExp(r'unregistered\s+(user|account|email)', caseSensitive: false),
+  ];
+
+  /// Normalises a login failure into the copy the screen expects. Anything that
+  /// isn't recognisably an "unknown email" stays as the server sent it, so a
+  /// wrong password or an outage is never mislabelled as a missing account.
+  String _mapLoginError(String? raw, int? statusCode) {
+    final message = (raw ?? '').replaceAll('Exception: ', '').trim();
+
+    final isUnknownAccount =
+        statusCode == 404 ||
+        _accountNotFoundPatterns.any((p) => p.hasMatch(message));
+
+    if (isUnknownAccount) return _accountNotFoundMessage;
+
+    return message.isEmpty ? 'Login failed. Please try again.' : message;
+  }
+
   // LOGIN
   Future<String> login(String email, String password) async {
     try {
@@ -40,9 +71,11 @@ class AuthRepository {
 
       return await _handleAuth(response, email);
     } on DioException catch (e) {
-      throw Exception(e.error.toString()); // ✅ clean message
+      throw Exception(
+        _mapLoginError(e.error?.toString(), e.response?.statusCode),
+      );
     } catch (e) {
-      throw Exception(e.toString().replaceAll('Exception: ', ''));
+      throw Exception(_mapLoginError(e.toString(), null));
     }
   }
 

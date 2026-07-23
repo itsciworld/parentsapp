@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/core/navigation/app_navigator.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
@@ -8,13 +9,17 @@ import 'package:vigil_parents_app/core/services/background/background_service.da
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  final binding = WidgetsFlutterBinding.ensureInitialized();
+  // Hold the native splash on screen through the async startup work below so
+  // there is no blank frame between it and the first route.
+  FlutterNativeSplash.preserve(widgetsBinding: binding);
   await dotenv.load(fileName: ".env");
   // Ensure existing sessions are mirrored to SharedPreferences so the
   // background isolate can read the auth token.
   await SecureDeviceService.syncMirrorFromSecure();
   await initializeBackgroundService();
   runApp(const ProviderScope(child: MyApp()));
+  FlutterNativeSplash.remove();
 }
 
 class MyApp extends StatefulWidget {

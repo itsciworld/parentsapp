@@ -5,6 +5,7 @@ import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
+import 'package:vigil_parents_app/core/utils/validators.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/login_view.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view_model/forgot_password_viewmodel.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
@@ -163,6 +164,7 @@ class _ForgotPasswordViewState extends ConsumerState<ForgotPasswordView> {
                                   isEmail: true,
                                   isMandatory: true,
                                   denySpace: true,
+                                  validator: Validators.email,
                                   keyboardType: TextInputType.emailAddress,
                                   fieldStyle: FlexiFieldStyle.outline,
                                   theme: _fieldTheme,

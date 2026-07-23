@@ -62,6 +62,9 @@ dependencies:
   video_player: ^2.9.2
   chewie: ^1.8.5
   google_maps_flutter: ^2.17.1
+  # Pinned to 2.4.7: 2.4.8+ requires meta ^1.18.0, which conflicts with the
+  # meta 1.17.0 pinned by flutter_test in the current Flutter SDK.
+  flutter_native_splash: ^2.4.7
 
 dev_dependencies:
   flutter_test:
@@ -74,6 +77,30 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+
+flutter_native_splash:
+  # app_icon.png is a rounded-square logo on a white field, so the splash
+  # background is white to let it sit seamlessly.
+  color: "#FFFFFF"
+  color_dark: "#FFFFFF"
+  image: assets/logo/app_icon.png
+  image_dark: assets/logo/app_icon.png
+
+  android: true
+  ios: true
+  web: false
+
+  android_gravity: center
+  ios_content_mode: center
+
+  # Android 12+ draws the splash icon inside a circular mask and only the
+  # inner ~2/3 is visible, so the full logo (with its tagline) would be
+  # cropped. app_icon_foreground.png is the padded variant meant for that.
+  android_12:
+    image: assets/logo/app_icon_foreground.png
+    icon_background_color: "#FFFFFF"
+    image_dark: assets/logo/app_icon_foreground.png
+    icon_background_color_dark: "#FFFFFF"
 
 flutter_launcher_icons:
   android: "launcher_icon"

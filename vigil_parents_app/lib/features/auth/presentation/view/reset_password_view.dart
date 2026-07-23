@@ -5,6 +5,7 @@ import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
+import 'package:vigil_parents_app/core/utils/validators.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/login_view.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view_model/forgot_password_viewmodel.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
@@ -14,11 +15,7 @@ class ResetPasswordView extends ConsumerStatefulWidget {
   final String email;
   final String otp;
 
-  const ResetPasswordView({
-    super.key,
-    required this.email,
-    required this.otp,
-  });
+  const ResetPasswordView({super.key, required this.email, required this.otp});
 
   @override
   ConsumerState<ResetPasswordView> createState() => _ResetPasswordViewState();
@@ -56,20 +53,11 @@ class _ResetPasswordViewState extends ConsumerState<ResetPasswordView> {
   void _handleResetPassword() {
     FocusScope.of(context).unfocus();
 
+    // The confirm field validates the match inline, so a failed validate()
+    // has already shown the reason on the offending field.
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     final password = _passwordController.text;
-    final confirm = _confirmController.text;
-
-    if (password != confirm) {
-      showAppToast(
-        context: context,
-        title: 'Passwords Mismatch',
-        subtitle: 'New password and confirm password do not match',
-        type: ToastType.warning,
-      );
-      return;
-    }
 
     ref
         .read(forgotPasswordViewModelProvider.notifier)
@@ -190,6 +178,7 @@ class _ResetPasswordViewState extends ConsumerState<ResetPasswordView> {
                                   obscureText: _obscurePassword,
                                   isMandatory: true,
                                   denySpace: true,
+                                  validator: Validators.newPassword,
                                   fieldStyle: FlexiFieldStyle.outline,
                                   theme: _fieldTheme,
                                   prefixIcon: Icon(
@@ -228,6 +217,11 @@ class _ResetPasswordViewState extends ConsumerState<ResetPasswordView> {
                                   obscureText: _obscureConfirm,
                                   isMandatory: true,
                                   denySpace: true,
+                                  validator: (value) =>
+                                      Validators.confirmPassword(
+                                        value,
+                                        _passwordController.text,
+                                      ),
                                   fieldStyle: FlexiFieldStyle.outline,
                                   theme: _fieldTheme,
                                   prefixIcon: Icon(
