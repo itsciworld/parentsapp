@@ -27,6 +27,12 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   final FlutterBackgroundService _service = FlutterBackgroundService();
 
+  /// No background isolate on web — every `invoke` would throw there.
+  void _notifyService(String event) {
+    if (!backgroundServiceSupported) return;
+    _service.invoke(event);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -34,10 +40,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
     // App starts in the foreground — pause the background sync jobs so they
     // don't duplicate the on-screen polling. Re-send shortly after to win the
     // race against the background isolate finishing its event subscription.
-    _service.invoke('app_foreground');
+    _notifyService('app_foreground');
     Future.delayed(
       const Duration(seconds: 2),
-      () => _service.invoke('app_foreground'),
+      () => _notifyService('app_foreground'),
     );
   }
 
@@ -50,10 +56,10 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      _service.invoke('app_foreground');
+      _notifyService('app_foreground');
     } else {
       // paused / inactive / hidden / detached → let the background sync resume.
-      _service.invoke('app_background');
+      _notifyService('app_background');
     }
   }
 

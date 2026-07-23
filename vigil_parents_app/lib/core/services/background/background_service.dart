@@ -38,8 +38,15 @@ const Duration _tick = Duration(seconds: 1);
 const String _channelId = 'vigil_monitoring';
 const String _channelName = 'Vigil Monitoring';
 
+/// True when the background isolate is available. `flutter_background_service`
+/// and the foreground notification channel are Android/iOS only — on web the
+/// screens poll directly instead, so the whole service is skipped there.
+bool get backgroundServiceSupported => !kIsWeb;
+
 /// Call once from `main()` (after `dotenv.load`).
 Future<void> initializeBackgroundService() async {
+  if (!backgroundServiceSupported) return;
+
   final service = FlutterBackgroundService();
 
   final notifications = FlutterLocalNotificationsPlugin();

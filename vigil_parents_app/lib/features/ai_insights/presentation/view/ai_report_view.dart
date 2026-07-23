@@ -1,6 +1,5 @@
-import 'dart:io';
-
 import 'package:file_saver/file_saver.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,7 +74,7 @@ class _AiReportViewState extends ConsumerState<AiReportView> {
           : 'vigil_ai_report_${childName.replaceAll(RegExp(r'\s+'), '_')}_${vm.date}';
 
       final String location;
-      if (Platform.isAndroid) {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
         // Native MediaStore save → lands in the public Downloads folder.
         final path = await _downloadsChannel.invokeMethod<String>(
           'saveToDownloads',
@@ -88,6 +87,7 @@ class _AiReportViewState extends ConsumerState<AiReportView> {
         location = path ?? 'Downloads/$safeName.pdf';
       } else {
         // iOS & others: app documents, reachable from the Files app.
+        // On web this triggers a normal browser download.
         final path = await FileSaver.instance.saveFile(
           name: safeName,
           bytes: bytes,

@@ -600,38 +600,50 @@ class _PermissionTile extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          _MiniToggle(on: granted),
+          _StatusBadge(on: granted),
         ],
       ),
     );
   }
 }
 
-/// A read-only switch-style indicator showing a permission's on/off state.
-class _MiniToggle extends StatelessWidget {
+/// A read-only status badge showing whether a permission is granted.
+///
+/// Rendered as a static pill (icon + label) so it clearly reads as a
+/// state indicator rather than an interactive toggle.
+class _StatusBadge extends StatelessWidget {
   final bool on;
-  const _MiniToggle({required this.on});
+  const _StatusBadge({required this.on});
 
   @override
   Widget build(BuildContext context) {
+    final color = on ? AppColors.primary : AppColors.textSecondary;
+    final bg = on ? AppColors.primaryLight : const Color(0xFFEDEFF3);
+
     return Container(
-      width: 40,
-      height: 22,
-      padding: const EdgeInsets.all(2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: on ? AppColors.primary : const Color(0xFFCBD2DD),
-        borderRadius: BorderRadius.circular(20),
+        color: bg,
+        borderRadius: BorderRadius.circular(8),
       ),
-      child: Align(
-        alignment: on ? Alignment.centerRight : Alignment.centerLeft,
-        child: Container(
-          width: 18,
-          height: 18,
-          decoration: const BoxDecoration(
-            color: AppColors.surface,
-            shape: BoxShape.circle,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            on ? Icons.check_circle : Icons.remove_circle_outline,
+            size: 13,
+            color: color,
           ),
-        ),
+          const SizedBox(width: 4),
+          Text(
+            on ? 'Allowed' : 'Blocked',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              color: color,
+            ),
+          ),
+        ],
       ),
     );
   }
