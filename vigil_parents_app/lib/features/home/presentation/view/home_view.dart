@@ -192,7 +192,13 @@ class _LoadedView extends ConsumerWidget {
       lastSyncAt: liveStatusVm.lastSyncAt,
     );
 
+    // Three distinct states, and they must not be collapsed into two: until the
+    // child list has come back we know nothing, and rendering the dashboard's
+    // placeholder child there is what made the screen show a stranger's data
+    // for the first few moments.
+    final resolvingChild = !selectedChild.initialized;
     final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
+    final hasChild = selectedChild.initialized && selectedChild.selected != null;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -227,10 +233,17 @@ class _LoadedView extends ConsumerWidget {
                       delayMs: 0,
                       child: _TopBar(
                         parent: parent,
-                        notificationCount: data.notificationCount,
+                        // The bell only leads to child-scoped content, so with
+                        // nothing linked there is nowhere for it to go.
+                        showNotifications: hasChild,
+                        notificationCount: badges.notificationsUnseen,
                         onParentTap: onParentTap,
-                        onNotificationsTap: () =>
-                            vm.onNotificationsTapped(context),
+                        onNotificationsTap: () {
+                          ref
+                              .read(featureBadgesProvider)
+                              .markNotificationsSeen();
+                          vm.onNotificationsTapped(context);
+                        },
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -238,7 +251,9 @@ class _LoadedView extends ConsumerWidget {
                     // ---- Child hero card ----------------------------------
                     _Reveal(
                       delayMs: 90,
-                      child: noChild
+                      child: resolvingChild
+                          ? const _ChildCardPlaceholder()
+                          : noChild
                           ? NoChildLinkedView(
                               refreshing: selectedChild.loading,
                               onRefresh: () => ref
@@ -255,87 +270,94 @@ class _LoadedView extends ConsumerWidget {
                               ),
                             ),
                     ),
-                    const SizedBox(height: 26),
 
-                    // ---- Monitoring tools ---------------------------------
-                    _Reveal(
-                      delayMs: 170,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SectionTitle(
-                            title: 'Monitoring Tools',
-                            subtitle: 'Tap a tool to view activity',
-                          ),
-                          const SizedBox(height: 14),
-                          FeatureGrid(
-                            features: features,
-                            onTap: (tile) {
-                              ref
-                                  .read(featureBadgesProvider)
-                                  .markSeenForTile(tile.id);
-                              vm
-                                  .onFeatureTapped(context, tile)
-                                  .then(
-                                    (_) =>
-                                        ref.read(featureBadgesProvider).load(),
-                                  );
-                            },
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 26),
+                    // Everything below is child-scoped. With no child resolved
+                    // there is nothing truthful to put here, so the screen ends
+                    // at the "No child linked yet" card.
+                    if (hasChild) ...[
+                      const SizedBox(height: 26),
 
-                    // ---- Social apps --------------------------------------
-                    _Reveal(
-                      delayMs: 190,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          _SectionTitle(
-                            title: 'Social Apps',
-                            subtitle: 'Tap to view captured chat messages',
-                          ),
-                          SizedBox(height: 14),
-                          SocialAppsCard(),
-                        ],
+                      // ---- Monitoring tools -------------------------------
+                      _Reveal(
+                        delayMs: 170,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const _SectionTitle(
+                              title: 'Monitoring Tools',
+                              subtitle: 'Tap a tool to view activity',
+                            ),
+                            const SizedBox(height: 14),
+                            FeatureGrid(
+                              features: features,
+                              onTap: (tile) {
+                                ref
+                                    .read(featureBadgesProvider)
+                                    .markSeenForTile(tile.id);
+                                vm
+                                    .onFeatureTapped(context, tile)
+                                    .then(
+                                      (_) => ref
+                                          .read(featureBadgesProvider)
+                                          .load(),
+                                    );
+                              },
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 26),
+                      const SizedBox(height: 26),
 
-                    // ---- Live location ------------------------------------
-                    _Reveal(
-                      delayMs: 205,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          _SectionTitle(
-                            title: 'Live Location',
-                            subtitle: 'Tap the map for full history',
-                          ),
-                          SizedBox(height: 14),
-                          HomeLocationCard(),
-                        ],
+                      // ---- Social apps ------------------------------------
+                      _Reveal(
+                        delayMs: 190,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            _SectionTitle(
+                              title: 'Social Apps',
+                              subtitle: 'Tap to view captured chat messages',
+                            ),
+                            SizedBox(height: 14),
+                            SocialAppsCard(),
+                          ],
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 26),
+                      const SizedBox(height: 26),
 
-                    // ---- App usage ----------------------------------------
-                    _Reveal(
-                      delayMs: 205,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          _SectionTitle(
-                            title: 'App Usage',
-                            subtitle: 'Tap to see screen-time details',
-                          ),
-                          SizedBox(height: 14),
-                          ActivityOverviewCard(),
-                        ],
+                      // ---- Live location ----------------------------------
+                      _Reveal(
+                        delayMs: 205,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            _SectionTitle(
+                              title: 'Live Location',
+                              subtitle: 'Tap the map for full history',
+                            ),
+                            SizedBox(height: 14),
+                            HomeLocationCard(),
+                          ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(height: 26),
+
+                      // ---- App usage --------------------------------------
+                      _Reveal(
+                        delayMs: 205,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            _SectionTitle(
+                              title: 'App Usage',
+                              subtitle: 'Tap to see screen-time details',
+                            ),
+                            SizedBox(height: 14),
+                            ActivityOverviewCard(),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 26),
 
                     // ---- Foundation ---------------------------------------
@@ -469,12 +491,14 @@ class _HeaderBackdrop extends StatelessWidget {
 /// ----------------------------------------------------------------------------
 class _TopBar extends StatelessWidget {
   final ParentProfile parent;
+  final bool showNotifications;
   final int notificationCount;
   final VoidCallback? onParentTap;
   final VoidCallback onNotificationsTap;
 
   const _TopBar({
     required this.parent,
+    required this.showNotifications,
     required this.notificationCount,
     required this.onParentTap,
     required this.onNotificationsTap,
@@ -547,7 +571,8 @@ class _TopBar extends StatelessWidget {
             ],
           ),
         ),
-        _NotifBell(count: notificationCount, onTap: onNotificationsTap),
+        if (showNotifications)
+          _NotifBell(count: notificationCount, onTap: onNotificationsTap),
       ],
     );
   }
@@ -593,6 +618,28 @@ class _NotifBell extends StatelessWidget {
                 ),
               ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Stands in for the child hero card while the child list is still being
+/// fetched. Deliberately contentless: showing *no* name is correct, whereas
+/// showing a placeholder one reads as a real (and wrong) child.
+class _ChildCardPlaceholder extends StatelessWidget {
+  const _ChildCardPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey.shade300,
+      highlightColor: Colors.grey.shade100,
+      child: Container(
+        height: 150,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(22),
         ),
       ),
     );

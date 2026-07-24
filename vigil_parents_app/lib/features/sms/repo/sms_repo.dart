@@ -10,7 +10,18 @@ import '../models/sms_thread_model.dart';
 class SmsContext {
   final String parentId;
   final String childId;
-  const SmsContext({required this.parentId, required this.childId});
+
+  /// True when a parent session exists, whether or not a child has been linked
+  /// yet. [isValid] can't answer this on its own: it needs *both* ids, so a
+  /// signed-in parent with nothing linked looks identical to a signed-out one.
+  /// Callers that report status to the user need to tell those two apart.
+  final bool hasSession;
+
+  const SmsContext({
+    required this.parentId,
+    required this.childId,
+    this.hasSession = false,
+  });
 
   bool get isValid => parentId.isNotEmpty && childId.isNotEmpty;
 }
@@ -43,7 +54,7 @@ class SmsRepository {
     try {
       final children = await _childRepository.fetchChildren();
       if (children.isEmpty) {
-        return SmsContext(parentId: parentId, childId: '');
+        return SmsContext(parentId: parentId, childId: '', hasSession: true);
       }
 
       // If a child is selected, find it and update its device key.
@@ -72,7 +83,11 @@ class SmsRepository {
       // Caller handles invalid context if childId is empty.
     }
 
-    return SmsContext(parentId: parentId, childId: childId);
+    return SmsContext(
+      parentId: parentId,
+      childId: childId,
+      hasSession: true,
+    );
   }
 
   /// Thread-grouped SMS for a child. One call returns every thread with its

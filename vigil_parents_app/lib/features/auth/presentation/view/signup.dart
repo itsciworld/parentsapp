@@ -5,6 +5,7 @@ import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
+import 'package:vigil_parents_app/core/utils/validators.dart';
 
 import 'package:vigil_parents_app/features/auth/presentation/view/login_view.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view_model/auth_viewmodel.dart';
@@ -167,6 +168,8 @@ class _SignupViewState extends ConsumerState<SignupView> {
                                   controller: _nameController,
                                   hint: 'Enter Your Name',
                                   isMandatory: true,
+                                  validator: Validators.fullName,
+                                  keyboardType: TextInputType.name,
                                   fieldStyle: FlexiFieldStyle.outline,
                                   theme: _fieldTheme,
                                   prefixIcon: Icon(
@@ -188,6 +191,7 @@ class _SignupViewState extends ConsumerState<SignupView> {
                                   isEmail: true,
                                   isMandatory: true,
                                   denySpace: true,
+                                  validator: Validators.email,
                                   keyboardType: TextInputType.emailAddress,
                                   fieldStyle: FlexiFieldStyle.outline,
                                   theme: _fieldTheme,
@@ -212,6 +216,11 @@ class _SignupViewState extends ConsumerState<SignupView> {
                                   hint: 'Enter Your Password',
                                   obscureText: _obscurePassword,
                                   isMandatory: true,
+                                  // No `denySpace` — a pasted payload such as
+                                  // `' OR 1=1 --` must reach the validator so
+                                  // it is rejected with a reason, rather than
+                                  // being silently stripped of its spaces.
+                                  validator: Validators.newPassword,
                                   fieldStyle: FlexiFieldStyle.outline,
                                   theme: _fieldTheme,
                                   suffixIcon: IconButton(

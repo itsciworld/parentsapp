@@ -7,28 +7,38 @@ import 'package:vigil_parents_app/features/contact/contact_repo.dart';
 import 'package:vigil_parents_app/features/contact/models/contacts_model.dart';
 import 'package:vigil_parents_app/features/events/models/event_model.dart';
 import 'package:vigil_parents_app/features/events/repo/events_repo.dart';
+import 'package:vigil_parents_app/features/notifications/models/social_notification_model.dart';
+import 'package:vigil_parents_app/features/notifications/repo/social_notification_repo.dart';
 import 'package:vigil_parents_app/features/sms/models/sms_model.dart';
 import 'package:vigil_parents_app/features/sms/repo/sms_repo.dart';
 
 /// Computes the home feature-tile badges as the number of *unseen* items per
-/// feature (sms / contacts / calls) for the selected child. Opening a feature
-/// marks it seen (badge clears) until new items arrive.
+/// feature (sms / contacts / calls) for the selected child, plus the unseen
+/// count behind the notification bell. Opening a feature marks it seen (badge
+/// clears) until new items arrive.
 class FeatureBadgesViewModel extends ChangeNotifier {
   final SharedPreferencesAsync _prefs = SharedPreferencesAsync();
   final SmsRepository _sms = SmsRepository();
   final ContactsRepository _contacts = ContactsRepository();
   final CallLogRepository _calls = CallLogRepository();
   final EventsRepository _events = EventsRepository();
+  final SocialNotificationRepository _notifications =
+      SocialNotificationRepository();
 
   int smsUnseen = 0;
   int contactsUnseen = 0;
   int callsUnseen = 0;
   int eventsUnseen = 0;
 
+  /// Drives the notification bell's dot. Stays at 0 while no child is linked,
+  /// so the bell is never marked unread for an account with nothing to show.
+  int notificationsUnseen = 0;
+
   int _smsTotal = 0;
   int _contactsTotal = 0;
   int _callsTotal = 0;
   int _eventsTotal = 0;
+  int _notificationsTotal = 0;
   String _childId = '';
 
   static String _seenKey(String feature, String childId) =>
@@ -53,8 +63,11 @@ class FeatureBadgesViewModel extends ChangeNotifier {
   Future<void> load() async {
     final ctx = await _sms.resolveContext();
     if (!ctx.isValid) {
+      // No session or no linked child — nothing can be unseen, so every badge
+      // (including the notification bell's dot) has to read zero.
       _childId = '';
       smsUnseen = contactsUnseen = callsUnseen = eventsUnseen = 0;
+      notificationsUnseen = 0;
       notifyListeners();
       return;
     }
@@ -88,12 +101,27 @@ class FeatureBadgesViewModel extends ChangeNotifier {
           childId: ctx.childId,
           parentId: ctx.parentId,
         ),
+        // Absorbed rather than propagated: a failure here would abandon the
+        // whole batch below and freeze the other four badges. An empty result
+        // just clears the bell, which is the safe direction to fail in.
+        _notifications
+            .getNotifications(childId: ctx.childId, parentId: ctx.parentId)
+            .catchError(
+              (_) => const SocialNotificationsResponse(
+                total: 0,
+                totalMessages: 0,
+                windowSince: null,
+                apps: [],
+              ),
+            ),
       ]);
 
       _smsTotal = (results[0] as SmsResponse).total;
       _contactsTotal = (results[1] as ContactsResponse).total;
       _callsTotal = (results[2] as CallLogsResponse).total;
       _eventsTotal = EventModel.dedupe(results[3] as List<EventModel>).length;
+      _notificationsTotal =
+          (results[4] as SocialNotificationsResponse).totalMessages;
     } catch (_) {
       return; // keep previous values on a transient failure
     }
@@ -102,6 +130,21 @@ class FeatureBadgesViewModel extends ChangeNotifier {
     contactsUnseen = await _computeUnseen('contacts', _contactsTotal);
     callsUnseen = await _computeUnseen('calls', _callsTotal);
     eventsUnseen = await _computeUnseen('events', _eventsTotal);
+    notificationsUnseen = await _computeUnseen(
+      'notifications',
+      _notificationsTotal,
+    );
+    notifyListeners();
+  }
+
+  /// Clears the notification bell's dot — call when the bell is opened.
+  Future<void> markNotificationsSeen() async {
+    if (_childId.isEmpty) return;
+    await _prefs.setInt(
+      _seenKey('notifications', _childId),
+      _notificationsTotal,
+    );
+    notificationsUnseen = 0;
     notifyListeners();
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
@@ -82,24 +83,22 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
 
     return Scaffold(
       backgroundColor: AppColors.scaffold,
-      appBar: AppBar(
-        backgroundColor: AppColors.headerTop,
-        elevation: 0,
-        centerTitle: false,
-        title: const Text(
-          'Profile',
-          style: TextStyle(
-            color: AppColors.textOnDark,
-            fontWeight: FontWeight.w700,
-            fontSize: 18,
-          ),
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // VIGIL logo header — same pattern as every other tab (Home,
+            // AI Insights, SMS …): logo first, then the screen's details.
+            const AppHeader(showBack: false),
+            Expanded(
+              child: RefreshIndicator(
+                color: AppColors.primary,
+                onRefresh: _refreshAll,
+                child: _buildBody(vm),
+              ),
+            ),
+          ],
         ),
-        iconTheme: const IconThemeData(color: AppColors.textOnDark),
-      ),
-      body: RefreshIndicator(
-        color: AppColors.primary,
-        onRefresh: _refreshAll,
-        child: _buildBody(vm),
       ),
     );
   }
@@ -148,10 +147,11 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
           icon: Icons.shield_outlined,
           rows: [
             _InfoRow(label: 'Status', value: _capitalize(profile.status)),
-            _InfoRow(
-              label: 'Registered Via',
-              value: _capitalize(profile.registeredVia),
-            ),
+            // "Registered Via" is intentionally not shown here. It carries no
+            // meaning for the parent; it exists for our own accountability and
+            // belongs in the super-admin view. The field is still parsed off
+            // /api/auth/me — see ProfileModel.registeredVia — so nothing is
+            // lost by hiding it.
             _InfoRow(
               label: 'Member Since',
               value: _formatDate(profile.createdAt),

@@ -11,6 +11,10 @@ class ProfileModel {
   final String address;
   final String status;
   final bool isVerified;
+
+  /// Kept off the parent's profile screen on purpose — it's an accountability
+  /// field for the super-admin view, not something a parent needs. Parsed here
+  /// so the value stays available if another surface needs it.
   final String registeredVia;
   final DateTime? createdAt;
   final DateTime? updatedAt;

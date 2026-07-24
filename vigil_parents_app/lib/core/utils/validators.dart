@@ -3,6 +3,48 @@
 class Validators {
   Validators._();
 
+  static const int minFullNameLength = 2;
+  static const int maxFullNameLength = 100;
+
+  /// A name is letters (any script) plus the punctuation real names actually
+  /// use: spaces, apostrophes, hyphens and full stops. It must *start* with a
+  /// letter, which alone rejects `' OR 1=1 --` and `<script>alert(1)</script>`.
+  ///
+  /// Because the class is built from `\p{L}`/`\p{M}` rather than `A-Za-z`,
+  /// `José` and `李雷` pass while emoji (symbols, not letters) do not.
+  static final RegExp _fullNameRegExp = RegExp(
+    "^[\\p{L}\\p{M}][\\p{L}\\p{M} .'‘’‐-]*\$",
+    unicode: true,
+  );
+
+  /// Returns `null` when [value] is a usable full name.
+  ///
+  /// Leading/trailing spaces are ignored, so `" Anand"` and `"Anand "` are both
+  /// accepted — the caller is expected to persist the trimmed value.
+  static String? fullName(String? value) {
+    final raw = value ?? '';
+
+    if (raw.isEmpty) return 'Full name is required.';
+
+    final name = raw.trim();
+    if (name.isEmpty) return 'Full name cannot be empty.';
+
+    // Both bounds count code points, so an accented or CJK name isn't
+    // penalised for the extra UTF-16 units it happens to occupy.
+    if (name.runes.length < minFullNameLength) {
+      return 'Full name must be at least $minFullNameLength characters.';
+    }
+    if (name.runes.length > maxFullNameLength) {
+      return 'Full name cannot exceed $maxFullNameLength characters.';
+    }
+
+    if (!_fullNameRegExp.hasMatch(name)) {
+      return 'Full name contains invalid characters.';
+    }
+
+    return null;
+  }
+
   /// Deliberately stricter than the usual "something@something.something":
   ///  - exactly one `@` (rejects `user@@gmail.com`)
   ///  - a non-empty local part (rejects `@gmail.com`) built from dot-separated
@@ -47,7 +89,16 @@ class Validators {
   }
 
   static const int minPasswordLength = 8;
-  static const int maxPasswordLength = 64;
+  static const int maxPasswordLength = 128;
+
+  /// Printable ASCII excluding the space (0x20). Anything else — emoji, other
+  /// scripts, control characters — is not something we want in a credential,
+  /// and the exclusion of the space is what catches `' OR 1=1 --`.
+  static final RegExp _passwordCharset = RegExp(r'^[\x21-\x7E]+$');
+
+  /// Angle brackets are inside the printable range but are the signature of
+  /// markup/script payloads such as `<script>alert()</script>`.
+  static final RegExp _passwordBlocked = RegExp(r'[<>]');
 
   /// Policy check for screens where a password is being *set* (reset / signup).
   /// Reports one failed rule at a time, strongest-signal first, so the field
@@ -57,11 +108,19 @@ class Validators {
 
     if (password.isEmpty) return 'Password is required.';
 
+    if (password.runes.length > maxPasswordLength) {
+      return 'Password cannot exceed $maxPasswordLength characters.';
+    }
+
+    // Runs before the composition rules below: an injection or emoji payload
+    // should be called out as such, not as "needs a lowercase letter".
+    if (!_passwordCharset.hasMatch(password) ||
+        _passwordBlocked.hasMatch(password)) {
+      return 'Password contains invalid characters.';
+    }
+
     if (password.length < minPasswordLength) {
       return 'Password must be at least $minPasswordLength characters.';
-    }
-    if (password.length > maxPasswordLength) {
-      return 'Password must not exceed $maxPasswordLength characters.';
     }
     if (!password.contains(RegExp(r'[A-Z]'))) {
       return 'Password must contain at least one uppercase letter.';
@@ -74,9 +133,6 @@ class Validators {
     }
     if (!password.contains(RegExp(r'[^A-Za-z0-9]'))) {
       return 'Password must contain at least one special character.';
-    }
-    if (password.contains(RegExp(r'\s'))) {
-      return 'Password must not contain spaces.';
     }
 
     return null;

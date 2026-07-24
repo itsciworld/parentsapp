@@ -20,8 +20,18 @@ class SmsSyncJob implements BackgroundJob {
     final ctx = await repo.resolveContext();
 
     if (!ctx.isValid) {
-      debugPrint('SMS: skip — no session/child yet');
-      _setNotification(service, 'Waiting for sign-in…');
+      // Two different situations, and they used to share one (wrong) message:
+      // a signed-in parent with nothing linked was told to sign in.
+      if (!ctx.hasSession) {
+        debugPrint('SMS: skip — no session yet');
+        _setNotification(service, 'Waiting for sign-in…');
+      } else {
+        debugPrint('SMS: skip — signed in, no child linked yet');
+        _setNotification(
+          service,
+          'No child linked yet — set up the Vigil Child app',
+        );
+      }
       return;
     }
 

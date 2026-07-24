@@ -135,6 +135,37 @@ class AuthRepository {
     }
   }
 
+  // The single sentence every OTP failure shows. A wrong code, a code that was
+  // already used and one that has expired are all the same thing to the user,
+  // and telling them apart only helps someone guessing codes.
+  static const String _invalidOtpMessage = 'Invalid OTP. Please try again.';
+
+  static final List<RegExp> _invalidOtpPatterns = [
+    RegExp(r'(otp|code|token)', caseSensitive: false),
+    RegExp(r'expired', caseSensitive: false),
+  ];
+
+  /// Normalises an OTP failure. Anything that isn't recognisably about the code
+  /// itself (an outage, a timeout, a rejected new password) keeps the server's
+  /// wording, so those are never mislabelled as a bad OTP.
+  ///
+  /// [statusCode] is only passed on the verify step, where a 4xx can *only*
+  /// mean the code was rejected. The reset step matches on the message alone,
+  /// because there a 400 may equally be about the new password.
+  String _mapOtpError(String? raw, {int? statusCode, required String fallback}) {
+    final message = (raw ?? '').replaceAll('Exception: ', '').trim();
+
+    final isOtpRejection =
+        statusCode == 400 ||
+        statusCode == 401 ||
+        statusCode == 410 ||
+        _invalidOtpPatterns.any((p) => p.hasMatch(message));
+
+    if (isOtpRejection) return _invalidOtpMessage;
+
+    return message.isEmpty ? fallback : message;
+  }
+
   // FORGOT PASSWORD → STEP 2: verify the OTP sent to the email
   Future<String> verifyOtp(String email, String otp) async {
     try {
@@ -145,9 +176,17 @@ class AuthRepository {
 
       return _readMessage(response, "OTP verified successfully");
     } on DioException catch (e) {
-      throw Exception(e.error.toString());
+      throw Exception(
+        _mapOtpError(
+          e.error?.toString(),
+          statusCode: e.response?.statusCode,
+          fallback: _invalidOtpMessage,
+        ),
+      );
     } catch (e) {
-      throw Exception(e.toString().replaceAll('Exception: ', ''));
+      throw Exception(
+        _mapOtpError(e.toString(), fallback: _invalidOtpMessage),
+      );
     }
   }
 
@@ -165,9 +204,21 @@ class AuthRepository {
 
       return _readMessage(response, "Password has been reset successfully");
     } on DioException catch (e) {
-      throw Exception(e.error.toString());
+      // A reused or expired OTP surfaces here too, when the user takes the
+      // long way round from the verify step to this one.
+      throw Exception(
+        _mapOtpError(
+          e.error?.toString(),
+          fallback: 'Could not reset your password. Please try again.',
+        ),
+      );
     } catch (e) {
-      throw Exception(e.toString().replaceAll('Exception: ', ''));
+      throw Exception(
+        _mapOtpError(
+          e.toString(),
+          fallback: 'Could not reset your password. Please try again.',
+        ),
+      );
     }
   }
 }

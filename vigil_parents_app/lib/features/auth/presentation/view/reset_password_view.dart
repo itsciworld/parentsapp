@@ -177,7 +177,10 @@ class _ResetPasswordViewState extends ConsumerState<ResetPasswordView> {
                                   hint: 'Enter New Password',
                                   obscureText: _obscurePassword,
                                   isMandatory: true,
-                                  denySpace: true,
+                                  // No `denySpace` — a pasted payload such as
+                                  // `' OR 1=1 --` must reach the validator so
+                                  // it is rejected with a reason, rather than
+                                  // being silently stripped of its spaces.
                                   validator: Validators.newPassword,
                                   fieldStyle: FlexiFieldStyle.outline,
                                   theme: _fieldTheme,
@@ -216,7 +219,6 @@ class _ResetPasswordViewState extends ConsumerState<ResetPasswordView> {
                                   hint: 'Re-enter New Password',
                                   obscureText: _obscureConfirm,
                                   isMandatory: true,
-                                  denySpace: true,
                                   validator: (value) =>
                                       Validators.confirmPassword(
                                         value,

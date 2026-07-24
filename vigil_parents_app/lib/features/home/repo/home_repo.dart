@@ -14,18 +14,23 @@ class DummyHomeRepository implements HomeRepository {
     await Future.delayed(const Duration(milliseconds: 600));
 
     return const HomeDashboardData(
-      notificationCount: 3,
+      // The bell's dot is driven by FeatureBadgesViewModel, which counts real
+      // unseen notifications for the selected child. A non-zero literal here
+      // would light the bell for accounts with no linked child at all.
+      notificationCount: 0,
       // Real name comes from the /api/auth/me profile; this is only a
       // placeholder shown while that request is in flight.
       parent: ParentProfile(name: '', initials: ''),
+      // Empty by design. These fields are only ever fallbacks for the selected
+      // child's real values, and inventing a name or device here is what made
+      // the home screen appear to show another child's data on first load.
       child: ChildProfile(
-        name: 'Harry Nikos',
-        // Network placeholder avatar — replace with API-provided URL later.
-        avatarUrl: 'https://i.pravatar.cc/150?img=13',
-        isOnline: true,
-        deviceModel: 'Samsung Galaxy S21',
-        osVersion: 'Android 13',
-        lastSync: 'Today, 09:30 AM',
+        name: '',
+        avatarUrl: '',
+        isOnline: false,
+        deviceModel: '',
+        osVersion: '',
+        lastSync: '—',
       ),
       statusIndicators: [
         StatusIndicator(
@@ -55,7 +60,6 @@ class DummyHomeRepository implements HomeRepository {
           icon: Icons.sms_rounded,
           iconColor: AppColors.greenIcon,
           iconBackground: AppColors.greenSoft,
-          badgeCount: 7,
         ),
         // Gallery — temporarily hidden from the monitoring tools grid.
         FeatureTile(
@@ -65,7 +69,6 @@ class DummyHomeRepository implements HomeRepository {
           icon: Icons.photo_library_rounded,
           iconColor: AppColors.orangeIcon,
           iconBackground: AppColors.orangeSoft,
-          badgeCount: 24,
         ),
 
         // FeatureTile(
@@ -84,7 +87,6 @@ class DummyHomeRepository implements HomeRepository {
           icon: Icons.phone_in_talk_rounded,
           iconColor: AppColors.purpleIcon,
           iconBackground: AppColors.purpleSoft,
-          badgeCount: 5,
         ),
 
         FeatureTile(
@@ -103,7 +105,6 @@ class DummyHomeRepository implements HomeRepository {
           icon: Icons.contact_page_rounded,
           iconColor: AppColors.orangeIcon,
           iconBackground: AppColors.orangeSoft,
-          badgeCount: 24,
         ),
 
         FeatureTile(
@@ -113,7 +114,6 @@ class DummyHomeRepository implements HomeRepository {
           icon: Icons.event_rounded,
           iconColor: AppColors.blueIcon,
           iconBackground: AppColors.blueSoft,
-          badgeCount: 7,
         ),
 
         // FeatureTile(
