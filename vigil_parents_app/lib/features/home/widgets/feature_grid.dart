@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
-// your toast path
 
 class FeatureGrid extends StatelessWidget {
   final List<FeatureTile> features;
@@ -29,8 +28,8 @@ class FeatureGrid extends StatelessWidget {
             if (tile.isLocked) {
               showAppToast(
                 context: context,
-                title: 'Coming Soon',
-                subtitle: '${tile.title} feature is coming soon!',
+                title: 'Premium Feature',
+                subtitle: '${tile.title} is coming in the paid version.',
                 type: ToastType.info,
                 icon: Icons.lock_rounded,
               );

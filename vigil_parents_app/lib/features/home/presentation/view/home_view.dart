@@ -5,7 +5,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
-import 'package:vigil_parents_app/features/app_usage/presentation/widgets/activity_overview_card.dart';
+import 'package:vigil_parents_app/core/apptost/app_tost.dart';
+// App Usage section is commented out on home for now.
+// import 'package:vigil_parents_app/features/app_usage/presentation/widgets/activity_overview_card.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
@@ -15,8 +17,10 @@ import 'package:vigil_parents_app/features/home/models/home_model.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/feature_badges_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/home_viewmodel.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/view_model/app_usage_viewmodel.dart';
-import 'package:vigil_parents_app/features/home/widgets/ai_foundation.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
+// Plan/subscription UI is disabled for now — no upgrade section is shown.
+// import 'package:vigil_parents_app/features/subscription/presentation/view_model/subscription_viewmodel.dart';
+// import 'package:vigil_parents_app/features/subscription/presentation/widgets/upgrade_plan_card.dart';
 import 'package:vigil_parents_app/features/live_status/models/live_status_model.dart';
 import 'package:vigil_parents_app/features/live_status/presentation/view_model/live_status_viewmodel.dart';
 import 'package:vigil_parents_app/features/location/presentation/view_model/location_viewmodel.dart';
@@ -64,6 +68,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         ref.read(socialScreenViewModelProvider).load(id);
       }
       ref.read(featureBadgesProvider).load();
+      // Plan/subscription loading disabled for now — no upgrade section shown.
+      // final subVm = ref.read(subscriptionViewModelProvider);
+      // if (subVm.plans.isEmpty && !subVm.isLoading) {
+      //   subVm.load(showLoader: false);
+      // }
     });
 
     // Keep the home map's "latest location" fresh while the screen is visible.
@@ -177,6 +186,11 @@ class _LoadedView extends ConsumerWidget {
     final liveStatusVm = ref.watch(liveStatusViewModelProvider);
     final badges = ref.watch(featureBadgesProvider);
 
+    // Plan section disabled for now — no upgrade/plan UI is shown on home.
+    // final subVm = ref.watch(subscriptionViewModelProvider);
+    // final showPlanSection =
+    //     !subVm.isOnTopPlan && (subVm.plans.isNotEmpty || subVm.isLoading);
+
     final features = [
       for (final t in data.features)
         t.withBadge(badges.unseenFor(t.id) > 0 ? badges.unseenFor(t.id) : null),
@@ -198,7 +212,8 @@ class _LoadedView extends ConsumerWidget {
     // for the first few moments.
     final resolvingChild = !selectedChild.initialized;
     final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
-    final hasChild = selectedChild.initialized && selectedChild.selected != null;
+    final hasChild =
+        selectedChild.initialized && selectedChild.selected != null;
 
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
@@ -238,11 +253,17 @@ class _LoadedView extends ConsumerWidget {
                         showNotifications: hasChild,
                         notificationCount: badges.notificationsUnseen,
                         onParentTap: onParentTap,
+                        // Notifications are locked until the paid version —
+                        // tapping shows a toast instead of opening them.
                         onNotificationsTap: () {
-                          ref
-                              .read(featureBadgesProvider)
-                              .markNotificationsSeen();
-                          vm.onNotificationsTapped(context);
+                          showAppToast(
+                            context: context,
+                            title: 'Premium Feature',
+                            subtitle:
+                                'Notifications are coming in the paid version.',
+                            type: ToastType.info,
+                            icon: Icons.lock_rounded,
+                          );
                         },
                       ),
                     ),
@@ -343,38 +364,40 @@ class _LoadedView extends ConsumerWidget {
                       const SizedBox(height: 26),
 
                       // ---- App usage --------------------------------------
-                      _Reveal(
-                        delayMs: 205,
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            _SectionTitle(
-                              title: 'App Usage',
-                              subtitle: 'Tap to see screen-time details',
-                            ),
-                            SizedBox(height: 14),
-                            ActivityOverviewCard(),
-                          ],
-                        ),
-                      ),
+                      // _Reveal(
+                      //   delayMs: 205,
+                      //   child: Column(
+                      //     crossAxisAlignment: CrossAxisAlignment.start,
+                      //     children: const [
+                      //       _SectionTitle(
+                      //         title: 'App Usage',
+                      //         subtitle: 'Tap to see screen-time details',
+                      //       ),
+                      //       SizedBox(height: 14),
+                      //       ActivityOverviewCard(),
+                      //     ],
+                      //   ),
+                      // ),
                     ],
-                    const SizedBox(height: 26),
-
-                    // ---- Foundation ---------------------------------------
-                    _Reveal(
-                      delayMs: 310,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const _SectionTitle(title: 'Our Initiative'),
-                          const SizedBox(height: 14),
-                          FoundationCard(
-                            info: data.foundation,
-                            onKnowMore: vm.onKnowMoreFoundation,
-                          ),
-                        ],
-                      ),
-                    ),
+                    // ---- Upgrade / plans ----------------------------------
+                    // Disabled for now — no plan/upgrade section is shown.
+                    // if (hasChild && showPlanSection) ...[
+                    //   const SizedBox(height: 26),
+                    //   _Reveal(
+                    //     delayMs: 310,
+                    //     child: Column(
+                    //       crossAxisAlignment: CrossAxisAlignment.start,
+                    //       children: const [
+                    //         _SectionTitle(
+                    //           title: 'Your Plan',
+                    //           subtitle: 'Unlock more monitoring tools',
+                    //         ),
+                    //         SizedBox(height: 14),
+                    //         UpgradePlanCard(),
+                    //       ],
+                    //     ),
+                    //   ),
+                    // ],
                     SizedBox(height: bottomPadding + 24),
                   ],
                 ),
@@ -578,6 +601,10 @@ class _TopBar extends StatelessWidget {
   }
 }
 
+/// Notifications are locked until the paid version — the bell shows a lock
+/// badge and tapping surfaces a toast instead of opening notifications.
+const bool _notificationsLocked = true;
+
 class _NotifBell extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
@@ -598,13 +625,34 @@ class _NotifBell extends StatelessWidget {
         ),
         child: Stack(
           alignment: Alignment.center,
+          clipBehavior: Clip.none,
           children: [
             const Icon(
               Icons.notifications_none_rounded,
               color: AppColors.textPrimary,
               size: 24,
             ),
-            if (count > 0)
+            // Lock badge while notifications are gated.
+            if (_notificationsLocked)
+              Positioned(
+                top: -4,
+                right: -4,
+                child: Container(
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.surface, width: 1.5),
+                  ),
+                  child: Icon(
+                    Icons.lock_rounded,
+                    size: 11,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+              )
+            // Unread dot (only when not locked).
+            else if (count > 0)
               Positioned(
                 top: 10,
                 right: 12,

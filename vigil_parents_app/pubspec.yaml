@@ -65,7 +65,8 @@ dependencies:
   # Pinned to 2.4.7: 2.4.8+ requires meta ^1.18.0, which conflicts with the
   # meta 1.17.0 pinned by flutter_test in the current Flutter SDK.
   flutter_native_splash: ^2.4.7
-
+  webview_flutter: ^4.14.1
+ 
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -77,6 +78,7 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.4
+  change_app_package_name: ^1.5.0
 
 flutter_native_splash:
   # app_icon.png is a rounded-square logo on a white field, so the splash

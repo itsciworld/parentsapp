@@ -7,7 +7,16 @@ class CustomNavItem {
   final IconData icon;
   final String label;
 
-  const CustomNavItem({required this.icon, required this.label});
+  /// When true, a small lock badge is drawn on the icon. Tapping is still
+  /// routed through [CustomBottomNavBar.onTabSelected] — the caller decides
+  /// what a tap on a locked item does.
+  final bool locked;
+
+  const CustomNavItem({
+    required this.icon,
+    required this.label,
+    this.locked = false,
+  });
 }
 
 // ─────────────────────────────────────────────
@@ -139,12 +148,35 @@ class _CustomBottomNavBarState extends State<CustomBottomNavBar>
                             ),
                             child: ScaleTransition(
                               scale: _scaleAnims[index],
-                              child: Icon(
-                                item.icon,
-                                size: 24,
-                                color: isActive
-                                    ? widget.activeColor
-                                    : widget.inactiveColor,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                children: [
+                                  Icon(
+                                    item.icon,
+                                    size: 24,
+                                    color: isActive
+                                        ? widget.activeColor
+                                        : widget.inactiveColor,
+                                  ),
+                                  // Small lock badge for gated tabs.
+                                  if (item.locked)
+                                    Positioned(
+                                      right: -6,
+                                      top: -6,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(2),
+                                        decoration: BoxDecoration(
+                                          color: widget.backgroundColor,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          Icons.lock_rounded,
+                                          size: 11,
+                                          color: widget.inactiveColor,
+                                        ),
+                                      ),
+                                    ),
+                                ],
                               ),
                             ),
                           ),

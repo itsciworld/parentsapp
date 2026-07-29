@@ -29,6 +29,18 @@ class ApiInterceptor extends Interceptor {
   /// normal error message instead of wiping the session.
   bool _isAuthPath(String path) => path.contains('/api/auth/');
 
+  /// Pre-authentication endpoints, where a 404 "User not found" just means the
+  /// submitted email/credentials are unknown — NOT a dead session. These are
+  /// the only auth paths exempt from the user-not-found force-logout; an
+  /// authenticated auth path like `/api/auth/me` must still log out.
+  bool _isPreAuthPath(String path) =>
+      path.contains('/api/auth/login') ||
+      path.contains('/api/auth/register') ||
+      path.contains('/api/auth/request-password-reset') ||
+      path.contains('/api/auth/verify-otp') ||
+      path.contains('/api/auth/reset-password') ||
+      path.contains('/api/auth/refresh-token');
+
   @override
   void onRequest(
     RequestOptions options,
@@ -105,6 +117,25 @@ class ApiInterceptor extends Interceptor {
       // authorization gap (the selected child's key isn't stored yet), NOT an
       // expired session — it must never log the user out.
       final isDeviceKeyError = message.toLowerCase().contains('device key');
+
+      // "User not found" means the account was deleted/disabled server-side, so
+      // the token is pointing at nothing. Refreshing can't fix that — wipe the
+      // session and bounce to login immediately. Only pre-auth paths (login,
+      // register, password reset) are exempt, where the same message just means
+      // "unknown credentials"; `/api/auth/me` and every data endpoint log out.
+      final isUserNotFound =
+          statusCode == 404 &&
+          message.toLowerCase().contains('user not found');
+      if (isUserNotFound && !_isPreAuthPath(path)) {
+        await _forceLogout();
+        return handler.reject(
+          DioException(
+            requestOptions: err.requestOptions,
+            error: message,
+            response: err.response,
+          ),
+        );
+      }
 
       // A 401 on a normal (non-auth) endpoint: try a silent token refresh and
       // replay the request before assuming the session is dead. We only bounce

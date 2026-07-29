@@ -107,6 +107,8 @@ class DummyHomeRepository implements HomeRepository {
           iconBackground: AppColors.orangeSoft,
         ),
 
+        // Locked until the paid version — tapping shows a "coming in paid
+        // version" toast instead of opening the events screen.
         FeatureTile(
           id: 'events',
           title: 'Events',
@@ -114,6 +116,7 @@ class DummyHomeRepository implements HomeRepository {
           icon: Icons.event_rounded,
           iconColor: AppColors.blueIcon,
           iconBackground: AppColors.blueSoft,
+          isLocked: true,
         ),
 
         // FeatureTile(

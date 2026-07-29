@@ -78,6 +78,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
       initialRoute: AppRoutesName.splashView,
+      // Build the initial stack with just the splash route. The default
+      // behaviour splits '/splashView' into '/' + '/splashView', and the
+      // phantom '/' resolves to the "Route not found" fallback that sits
+      // hidden under every screen — pressing back to the root would surface it.
+      onGenerateInitialRoutes: (_) => [
+        AppRouteGenerator.generateRoute(
+          const RouteSettings(name: AppRoutesName.splashView),
+        ),
+      ],
       onGenerateRoute: AppRouteGenerator.generateRoute,
     );
   }

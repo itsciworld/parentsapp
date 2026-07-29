@@ -10,6 +10,9 @@ import 'package:vigil_parents_app/features/child/presentation/view_model/child_p
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/profile/models/profile_model.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view_model/profile_viewmodel.dart';
+import 'package:vigil_parents_app/features/subscription/models/subscription_model.dart';
+// Plan/subscription viewmodel disabled for now — no plan UI is shown.
+// import 'package:vigil_parents_app/features/subscription/presentation/view_model/subscription_viewmodel.dart';
 
 class ProfileView extends ConsumerStatefulWidget {
   const ProfileView({super.key});
@@ -27,6 +30,8 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
 
     Future.microtask(() async {
       ref.read(profileViewModelProvider).loadProfile();
+      // Plan/subscription UI disabled for now — no plan card or upgrade shown.
+      // ref.read(subscriptionViewModelProvider).load(showLoader: false);
       // Load the selected child, then permissions for the active child.
       await ref.read(selectedChildProvider).load();
       final childId = ref.read(selectedChildProvider).selectedId;
@@ -39,6 +44,8 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
   /// Pull-to-refresh: reloads the profile and the child's permissions.
   Future<void> _refreshAll() async {
     await ref.read(profileViewModelProvider).refresh();
+    // Plan/subscription refresh disabled for now.
+    // await ref.read(subscriptionViewModelProvider).refresh();
     await ref.read(selectedChildProvider).load(force: true);
     final childId = ref.read(selectedChildProvider).selectedId;
     if (childId != null) {
@@ -125,6 +132,9 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
 
     final selectedChild = ref.watch(selectedChildProvider);
     final permsVm = ref.watch(childPermissionsProvider);
+    // Plan/subscription UI disabled for now.
+    // final subVm = ref.watch(subscriptionViewModelProvider);
+    // final hasChild = selectedChild.selected != null;
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -132,6 +142,16 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
       children: [
         _ProfileHeader(profile: profile),
         const SizedBox(height: 20),
+        // Plan/subscription card disabled for now.
+        // if (hasChild) ...[
+        //   _CurrentPlanCard(
+        //     sub: subVm.mySubscription,
+        //     loading: subVm.isLoading && subVm.plans.isEmpty,
+        //     onManage: () =>
+        //         Navigator.of(context).pushNamed(AppRoutesName.plansView),
+        //   ),
+        //   const SizedBox(height: 16),
+        // ],
         _InfoSection(
           title: 'Location',
           icon: Icons.location_on_outlined,
@@ -172,6 +192,14 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
           ),
         ],
         const SizedBox(height: 24),
+        // Upgrade button disabled for now — no plan/upsell shown.
+        // if (hasChild && !subVm.isOnTopPlan) ...[
+        //   _UpgradeButton(
+        //     onTap: () =>
+        //         Navigator.of(context).pushNamed(AppRoutesName.plansView),
+        //   ),
+        //   const SizedBox(height: 12),
+        // ],
         _LogoutButton(isLoading: _isLoggingOut, onTap: _confirmAndLogout),
         const SizedBox(height: 16),
         const Center(
@@ -644,6 +672,265 @@ class _StatusBadge extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Current plan / subscription card ─────────────────────────────────────────────
+// Kept for when the paid version is enabled again; not currently used.
+// ignore: unused_element
+class _CurrentPlanCard extends StatelessWidget {
+  final MySubscription sub;
+  final bool loading;
+  final VoidCallback onManage;
+
+  const _CurrentPlanCard({
+    required this.sub,
+    required this.loading,
+    required this.onManage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasSub = sub.hasSubscription;
+    final planLabel = hasSub && sub.planName.trim().isNotEmpty
+        ? sub.planName.trim()
+        : 'Free plan';
+
+    // Status pill text/colour.
+    final String statusText;
+    final Color statusColor;
+    if (loading && !hasSub) {
+      statusText = '—';
+      statusColor = AppColors.textSecondary;
+    } else if (sub.inTrial || sub.status.toLowerCase() == 'trial') {
+      statusText = 'Trial';
+      statusColor = AppColors.warning;
+    } else if (hasSub) {
+      statusText = 'Active';
+      statusColor = AppColors.primary;
+    } else {
+      statusText = 'Free';
+      statusColor = AppColors.textSecondary;
+    }
+
+    final days = sub.inTrial ? sub.trialDaysRemaining : sub.daysRemaining;
+    final subtitle = !hasSub
+        ? 'No paid subscription yet'
+        : sub.inTrial
+        ? '$days days left in trial'
+        : days > 0
+        ? '$days days remaining'
+        : 'Active subscription';
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.workspace_premium_outlined,
+                size: 20,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Current Plan',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: onManage,
+                child: const Text(
+                  'View plans',
+                  style: TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      planLabel,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                        letterSpacing: -0.2,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  statusText,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Upgrade plan button (primary gradient, leads to the plans screen) ────────────
+// Kept for when the paid version is enabled again; not currently used.
+// ignore: unused_element
+class _UpgradeButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _UpgradeButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: AppColors.surface,
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(18),
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: AppColors.cardBorder),
+            boxShadow: const [
+              BoxShadow(
+                color: AppColors.shadow,
+                blurRadius: 12,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              // Gradient premium badge
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.primary, AppColors.blueIcon],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.workspace_premium_rounded,
+                  size: 24,
+                  color: Colors.white,
+                ),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Upgrade Plan',
+                      style: TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Unlock all monitoring features',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 10),
+              // Accent chip with arrow
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Upgrade',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                    SizedBox(width: 4),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 15,
+                      color: AppColors.primaryDark,
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

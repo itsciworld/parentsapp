@@ -1,4 +1,4 @@
-package com.example.vigil_parents_app
+package com.app.parent.app
 
 import android.Manifest
 import android.content.ContentValues

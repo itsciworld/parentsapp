@@ -16,6 +16,7 @@ import 'package:vigil_parents_app/features/notifications/presentation/view/socia
 import 'package:vigil_parents_app/features/profile/presentation/view/profile_view.dart';
 import 'package:vigil_parents_app/features/settings/presentation/view/settings_view.dart';
 import 'package:vigil_parents_app/features/sms/view/sms_view.dart';
+import 'package:vigil_parents_app/features/subscription/presentation/view/plans_view.dart';
 
 class AppRoutesName {
   static const String introView = '/introView';
@@ -35,6 +36,7 @@ class AppRoutesName {
   static const String settingsView = '/settingsView';
   static const String profileView = '/profileView';
   static const String notificationsView = '/notificationsView';
+  static const String plansView = '/plansView';
 }
 
 class AppRouteGenerator {
@@ -90,6 +92,8 @@ class AppRouteGenerator {
         return MaterialPageRoute(
           builder: (_) => const SocialNotificationsScreen(),
         );
+      case AppRoutesName.plansView:
+        return MaterialPageRoute(builder: (_) => const PlansView());
       default:
         return MaterialPageRoute(
           builder: (_) =>

@@ -19,7 +19,7 @@ val googleMapsApiKey: String = run {
 }
 
 android {
-    namespace = "com.example.vigil_parents_app"
+    namespace = "com.app.parent.app"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -36,7 +36,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.vigil_parents_app"
+        applicationId = "com.app.parent.app"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

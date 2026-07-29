@@ -157,7 +157,13 @@ class _IntroViewState extends State<IntroView> {
                   children: [
                     CustomButton(
                       onTap: () {
-                        Navigator.pushNamed(context, AppRoutesName.loginView);
+                        // Replace intro so login becomes the root — pressing
+                        // back from login exits the app instead of returning
+                        // to the intro carousel.
+                        Navigator.pushReplacementNamed(
+                          context,
+                          AppRoutesName.loginView,
+                        );
                       },
                       isLoading: false,
                       label: 'Login',
