@@ -14,6 +14,7 @@ import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_l
 import 'package:vigil_parents_app/features/device_info/models/device_info_model.dart';
 import 'package:vigil_parents_app/features/device_info/presentation/view_model/device_info_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/models/home_model.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/feature_badges_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/presentation/view_model/home_viewmodel.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/view_model/app_usage_viewmodel.dart';
@@ -59,16 +60,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       // The widget may have been unmounted while the child list loaded.
       if (!mounted) return;
       final id = ref.read(selectedChildProvider).selectedId;
-      if (id != null) {
-        ref.read(deviceInfoViewModelProvider).load(id);
-        // Begin live battery/connectivity polling for the selected child.
-        _liveStatusVm = ref.read(liveStatusViewModelProvider);
-        _liveStatusVm!.startPolling(id);
-        ref.read(locationViewModelProvider).load(id);
-        ref.read(appUsageViewModelProvider).load(id);
-        ref.read(socialScreenViewModelProvider).load(id);
-      }
-      ref.read(featureBadgesProvider).load();
+      if (id != null) _loadForChild(id);
       // Plan/subscription loading disabled for now — no upgrade section shown.
       // final subVm = ref.read(subscriptionViewModelProvider);
       // if (subVm.plans.isEmpty && !subVm.isLoading) {
@@ -76,12 +68,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       // }
     });
 
+    _startTimers();
+  }
+
+  /// The child whose data we have already requested, so this runs once per
+  /// child no matter how many times we're told about the selection.
+  String? _loadedFor;
+
+  /// Fetches everything on Home that is scoped to a single child.
+  ///
+  /// This used to live inline in [initState], which sampled the selection
+  /// exactly once and gave up if it was still null. `selectedChildProvider`
+  /// hands concurrent callers a single shared load, so when that one failed —
+  /// a cold-start network hiccup is enough — every awaiting caller got a null
+  /// id. Home skipped this whole block and never came back to it, while a
+  /// later successful load (another tab, the child dropdown) filled the
+  /// selection in. That is why the hero card showed the child's name while
+  /// device info, live status and the location card sat empty forever, and why
+  /// SMS/calls looked fine: those screens fetch on open, so they get a second
+  /// chance that Home never had.
+  void _loadForChild(String childId) {
+    if (childId == _loadedFor) return;
+    _loadedFor = childId;
+
+    ref.read(deviceInfoViewModelProvider).load(childId);
+    // Begin live battery/connectivity polling for the selected child.
+    _liveStatusVm = ref.read(liveStatusViewModelProvider);
+    _liveStatusVm!.startPolling(childId);
+    ref.read(locationViewModelProvider).load(childId);
+    ref.read(appUsageViewModelProvider).load(childId);
+    ref.read(socialScreenViewModelProvider).load(childId);
+    ref.read(featureBadgesProvider).load();
+  }
+
+  /// Home sits in the shell's [IndexedStack], so it stays mounted for the whole
+  /// session and these timers would otherwise keep firing while the app is in
+  /// the background — competing with the background service instead of handing
+  /// over to it.
+  void _startTimers() {
+    _stopTimers();
+
     // Keep the home map's "latest location" fresh while the screen is visible.
+    // The fallback id also makes this the recovery path for a first load that
+    // never ran — without it a tick found the view model empty and no-oped.
     _locationTimer = Timer.periodic(const Duration(seconds: 40), (_) {
-      ref.read(locationViewModelProvider).refresh();
+      ref
+          .read(locationViewModelProvider)
+          .refresh(
+            fallbackChildId: ref.read(selectedChildProvider).selectedId,
+          );
     });
 
-    // SMS / calls / contacts / events counts arrive from the backend on their
+    // SMS / calls / contacts / gallery counts arrive from the backend on their
     // own schedule, so poll them here too. Without this the tile badges only
     // moved when the user opened the feature itself, which is exactly the
     // screen where the new items stop being "unseen".
@@ -90,14 +128,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     });
   }
 
-  void _onChildSelected(String childId) {
-    ref.read(deviceInfoViewModelProvider).load(childId);
-    ref.read(liveStatusViewModelProvider).startPolling(childId);
-    ref.read(locationViewModelProvider).load(childId);
-    ref.read(appUsageViewModelProvider).load(childId);
-    ref.read(socialScreenViewModelProvider).load(childId);
-    ref.read(featureBadgesProvider).load();
+  void _stopTimers() {
+    _locationTimer?.cancel();
+    _locationTimer = null;
+    _badgesTimer?.cancel();
+    _badgesTimer = null;
   }
+
+  void _onChildSelected(String childId) => _loadForChild(childId);
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -107,18 +145,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (state == AppLifecycleState.resumed) {
       final id = ref.read(selectedChildProvider).selectedId;
       if (id != null) vm.startPolling(id);
+      _startTimers();
 
-      ref.read(locationViewModelProvider).refresh();
-      ref.read(appUsageViewModelProvider).refresh();
-      // Coming back from the background is the most likely moment for the
-      // counts to be stale — the polling timers were still running, but the
-      // backend may have collected a lot while we were away.
-      ref.read(featureBadgesProvider).load();
+      // Location and the social screen have no background job, so nothing kept
+      // them fresh while we were away — they always catch up.
+      ref.read(locationViewModelProvider).refresh(fallbackChildId: id);
       ref.read(socialScreenViewModelProvider).refresh();
+
+      // These two do have jobs, so only re-fetch what the service actually saw
+      // change. The badge reload alone is five parallel requests.
+      if (SyncSignals.shouldRefresh(SyncFeature.appUsage)) {
+        ref.read(appUsageViewModelProvider).refresh();
+      }
+      if (_badgesAreStale()) ref.read(featureBadgesProvider).load();
     } else {
       vm.stopPolling();
+      _stopTimers();
     }
   }
+
+  /// The badges summarise four features at once, so any one of them moving
+  /// means the counts on screen are out of date.
+  bool _badgesAreStale() =>
+      SyncSignals.shouldRefresh(SyncFeature.sms) ||
+      SyncSignals.shouldRefresh(SyncFeature.calls) ||
+      SyncSignals.shouldRefresh(SyncFeature.contacts) ||
+      SyncSignals.shouldRefresh(SyncFeature.media);
 
   @override
   void dispose() {
@@ -139,6 +191,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    // A child can arrive long after [initState] sampled the selection — the
+    // first children request may have failed and a later one succeeded, or the
+    // parent linked their first device while sitting on this screen. Either way
+    // this is where Home notices and fetches the child's data.
+    ref.listen<String?>(selectedChildProvider.select((vm) => vm.selectedId), (
+      _,
+      next,
+    ) {
+      if (next != null) _loadForChild(next);
+    });
+
     return Scaffold(
       backgroundColor: AppColors.scaffold,
       body: ListenableBuilder(

@@ -20,13 +20,17 @@
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
-        <!-- Declare the foreground service type for Android 14+ -->
+        <!-- Declare the foreground service type for Android 14+.
+             exported=false overrides the plugin's manifest, which ships it as
+             exported: nothing outside this app has any reason to start or stop
+             the monitoring service, and leaving it open let any installed app
+             do exactly that. -->
         <service
             android:name="id.flutter.flutter_background_service.BackgroundService"
             android:foregroundServiceType="dataSync"
-            android:exported="true"
+            android:exported="false"
             android:stopWithTask="false"
-            tools:replace="android:foregroundServiceType" />
+            tools:replace="android:foregroundServiceType,android:exported" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

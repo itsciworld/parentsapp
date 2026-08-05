@@ -1,57 +1,20 @@
 import 'package:dio/dio.dart';
-import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
-import 'package:vigil_parents_app/features/child/repo/child_repo.dart';
+import 'package:vigil_parents_app/core/services/child_context/child_context_resolver.dart';
 import 'package:vigil_parents_app/network/api_intercptor.dart';
 
 import '../models/event_model.dart';
 
 /// Identifiers needed to query events for a child.
-class EventsContext {
-  final String parentId;
-  final String childId;
-  const EventsContext({required this.parentId, required this.childId});
-
-  bool get isValid => parentId.isNotEmpty && childId.isNotEmpty;
-}
+typedef EventsContext = ChildContext;
 
 class EventsRepository {
-  EventsRepository({ApiClient? client, ChildRepository? childRepository})
-    : _apiClient = client ?? ApiClient(),
-      _childRepository = childRepository ?? ChildRepository();
+  EventsRepository({ApiClient? client}) : _apiClient = client ?? ApiClient();
 
   final ApiClient _apiClient;
-  final ChildRepository _childRepository;
 
-  /// Resolves the parent + child ids from storage. If no child is selected
-  /// yet, it fetches the children list, picks the first, and remembers it
-  /// (id + device key) so the background service can run headless.
-  Future<EventsContext> resolveContext() async {
-    // No session → don't hit the API (avoids 401 spam from the background
-    // isolate before the user has signed in).
-    final token = await SecureDeviceService.getToken() ?? '';
-    if (token.isEmpty) {
-      return const EventsContext(parentId: '', childId: '');
-    }
-
-    final parentId = await SecureDeviceService.getParentId() ?? '';
-    var childId = await SecureDeviceService.getSelectedChildId() ?? '';
-
-    if (childId.isEmpty) {
-      try {
-        final children = await _childRepository.fetchChildren();
-        if (children.isNotEmpty) {
-          final first = children.first;
-          childId = first.id;
-          await SecureDeviceService.saveSelectedChildId(first.id);
-          await SecureDeviceService.saveSelectedChildDeviceKey(first.deviceKey);
-        }
-      } catch (_) {
-        // Leave childId empty; caller handles the invalid context.
-      }
-    }
-
-    return EventsContext(parentId: parentId, childId: childId);
-  }
+  /// See [ChildContextResolver.resolve] — shared across features and
+  /// cached, so polling callers no longer re-fetch the children list.
+  Future<EventsContext> resolveContext() => ChildContextResolver.resolve();
 
   /// GET /api/events/get_events — paginated. `x-device-key` (selected child's
   /// device key) is attached automatically by ApiInterceptor.

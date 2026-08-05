@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/core/utils/polling_screen.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
@@ -25,7 +26,8 @@ class LocationDetailScreen extends ConsumerStatefulWidget {
       _LocationDetailScreenState();
 }
 
-class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
+class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
+    with WidgetsBindingObserver, PollingScreen<LocationDetailScreen> {
   GoogleMapController? _mapController;
 
   // Person-pin bitmap for the live marker, loaded once the context is ready.
@@ -35,7 +37,6 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
   // a new latest location arrives rather than on every rebuild.
   String? _centeredId;
 
-  Timer? _pollTimer;
 
   @override
   void didChangeDependencies() {
@@ -46,6 +47,12 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
       });
     }
   }
+
+  @override
+  Duration get pollInterval => const Duration(seconds: 48);
+
+  @override
+  void onPoll() => ref.read(locationViewModelProvider).refresh();
 
   @override
   void initState() {
@@ -64,15 +71,12 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
       }
     });
 
-    // Keep the pin live while the screen is open.
-    _pollTimer = Timer.periodic(const Duration(seconds: 48), (_) {
-      ref.read(locationViewModelProvider).refresh();
-    });
+    startPolling();
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    stopPolling();
     _mapController?.dispose();
     super.dispose();
   }

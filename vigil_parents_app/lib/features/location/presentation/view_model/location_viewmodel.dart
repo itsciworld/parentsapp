@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/core/utils/refresh_guard.dart';
 import 'package:vigil_parents_app/features/location/models/location_model.dart';
 import 'package:vigil_parents_app/features/location/repo/location_repo.dart';
 
@@ -8,7 +9,7 @@ import 'package:vigil_parents_app/features/location/repo/location_repo.dart';
 /// recent fix. Shared between the Home map card and the full-screen detail
 /// view, so switching child in one reflects in the other. Call [load] whenever
 /// the selected child changes.
-class LocationViewModel extends ChangeNotifier {
+class LocationViewModel extends ChangeNotifier with RefreshGuard {
   LocationViewModel(this._repository);
 
   final LocationRepository _repository;
@@ -56,11 +57,15 @@ class LocationViewModel extends ChangeNotifier {
   }
 
   /// Silent reload of the current child — used for pull-to-refresh / polling.
-  Future<void> refresh() async {
-    final id = _childId;
+  ///
+  /// [fallbackChildId] is used when no child has been loaded yet. Without it a
+  /// tick that finds this view model empty returns immediately and keeps doing
+  /// so forever, so a first load that never ran was never recovered from.
+  Future<void> refresh({String? fallbackChildId}) => guardedRefresh(() async {
+    final id = _childId ?? fallbackChildId;
     if (id == null) return;
     await load(id, showLoader: false);
-  }
+  });
 }
 
 final locationRepositoryProvider = Provider<LocationRepository>((ref) {

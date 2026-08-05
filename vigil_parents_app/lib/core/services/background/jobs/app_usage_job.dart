@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/background_job.dart';
 import 'package:vigil_parents_app/features/app_usage/repo/app_usage_repo.dart';
 
@@ -12,8 +13,11 @@ class AppUsageSyncJob implements BackgroundJob {
   @override
   Duration get interval => const Duration(minutes: 2);
 
-  /// Last seen app count, so we only log when the set actually changes.
+  /// Last seen app count, so we only report when the set actually changes.
   int _lastTotal = -1;
+
+  /// Last seen total usage minutes — the part that actually moves.
+  int _lastMinutes = -1;
 
   @override
   Future<void> run(ServiceInstance service) async {
@@ -32,15 +36,15 @@ class AppUsageSyncJob implements BackgroundJob {
 
     final totalMinutes = apps.fold<int>(0, (sum, a) => sum + a.usageMinutes);
 
-    if (_lastTotal >= 0 && apps.length != _lastTotal) {
-      debugPrint('AppUsage: app list changed (${apps.length} apps)');
-    }
+    // Usage minutes tick up constantly, so the *minutes* are what makes this
+    // feature stale — not just the app list changing.
+    final changed =
+        _lastTotal >= 0 &&
+        (apps.length != _lastTotal || totalMinutes != _lastMinutes);
+    if (changed) debugPrint('AppUsage: usage changed (${apps.length} apps)');
     _lastTotal = apps.length;
+    _lastMinutes = totalMinutes;
 
-    // Let the UI isolate refresh if it's listening.
-    service.invoke('app_usage_update', {
-      'apps': apps.length,
-      'minutes': totalMinutes,
-    });
+    reportSync(service, SyncFeature.appUsage, changed: changed);
   }
 }

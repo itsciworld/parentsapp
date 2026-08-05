@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
+import 'package:vigil_parents_app/core/utils/polling_screen.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/components/app_search_field.dart';
@@ -20,9 +22,18 @@ class ContactsPage extends ConsumerStatefulWidget {
   ConsumerState<ContactsPage> createState() => _ContactsPageState();
 }
 
-class _ContactsPageState extends ConsumerState<ContactsPage> {
-  Timer? _pollTimer;
+class _ContactsPageState extends ConsumerState<ContactsPage>
+    with WidgetsBindingObserver, PollingScreen<ContactsPage> {
   final _searchController = TextEditingController();
+
+  @override
+  Duration get pollInterval => const Duration(minutes: 5);
+
+  @override
+  String? get pollFeature => SyncFeature.contacts;
+
+  @override
+  void onPoll() => ref.read(contactsViewModelProvider).refresh();
 
   @override
   void initState() {
@@ -33,15 +44,12 @@ class _ContactsPageState extends ConsumerState<ContactsPage> {
       ref.read(contactsViewModelProvider).loadContacts();
     });
 
-    // Keep the list fresh while the screen is open.
-    _pollTimer = Timer.periodic(const Duration(minutes: 5), (_) {
-      ref.read(contactsViewModelProvider).refresh();
-    });
+    startPolling();
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    stopPolling();
     _searchController.dispose();
     super.dispose();
   }

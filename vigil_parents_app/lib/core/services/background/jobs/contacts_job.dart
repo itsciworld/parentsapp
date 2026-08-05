@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/background_job.dart';
 import 'package:vigil_parents_app/features/contact/contact_repo.dart';
 
@@ -29,14 +30,10 @@ class ContactsSyncJob implements BackgroundJob {
       parentId: ctx.parentId,
     );
 
-    if (_lastTotal >= 0 && res.total > _lastTotal) {
-      debugPrint('Contacts: new contact added');
-    } else {
-      debugPrint('Contacts: skip — no new contact');
-    }
+    final changed = _lastTotal >= 0 && res.total > _lastTotal;
+    debugPrint(changed ? 'Contacts: new contact' : 'Contacts: no new contact');
     _lastTotal = res.total;
 
-    // Let the UI isolate refresh if it's listening.
-    service.invoke('contacts_update', {'total': res.total});
+    reportSync(service, SyncFeature.contacts, changed: changed);
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/core/services/child_context/child_context_resolver.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
 import 'package:vigil_parents_app/features/child/models/child_model.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/child_viewmodel.dart';
@@ -113,9 +114,19 @@ class SelectedChildViewModel extends ChangeNotifier {
   /// — so child-scoped API calls send the right `x-device-key`.
   Future<void> _persistSelection() async {
     final child = selected;
-    if (child == null) return;
+    if (child == null) {
+      // Nothing selectable (signed out, or the last child was unlinked). Drop
+      // the shared context so repositories can't keep using a dead child id.
+      ChildContextResolver.invalidate();
+      return;
+    }
     await SecureDeviceService.saveSelectedChildId(child.id);
     await SecureDeviceService.saveSelectedChildDeviceKey(child.deviceKey);
+    // We just resolved this from a freshly fetched children list, so seed the
+    // shared resolver rather than letting it repeat that same fetch. This is
+    // also the invalidation point for a child switch: priming overwrites the
+    // cached context immediately.
+    await ChildContextResolver.prime(childId: child.id);
   }
 }
 

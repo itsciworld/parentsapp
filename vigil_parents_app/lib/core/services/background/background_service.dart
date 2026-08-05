@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 
+import 'package:device_info_plus/device_info_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -43,6 +45,40 @@ const String _channelName = 'Vigil Monitoring';
 /// screens poll directly instead, so the whole service is skipped there.
 bool get backgroundServiceSupported => !kIsWeb;
 
+/// Android 15 (API 35) refuses to let a `BOOT_COMPLETED` receiver start a
+/// `dataSync` foreground service — the attempt throws
+/// `ForegroundServiceStartNotAllowedException` and takes the process with it.
+/// Below 35 the boot start is still both legal and useful, so this is decided
+/// per device rather than switched off everywhere.
+Future<bool> _bootStartAllowed() async {
+  if (!Platform.isAndroid) return true;
+  try {
+    final info = await DeviceInfoPlugin().androidInfo;
+    return info.version.sdkInt < 35;
+  } catch (e) {
+    // Can't tell — assume the stricter rule rather than risk the crash.
+    debugPrint('Background: SDK probe failed ($e), disabling boot start');
+    return false;
+  }
+}
+
+/// Starts the service if it isn't already running.
+///
+/// Two situations need this. On Android 15 the service can no longer come back
+/// on its own after a reboot (see [_bootStartAllowed]), and the same platform
+/// caps a `dataSync` service at six hours per 24h before stopping it. In both
+/// cases the app being opened is the moment we can legitimately start again.
+Future<void> ensureBackgroundServiceRunning() async {
+  if (!backgroundServiceSupported) return;
+  final service = FlutterBackgroundService();
+  try {
+    if (await service.isRunning()) return;
+    await service.startService();
+  } catch (e) {
+    debugPrint('Background: could not start service → $e');
+  }
+}
+
 /// Call once from `main()` (after `dotenv.load`).
 Future<void> initializeBackgroundService() async {
   if (!backgroundServiceSupported) return;
@@ -66,7 +102,7 @@ Future<void> initializeBackgroundService() async {
     androidConfiguration: AndroidConfiguration(
       onStart: onStart,
       autoStart: true,
-      autoStartOnBoot: true,
+      autoStartOnBoot: await _bootStartAllowed(),
       isForegroundMode: true,
       notificationChannelId: _channelId,
       initialNotificationTitle: 'Vigil',

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 
+import 'package:vigil_parents_app/core/services/child_context/child_context_resolver.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
 import 'package:vigil_parents_app/network/api_intercptor.dart';
 
@@ -187,6 +188,9 @@ class AuthRepository {
     } finally {
       // Local session must be cleared even if the network call fails.
       await SecureDeviceService.clearAuthData();
+      // Drop the cached parent/child ids too, so the next sign-in on this
+      // device can't inherit the previous account's selected child.
+      ChildContextResolver.invalidate();
     }
   }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/background_job.dart';
 import 'package:vigil_parents_app/features/gallery/repo/gallery_repo.dart';
 
@@ -29,11 +30,8 @@ class MediaSyncJob implements BackgroundJob {
       parentId: ctx.parentId,
     );
 
-    if (_lastTotal >= 0 && res.total > _lastTotal) {
-      debugPrint('Media: ${res.total - _lastTotal} new file(s) received');
-    } else {
-      debugPrint('Media: no new files');
-    }
+    final changed = _lastTotal >= 0 && res.total > _lastTotal;
+    debugPrint(changed ? 'Media: new file(s) received' : 'Media: no new files');
     _lastTotal = res.total;
 
     final now = DateTime.now();
@@ -46,7 +44,6 @@ class MediaSyncJob implements BackgroundJob {
       );
     }
 
-    // Let the UI isolate refresh if it's listening.
-    service.invoke('media_update', {'total': res.total});
+    reportSync(service, SyncFeature.media, changed: changed);
   }
 }

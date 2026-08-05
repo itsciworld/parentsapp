@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
+import 'package:vigil_parents_app/core/utils/polling_screen.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
@@ -26,8 +28,17 @@ class DeviceInfoScreen extends ConsumerStatefulWidget {
   ConsumerState<DeviceInfoScreen> createState() => _DeviceInfoScreenState();
 }
 
-class _DeviceInfoScreenState extends ConsumerState<DeviceInfoScreen> {
-  Timer? _poll;
+class _DeviceInfoScreenState extends ConsumerState<DeviceInfoScreen>
+    with WidgetsBindingObserver, PollingScreen<DeviceInfoScreen> {
+
+  @override
+  Duration get pollInterval => const Duration(seconds: 15);
+
+  @override
+  String? get pollFeature => SyncFeature.liveStatus;
+
+  @override
+  void onPoll() => ref.read(liveStatusViewModelProvider).refresh();
 
   @override
   void initState() {
@@ -37,15 +48,12 @@ class _DeviceInfoScreenState extends ConsumerState<DeviceInfoScreen> {
       final id = ref.read(selectedChildProvider).selectedId;
       if (id != null) _loadFor(id);
     });
-    // Keep the live data fresh while this screen is open.
-    _poll = Timer.periodic(const Duration(seconds: 15), (_) {
-      ref.read(liveStatusViewModelProvider).refresh();
-    });
+    startPolling();
   }
 
   @override
   void dispose() {
-    _poll?.cancel();
+    stopPolling();
     super.dispose();
   }
 

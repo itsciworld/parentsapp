@@ -12,8 +12,49 @@ import 'package:vigil_parents_app/features/location/presentation/widgets/person_
 /// Home-page "Live Location" card: a live OpenStreetMap preview centered on the
 /// selected child's most recent fix, with an expand icon that opens the full
 /// history map.
-class HomeLocationCard extends ConsumerWidget {
+class HomeLocationCard extends ConsumerStatefulWidget {
   const HomeLocationCard({super.key});
+
+  @override
+  ConsumerState<HomeLocationCard> createState() => _HomeLocationCardState();
+}
+
+class _HomeLocationCardState extends ConsumerState<HomeLocationCard> {
+  /// The child we have already asked the view model for, so neither a rebuild
+  /// nor a failed request can turn this into a request loop.
+  String? _requestedFor;
+
+  @override
+  void initState() {
+    super.initState();
+    _ensureLoaded();
+  }
+
+  /// Fetches this card's own data instead of relying on [HomeScreen]'s one-shot
+  /// startup fetch.
+  ///
+  /// That fetch runs once, in a microtask, before this card is mounted — and
+  /// when it doesn't land (the child list was still resolving, the request
+  /// failed, the screen was rebuilt) nothing retried: the home poll timer calls
+  /// `refresh()`, which returned immediately while the view model had never
+  /// been given a child. The card then stayed empty until the detail screen —
+  /// the only other caller of `load` — was opened, which is exactly the
+  /// "location only shows up after I expand it" report.
+  void _ensureLoaded() {
+    final childId = ref.read(selectedChildProvider).selectedId;
+    if (childId == null || childId == _requestedFor) return;
+    _requestedFor = childId;
+
+    // Home may already have this child in flight — don't duplicate its request.
+    final vm = ref.read(locationViewModelProvider);
+    if (vm.childId == childId && (vm.latest != null || vm.loading)) return;
+
+    // Deferred: this can run from a provider notification, and `load` notifies
+    // synchronously when it shows the loader.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) vm.load(childId, showLoader: vm.latest == null);
+    });
+  }
 
   void _openDetail(BuildContext context) {
     Navigator.of(context).push(
@@ -39,7 +80,12 @@ class HomeLocationCard extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    // The card can mount before the child list has resolved, and the selection
+    // can change under us from the hero card's dropdown — either way this is
+    // where we notice we're showing a child we never asked for.
+    ref.listen(selectedChildProvider, (_, _) => _ensureLoaded());
+
     final vm = ref.watch(locationViewModelProvider);
     final childName = ref.watch(selectedChildProvider).selected?.name;
     final latest = vm.latest;

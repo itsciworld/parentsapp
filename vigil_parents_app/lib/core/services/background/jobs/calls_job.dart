@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/background_job.dart';
 import 'package:vigil_parents_app/features/calls/repo/call_repo.dart';
 
@@ -29,14 +30,10 @@ class CallsSyncJob implements BackgroundJob {
       parentId: ctx.parentId,
     );
 
-    if (_lastTotal >= 0 && res.total > _lastTotal) {
-      debugPrint('Calls: new call logged');
-    } else {
-      debugPrint('Calls: skip —  parent no new call');
-    }
+    final changed = _lastTotal >= 0 && res.total > _lastTotal;
+    debugPrint(changed ? 'Calls: new call logged' : 'Calls: no new call');
     _lastTotal = res.total;
 
-    // Let the UI isolate refresh if it's listening.
-    service.invoke('calls_update', {'total': res.total});
+    reportSync(service, SyncFeature.calls, changed: changed);
   }
 }

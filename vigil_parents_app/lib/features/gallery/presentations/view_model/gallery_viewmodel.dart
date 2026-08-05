@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/core/utils/refresh_guard.dart';
 import 'package:vigil_parents_app/features/gallery/models/media_model.dart';
 import 'package:vigil_parents_app/features/gallery/repo/gallery_repo.dart';
 
 /// Drives the media/gallery screen: loads paged media for the selected child,
 /// supports an All / Photos / Videos filter, pull-to-refresh and infinite
 /// scroll. Designed to live behind a [ChangeNotifierProvider] like the SMS VM.
-class GalleryViewModel extends ChangeNotifier {
+class GalleryViewModel extends ChangeNotifier with RefreshGuard {
   GalleryViewModel(this.repository);
 
   final GalleryRepository repository;
@@ -123,7 +124,7 @@ class GalleryViewModel extends ChangeNotifier {
   }
 
   /// Silent refresh (used by the poll timer / pull-to-refresh).
-  Future<void> refresh() => load(showLoader: false);
+  Future<void> refresh() => guardedRefresh(() => load(showLoader: false));
 
   /// Reload from scratch — used when the selected child changes.
   Future<void> reload() async {
@@ -135,6 +136,8 @@ class GalleryViewModel extends ChangeNotifier {
   }
 }
 
-final galleryViewModelProvider = ChangeNotifierProvider<GalleryViewModel>((ref) {
+final galleryViewModelProvider = ChangeNotifierProvider<GalleryViewModel>((
+  ref,
+) {
   return GalleryViewModel(ref.read(galleryRepositoryProvider));
 });

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
+import 'package:vigil_parents_app/core/utils/polling_screen.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
@@ -23,10 +25,19 @@ class AppUsageDetailScreen extends ConsumerStatefulWidget {
       _AppUsageDetailScreenState();
 }
 
-class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen> {
+class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen>
+    with WidgetsBindingObserver, PollingScreen<AppUsageDetailScreen> {
   static const int _previewCount = 5;
   bool _showAll = false;
-  Timer? _pollTimer;
+
+  @override
+  Duration get pollInterval => const Duration(seconds: 30);
+
+  @override
+  String? get pollFeature => SyncFeature.appUsage;
+
+  @override
+  void onPoll() => ref.read(appUsageViewModelProvider).refresh();
 
   @override
   void initState() {
@@ -41,14 +52,12 @@ class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen> {
       await vm.loadHistory(id, AppUsageDateRange.today);
     });
 
-    _pollTimer = Timer.periodic(const Duration(seconds: 30), (_) {
-      ref.read(appUsageViewModelProvider).refresh();
-    });
+    startPolling();
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    stopPolling();
     super.dispose();
   }
 

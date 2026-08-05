@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/core/utils/refresh_guard.dart';
 import 'package:vigil_parents_app/features/app_usage/models/app_usage_model.dart';
 import 'package:vigil_parents_app/features/app_usage/repo/app_usage_repo.dart';
 
@@ -43,7 +44,7 @@ enum AppUsageDateRange {
 /// Loads app-usage stats for the selected child. Shared between the Home
 /// "Activity Overview" card and the full-screen detail view, so switching child
 /// in one reflects in the other. Apps are kept sorted by usage (most first).
-class AppUsageViewModel extends ChangeNotifier {
+class AppUsageViewModel extends ChangeNotifier with RefreshGuard {
   AppUsageViewModel(this._repository);
 
   final AppUsageRepository _repository;
@@ -143,10 +144,7 @@ class AppUsageViewModel extends ChangeNotifier {
         if (kDebugMode) {
           print('📅 [AppUsage] ${range.label} → history?period=$period');
         }
-        res = await _repository.getAppHistory(
-          childId: childId,
-          period: period,
-        );
+        res = await _repository.getAppHistory(childId: childId, period: period);
       }
       if (_childId != childId) return; // selection changed mid-flight
       apps = res;
@@ -174,7 +172,7 @@ class AppUsageViewModel extends ChangeNotifier {
   }
 
   /// Silent reload of the current child — used for pull-to-refresh / polling.
-  Future<void> refresh() async {
+  Future<void> refresh() => guardedRefresh(() async {
     final id = _childId;
     if (id == null) return;
     if (_isHistoryMode) {
@@ -182,7 +180,7 @@ class AppUsageViewModel extends ChangeNotifier {
     } else {
       await load(id, showLoader: false);
     }
-  }
+  });
 
   /// Exit history mode and return to current stats.
   void exitHistoryMode() {

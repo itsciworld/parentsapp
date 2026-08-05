@@ -1,8 +1,9 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:vigil_parents_app/config/api_config.dart';
 import 'package:vigil_parents_app/core/navigation/app_navigator.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
+import 'package:vigil_parents_app/core/services/child_context/child_context_resolver.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
 
 class ApiInterceptor extends Interceptor {
@@ -11,9 +12,9 @@ class ApiInterceptor extends Interceptor {
   static final Dio _tokenDio = Dio(
     BaseOptions(
       baseUrl: ApiConfig.baseUrl,
-      connectTimeout: const Duration(seconds: 65),
-      receiveTimeout: const Duration(seconds: 65),
-      sendTimeout: const Duration(seconds: 65),
+      connectTimeout: ApiClient.connectTimeout,
+      receiveTimeout: ApiClient.ioTimeout,
+      sendTimeout: ApiClient.ioTimeout,
     ),
   );
 
@@ -63,19 +64,34 @@ class ApiInterceptor extends Interceptor {
       options.headers.putIfAbsent('x-device-key', () => deviceKey);
     }
 
-    // SMS polls run every 5s — keep their request/response out of the logs.
-    if (!_isSilent(options.path)) {
-      debugPrint("➡️ REQUEST[${options.method}] => ${options.path}");
-      debugPrint("Headers: ${options.headers}");
-      debugPrint("Body: ${options.data}");
-    } else {
-      // Even for silent requests, log the device key to help debug auth issues
-      debugPrint(
-        "➡️ [Silent] ${options.method} ${options.path} | device-key: ${deviceKey ?? 'none'}",
-      );
+    // `debugPrint` is NOT stripped from release builds, so every log here has
+    // to be gated explicitly — otherwise request bodies (and, before the
+    // redaction below, the bearer token) end up in production logcat.
+    if (kDebugMode) {
+      // SMS polls run every 5s — keep their request/response out of the logs.
+      if (!_isSilent(options.path)) {
+        debugPrint("➡️ REQUEST[${options.method}] => ${options.path}");
+        debugPrint("Headers: ${_redactHeaders(options.headers)}");
+        debugPrint("Body: ${options.data}");
+      } else {
+        // Even for silent requests, log the device key to help debug auth issues
+        debugPrint(
+          "➡️ [Silent] ${options.method} ${options.path} | device-key: ${deviceKey ?? 'none'}",
+        );
+      }
     }
 
     handler.next(options);
+  }
+
+  /// A copy of [headers] with the bearer token masked, so it never reaches a
+  /// log sink even in debug builds or a captured bug report.
+  Map<String, dynamic> _redactHeaders(Map<String, dynamic> headers) {
+    final safe = Map<String, dynamic>.from(headers);
+    if (safe.containsKey('Authorization')) {
+      safe['Authorization'] = 'Bearer ***redacted***';
+    }
+    return safe;
   }
 
   /// Endpoints whose request/response bodies should not be logged.
@@ -90,7 +106,7 @@ class ApiInterceptor extends Interceptor {
 
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
-    if (!_isSilent(response.requestOptions.path)) {
+    if (kDebugMode && !_isSilent(response.requestOptions.path)) {
       debugPrint("✅ RESPONSE[${response.statusCode}] => ${response.data}");
     }
     handler.next(response);
@@ -113,7 +129,7 @@ class ApiInterceptor extends Interceptor {
         }
       }
 
-      debugPrint("❌ ERROR[$statusCode] => $message");
+      if (kDebugMode) debugPrint("❌ ERROR[$statusCode] => $message");
 
       // A missing `x-device-key` also comes back as 401, but it's a per-request
       // authorization gap (the selected child's key isn't stored yet), NOT an
@@ -178,7 +194,7 @@ class ApiInterceptor extends Interceptor {
         message = "Unexpected error occurred.";
       }
 
-      debugPrint("❌ NETWORK ERROR => $message");
+      if (kDebugMode) debugPrint("❌ NETWORK ERROR => $message");
     }
 
     handler.reject(
@@ -201,7 +217,7 @@ class ApiInterceptor extends Interceptor {
     if (refreshToken == null || refreshToken.isEmpty) return false;
 
     try {
-      debugPrint("🔄 Refreshing access token…");
+      if (kDebugMode) debugPrint("🔄 Refreshing access token…");
       final res = await _tokenDio.post(
         '/api/auth/refresh-token',
         data: {'refreshToken': refreshToken},
@@ -214,12 +230,12 @@ class ApiInterceptor extends Interceptor {
           token: data['token'] as String,
           refreshToken: data['refreshToken'] as String?,
         );
-        debugPrint("✅ Token refreshed");
+        if (kDebugMode) debugPrint("✅ Token refreshed");
         return true;
       }
       return false;
     } catch (e) {
-      debugPrint("❌ Token refresh failed => $e");
+      if (kDebugMode) debugPrint("❌ Token refresh failed => $e");
       return false;
     }
   }
@@ -237,6 +253,7 @@ class ApiInterceptor extends Interceptor {
     if (_loggingOut) return;
     _loggingOut = true;
     await SecureDeviceService.clearAuthData();
+    ChildContextResolver.invalidate();
     navigatorKey.currentState?.pushNamedAndRemoveUntil(
       AppRoutesName.loginView,
       (_) => false,
@@ -246,15 +263,26 @@ class ApiInterceptor extends Interceptor {
 }
 
 class ApiClient {
+  /// Most calls here are polled on a 5s–60s timer, so a request that is going
+  /// to fail needs to fail well inside its own poll interval. The old 65s
+  /// budget was longer than every interval in the app, which let dead requests
+  /// pile up on a bad connection.
+  static const Duration connectTimeout = Duration(seconds: 20);
+  static const Duration ioTimeout = Duration(seconds: 30);
+
+  /// Generated PDF reports are the one legitimately slow response, so byte
+  /// downloads keep the original, generous budget.
+  static const Duration downloadTimeout = Duration(seconds: 65);
+
   late final Dio _dio;
 
   ApiClient() {
     _dio = Dio(
       BaseOptions(
         baseUrl: ApiConfig.baseUrl,
-        connectTimeout: const Duration(seconds: 65),
-        receiveTimeout: const Duration(seconds: 65),
-        sendTimeout: const Duration(seconds: 65),
+        connectTimeout: connectTimeout,
+        receiveTimeout: ioTimeout,
+        sendTimeout: ioTimeout,
       ),
     );
 
@@ -287,7 +315,10 @@ class ApiClient {
       return await _dio.get<List<int>>(
         path,
         queryParameters: query,
-        options: Options(responseType: ResponseType.bytes),
+        options: Options(
+          responseType: ResponseType.bytes,
+          receiveTimeout: downloadTimeout,
+        ),
       );
     } on DioException catch (e) {
       throw Exception(e.error.toString());

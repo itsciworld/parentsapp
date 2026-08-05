@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/core/utils/refresh_guard.dart';
 import 'package:vigil_parents_app/features/live_status/models/live_status_model.dart';
 import 'package:vigil_parents_app/features/live_status/repo/live_status_repo.dart';
 
@@ -10,7 +11,7 @@ import 'package:vigil_parents_app/features/live_status/repo/live_status_repo.dar
 ///
 /// "Last sync" is the moment this view model last fetched the endpoint
 /// successfully — every successful call to [load]/[refresh] updates it.
-class LiveStatusViewModel extends ChangeNotifier {
+class LiveStatusViewModel extends ChangeNotifier with RefreshGuard {
   LiveStatusViewModel(this._repository);
 
   final LiveStatusRepository _repository;
@@ -68,11 +69,11 @@ class LiveStatusViewModel extends ChangeNotifier {
   }
 
   /// Re-fetches without toggling the loader.
-  Future<void> refresh() {
+  Future<void> refresh() => guardedRefresh(() {
     final id = _childId;
     if (id == null) return Future.value();
     return load(id, showLoader: false);
-  }
+  });
 
   /// Begins foreground polling for [childId]: an immediate fetch followed by a
   /// periodic refresh. Safe to call when the selected child changes — it resets

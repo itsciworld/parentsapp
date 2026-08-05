@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/core/utils/refresh_guard.dart';
 import 'package:vigil_parents_app/features/events/models/event_model.dart';
 import 'package:vigil_parents_app/features/events/repo/events_repo.dart';
 
@@ -7,7 +8,7 @@ import 'package:vigil_parents_app/features/events/repo/events_repo.dart';
 /// child. The Syncfusion calendar handles per-date markers + the agenda itself,
 /// so this VM only needs the flat list (plus a "nearest first" ordering for the
 /// All-Events list below the calendar).
-class EventsViewModel extends ChangeNotifier {
+class EventsViewModel extends ChangeNotifier with RefreshGuard {
   final EventsRepository repository;
 
   EventsViewModel(this.repository);
@@ -61,8 +62,7 @@ class EventsViewModel extends ChangeNotifier {
       }
 
       return false;
-    }).toList()
-      ..sort((a, b) => a.start.compareTo(b.start));
+    }).toList()..sort((a, b) => a.start.compareTo(b.start));
     return list;
   }
 
@@ -118,7 +118,7 @@ class EventsViewModel extends ChangeNotifier {
     await loadEvents();
   }
 
-  Future<void> refresh() => loadEvents(showLoader: false);
+  Future<void> refresh() => guardedRefresh(() => loadEvents(showLoader: false));
 }
 
 final eventsViewModelProvider = ChangeNotifierProvider((ref) {

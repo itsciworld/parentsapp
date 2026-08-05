@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:vigil_parents_app/core/utils/refresh_guard.dart';
 import 'package:vigil_parents_app/components/day_window_selector.dart';
 import 'package:vigil_parents_app/features/sms/models/sms_thread_model.dart';
 import 'package:vigil_parents_app/features/sms/repo/sms_repo.dart';
@@ -10,7 +11,7 @@ import 'package:vigil_parents_app/features/sms/repo/sms_repo.dart';
 /// Drives the thread-based SMS screen: loads grouped threads for the selected
 /// child and exposes a search filter. Tracks a per-thread "seen" count so the
 /// thread badge behaves like an unread counter that clears once opened.
-class SmsViewModel extends ChangeNotifier {
+class SmsViewModel extends ChangeNotifier with RefreshGuard {
   final SmsRepository repository;
 
   SmsViewModel(this.repository);
@@ -82,8 +83,25 @@ class SmsViewModel extends ChangeNotifier {
         .toList();
   }
 
-  int get totalThreads => _threads.length;
-  int get totalMessages => _threads.fold(0, (sum, t) => sum + t.count);
+  /// Threads loaded for this child before any filtering. The empty state uses
+  /// it to tell "this child has no SMS" apart from "the filter hid them all".
+  int get loadedThreads => _threads.length;
+
+  /// The counters above the list describe *the list*. Reading the unfiltered
+  /// data here is what put "48 Chats · 155 Messages" on top of an empty screen
+  /// and made the filter look broken.
+  int get totalThreads => threads.length;
+
+  int get totalMessages =>
+      threads.fold(0, (sum, t) => sum + _messagesInWindow(t));
+
+  /// Messages in [thread] that fall inside the active window. With no window
+  /// the server's own count wins — it covers messages beyond the ones this
+  /// payload expanded.
+  int _messagesInWindow(SmsThread thread) {
+    if (_window == DayWindow.all) return thread.count;
+    return thread.messages.where((m) => _window.includes(m.date)).length;
+  }
 
   Future<void> loadThreads({bool showLoader = true}) async {
     if (showLoader) {
@@ -135,7 +153,8 @@ class SmsViewModel extends ChangeNotifier {
     await loadThreads();
   }
 
-  Future<void> refresh() => loadThreads(showLoader: false);
+  Future<void> refresh() =>
+      guardedRefresh(() => loadThreads(showLoader: false));
 }
 
 final smsViewModelProvider = ChangeNotifierProvider((ref) {

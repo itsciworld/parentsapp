@@ -1,3 +1,5 @@
+import 'package:vigil_parents_app/core/utils/api_date.dart';
+
 // Maps the /api/logs/calllogs response:
 // { status, total, page, limit, pages, callLogs: [ {name, number, callType, duration, timestamp} ] }
 
@@ -96,10 +98,7 @@ class CallLogModel {
     return 0;
   }
 
-  static DateTime? _toDate(dynamic v) {
-    if (v == null) return null;
-    return DateTime.tryParse(v.toString())?.toLocal();
-  }
+  static DateTime? _toDate(dynamic v) => parseApiDate(v);
 }
 
 class CallLogsResponse {

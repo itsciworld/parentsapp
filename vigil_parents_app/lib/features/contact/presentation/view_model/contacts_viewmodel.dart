@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/core/utils/refresh_guard.dart';
 import 'package:vigil_parents_app/features/contact/contact_repo.dart';
 import 'package:vigil_parents_app/features/contact/models/contacts_model.dart';
 
 /// Drives the contacts screen: loads all contacts for the selected child in a
 /// single request (no lazy loading) plus a search filter.
-class ContactsViewModel extends ChangeNotifier {
+class ContactsViewModel extends ChangeNotifier with RefreshGuard {
   final ContactsRepository repository;
 
   ContactsViewModel(this.repository);
@@ -79,7 +80,8 @@ class ContactsViewModel extends ChangeNotifier {
     await loadContacts();
   }
 
-  Future<void> refresh() => loadContacts(showLoader: false);
+  Future<void> refresh() =>
+      guardedRefresh(() => loadContacts(showLoader: false));
 }
 
 final contactsViewModelProvider = ChangeNotifierProvider((ref) {

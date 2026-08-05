@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/core/utils/refresh_guard.dart';
 import 'package:vigil_parents_app/features/social_apps/models/social_screen_model.dart';
 import 'package:vigil_parents_app/features/social_apps/repo/social_screen_repo.dart';
 
 /// Loads captured social-app chat messages for the selected child and tracks
 /// which app the user is currently viewing (defaults to the first available).
-class SocialScreenViewModel extends ChangeNotifier {
+class SocialScreenViewModel extends ChangeNotifier with RefreshGuard {
   SocialScreenViewModel(this._repository);
 
   final SocialScreenRepository _repository;
@@ -117,11 +118,11 @@ class SocialScreenViewModel extends ChangeNotifier {
   }
 
   /// Silent reload of the current child — used for pull-to-refresh.
-  Future<void> refresh() async {
+  Future<void> refresh() => guardedRefresh(() async {
     final id = _childId;
     if (id == null) return;
     await load(id, showLoader: false);
-  }
+  });
 
   /// Switch the app being viewed.
   void select(String package) {

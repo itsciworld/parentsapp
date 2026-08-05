@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/core/navigation/app_navigator.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
 import 'package:vigil_parents_app/core/services/background/background_service.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
 
 void main() async {
@@ -42,6 +43,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // Start listening for the background jobs' "this feature changed" signals
+    // before anything else can go to background.
+    SyncSignals.start();
     // App starts in the foreground — pause the background sync jobs so they
     // don't duplicate the on-screen polling. Re-send shortly after to win the
     // race against the background isolate finishing its event subscription.
@@ -62,8 +66,15 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       _notifyService('app_foreground');
+      // The service may not have survived since we were last open: Android 15
+      // stops a dataSync service after six hours per day, and won't let it
+      // restart itself at boot. Opening the app is our chance to revive it.
+      ensureBackgroundServiceRunning();
     } else {
       // paused / inactive / hidden / detached → let the background sync resume.
+      // Reset the change log first so what arrives from here on describes only
+      // this away period.
+      SyncSignals.markAwayPeriodStart();
       _notifyService('app_background');
     }
   }

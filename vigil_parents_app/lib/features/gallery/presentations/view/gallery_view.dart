@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
+import 'package:vigil_parents_app/core/utils/polling_screen.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
@@ -19,9 +21,18 @@ class GalleryScreen extends ConsumerStatefulWidget {
   ConsumerState<GalleryScreen> createState() => _GalleryScreenState();
 }
 
-class _GalleryScreenState extends ConsumerState<GalleryScreen> {
-  Timer? _pollTimer;
+class _GalleryScreenState extends ConsumerState<GalleryScreen>
+    with WidgetsBindingObserver, PollingScreen<GalleryScreen> {
   final _scrollController = ScrollController();
+
+  @override
+  Duration get pollInterval => const Duration(seconds: 10);
+
+  @override
+  String? get pollFeature => SyncFeature.media;
+
+  @override
+  void onPoll() => ref.read(galleryViewModelProvider).refresh();
 
   @override
   void initState() {
@@ -34,10 +45,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
       ref.read(galleryViewModelProvider).load();
     });
 
-    // Refresh from the API every 10s while the screen is open.
-    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
-      ref.read(galleryViewModelProvider).refresh();
-    });
+    startPolling();
 
     // Infinite scroll — fetch the next page near the bottom.
     _scrollController.addListener(_onScroll);
@@ -45,7 +53,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen> {
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    stopPolling();
     _scrollController
       ..removeListener(_onScroll)
       ..dispose();

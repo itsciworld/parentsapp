@@ -1,70 +1,22 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:vigil_parents_app/core/services/child_context/child_context_resolver.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
-import 'package:vigil_parents_app/features/child/repo/child_repo.dart';
 import 'package:vigil_parents_app/network/api_intercptor.dart';
 
 import '../models/app_usage_model.dart';
 
 /// Identifiers needed to query app usage for a child.
-class AppUsageContext {
-  final String parentId;
-  final String childId;
-  const AppUsageContext({required this.parentId, required this.childId});
-
-  bool get isValid => parentId.isNotEmpty && childId.isNotEmpty;
-}
+typedef AppUsageContext = ChildContext;
 
 class AppUsageRepository {
-  AppUsageRepository({ApiClient? client, ChildRepository? childRepository})
-    : _apiClient = client ?? ApiClient(),
-      _childRepository = childRepository ?? ChildRepository();
+  AppUsageRepository({ApiClient? client}) : _apiClient = client ?? ApiClient();
 
   final ApiClient _apiClient;
-  final ChildRepository _childRepository;
 
-  /// Resolves the parent + child ids from storage for headless (background)
-  /// runs, refreshing the selected child's device key so `x-device-key` is
-  /// current. Mirrors [SmsRepository.resolveContext].
-  Future<AppUsageContext> resolveContext() async {
-    final token = await SecureDeviceService.getToken() ?? '';
-    if (token.isEmpty) {
-      return const AppUsageContext(parentId: '', childId: '');
-    }
-
-    final parentId = await SecureDeviceService.getParentId() ?? '';
-    var childId = await SecureDeviceService.getSelectedChildId() ?? '';
-
-    try {
-      final children = await _childRepository.fetchChildren();
-      if (children.isEmpty) {
-        return AppUsageContext(parentId: parentId, childId: '');
-      }
-
-      if (childId.isNotEmpty) {
-        final selected = children.where((c) => c.id == childId).firstOrNull;
-        if (selected != null) {
-          await SecureDeviceService.saveSelectedChildDeviceKey(
-            selected.deviceKey,
-          );
-        } else {
-          final first = children.first;
-          childId = first.id;
-          await SecureDeviceService.saveSelectedChildId(first.id);
-          await SecureDeviceService.saveSelectedChildDeviceKey(first.deviceKey);
-        }
-      } else {
-        final first = children.first;
-        childId = first.id;
-        await SecureDeviceService.saveSelectedChildId(first.id);
-        await SecureDeviceService.saveSelectedChildDeviceKey(first.deviceKey);
-      }
-    } catch (_) {
-      // Proceed with whatever is stored; caller handles an invalid context.
-    }
-
-    return AppUsageContext(parentId: parentId, childId: childId);
-  }
+  /// See [ChildContextResolver.resolve] — shared across features and
+  /// cached, so polling callers no longer re-fetch the children list.
+  Future<AppUsageContext> resolveContext() => ChildContextResolver.resolve();
 
   /// GET /api/apps/get_apps — the child's tracked apps, sorted by usage time
   /// (most-used first). `x-device-key` is attached automatically by
@@ -158,7 +110,9 @@ class AppUsageRepository {
       if (kDebugMode) print('⚠️  [AppUsage] history → unexpected response');
       return const [];
     } on DioException catch (e) {
-      if (kDebugMode) print('❌  [AppUsage] history($period) failed: ${e.error}');
+      if (kDebugMode) {
+        print('❌  [AppUsage] history($period) failed: ${e.error}');
+      }
       throw Exception(e.error.toString());
     } catch (e) {
       if (kDebugMode) print('❌  [AppUsage] history($period) failed: $e');

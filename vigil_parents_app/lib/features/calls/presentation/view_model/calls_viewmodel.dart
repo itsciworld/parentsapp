@@ -1,12 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/core/utils/refresh_guard.dart';
 import 'package:vigil_parents_app/components/day_window_selector.dart';
 import 'package:vigil_parents_app/features/calls/models/calls_model.dart';
 import 'package:vigil_parents_app/features/calls/repo/call_repo.dart';
 
 enum CallFilter { all, incoming, outgoing, missed }
 
-class CallLogViewModel extends ChangeNotifier {
+class CallLogViewModel extends ChangeNotifier with RefreshGuard {
   final CallLogRepository repository;
 
   CallLogViewModel({CallLogRepository? repository})
@@ -181,7 +182,8 @@ class CallLogViewModel extends ChangeNotifier {
     await loadCallLogs();
   }
 
-  Future<void> refresh() => loadCallLogs(showLoader: false);
+  Future<void> refresh() =>
+      guardedRefresh(() => loadCallLogs(showLoader: false));
 }
 
 final callLogViewModelProvider = ChangeNotifierProvider((ref) {

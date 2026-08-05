@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:syncfusion_flutter_calendar/calendar.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
+import 'package:vigil_parents_app/core/utils/polling_screen.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
@@ -22,12 +24,21 @@ class EventsScreen extends ConsumerStatefulWidget {
   ConsumerState<EventsScreen> createState() => _EventsScreenState();
 }
 
-class _EventsScreenState extends ConsumerState<EventsScreen> {
-  Timer? _pollTimer;
+class _EventsScreenState extends ConsumerState<EventsScreen>
+    with WidgetsBindingObserver, PollingScreen<EventsScreen> {
 
   /// The calendar date the user tapped. Null until they pick one (then we fall
   /// back to the focus date for the initial highlight).
   DateTime? _selectedDay;
+
+  @override
+  Duration get pollInterval => const Duration(minutes: 30);
+
+  @override
+  String? get pollFeature => SyncFeature.events;
+
+  @override
+  void onPoll() => ref.read(eventsViewModelProvider).refresh();
 
   @override
   void initState() {
@@ -37,15 +48,12 @@ class _EventsScreenState extends ConsumerState<EventsScreen> {
       ref.read(eventsViewModelProvider).loadEvents();
     });
 
-    // While the screen is open, refresh from the API every 30s (cheap re-poll).
-    _pollTimer = Timer.periodic(const Duration(minutes: 30), (_) {
-      ref.read(eventsViewModelProvider).refresh();
-    });
+    startPolling();
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    stopPolling();
     super.dispose();
   }
 

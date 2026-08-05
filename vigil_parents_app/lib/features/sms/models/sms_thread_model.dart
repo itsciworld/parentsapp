@@ -1,3 +1,5 @@
+import 'package:vigil_parents_app/core/utils/api_date.dart';
+
 // Models for the grouped SMS endpoint:
 // /api/sms/get_sms?child_id=..&parent_id=..&grouped=true
 //
@@ -149,7 +151,4 @@ int _toInt(dynamic v, {int fallback = 0}) {
   return fallback;
 }
 
-DateTime? _toDate(dynamic v) {
-  if (v == null) return null;
-  return DateTime.tryParse(v.toString())?.toLocal();
-}
+DateTime? _toDate(dynamic v) => parseApiDate(v);

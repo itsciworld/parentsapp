@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:vigil_parents_app/core/services/background/jobs/background_job.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
 import 'package:vigil_parents_app/features/live_status/repo/live_status_repo.dart';
 
 /// Polls the child's live-status endpoint periodically so battery and
@@ -10,7 +11,11 @@ class LiveStatusSyncJob implements BackgroundJob {
   String get name => 'live_status_sync';
 
   @override
-  Duration get interval => const Duration(seconds: 60);
+  Duration get interval => const Duration(seconds: 40);
+
+  /// Online state + battery level at the last poll, so an unchanged status
+  /// doesn't ask the UI to re-fetch on resume.
+  String? _lastSignature;
 
   @override
   Future<void> run(ServiceInstance service) async {
@@ -28,11 +33,10 @@ class LiveStatusSyncJob implements BackgroundJob {
       'battery ${res.battery.level ?? "?"}% • ${res.connectivity.label}',
     );
 
-    // Let the UI isolate refresh if it's listening.
-    service.invoke('live_status_update', {
-      'childId': res.childId,
-      'isOnline': res.isOnline,
-      'batteryLevel': res.battery.level,
-    });
+    final signature = '${res.isOnline}/${res.battery.level}';
+    final changed = _lastSignature != null && signature != _lastSignature;
+    _lastSignature = signature;
+
+    reportSync(service, SyncFeature.liveStatus, changed: changed);
   }
 }

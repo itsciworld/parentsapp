@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
+import 'package:vigil_parents_app/core/utils/polling_screen.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/components/app_search_field.dart';
@@ -44,9 +46,18 @@ class AccessCallsScreen extends ConsumerStatefulWidget {
   ConsumerState<AccessCallsScreen> createState() => _AccessCallsScreenState();
 }
 
-class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
-  Timer? _pollTimer;
+class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen>
+    with WidgetsBindingObserver, PollingScreen<AccessCallsScreen> {
   final _searchController = TextEditingController();
+
+  @override
+  Duration get pollInterval => const Duration(seconds: 5);
+
+  @override
+  String? get pollFeature => SyncFeature.calls;
+
+  @override
+  void onPoll() => ref.read(callLogViewModelProvider).refresh();
 
   @override
   void initState() {
@@ -55,14 +66,12 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen> {
       await ref.read(selectedChildProvider).load();
       ref.read(callLogViewModelProvider).loadCallLogs();
     });
-    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      ref.read(callLogViewModelProvider).refresh();
-    });
+    startPolling();
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    stopPolling();
     _searchController.dispose();
     super.dispose();
   }
