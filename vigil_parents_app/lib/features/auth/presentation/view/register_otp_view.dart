@@ -5,21 +5,29 @@ import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
-import 'package:vigil_parents_app/features/auth/presentation/view_model/forgot_password_viewmodel.dart';
+import 'package:vigil_parents_app/features/auth/presentation/view_model/register_viewmodel.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 
-class OtpVerificationView extends ConsumerStatefulWidget {
-  /// Email the OTP was sent to (passed from the Forgot Password screen).
+/// Step 2 of registration. Carries the credentials entered on the signup
+/// screen because `/api/auth/register-website` needs all four fields at once —
+/// nothing was created server-side by the send-OTP call.
+class RegisterOtpView extends ConsumerStatefulWidget {
+  final String name;
   final String email;
+  final String password;
 
-  const OtpVerificationView({super.key, required this.email});
+  const RegisterOtpView({
+    super.key,
+    required this.name,
+    required this.email,
+    required this.password,
+  });
 
   @override
-  ConsumerState<OtpVerificationView> createState() =>
-      _OtpVerificationViewState();
+  ConsumerState<RegisterOtpView> createState() => _RegisterOtpViewState();
 }
 
-class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
+class _RegisterOtpViewState extends ConsumerState<RegisterOtpView> {
   final TextEditingController _otpController = TextEditingController();
 
   // Brand Colours
@@ -49,26 +57,29 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
     }
 
     ref
-        .read(forgotPasswordViewModelProvider.notifier)
-        .verifyOtp(widget.email, otp);
+        .read(registerViewModelProvider.notifier)
+        .registerWithOtp(
+          name: widget.name,
+          email: widget.email,
+          password: widget.password,
+          otp: otp,
+        );
   }
 
   void _handleResend() {
     FocusScope.of(context).unfocus();
+    _otpController.clear();
     ref
-        .read(forgotPasswordViewModelProvider.notifier)
-        .requestPasswordReset(widget.email);
+        .read(registerViewModelProvider.notifier)
+        .sendRegisterOtp(widget.name, widget.email);
   }
 
   @override
   Widget build(BuildContext context) {
     final mq = MediaQuery.of(context);
 
-    // ── State listener: toast + navigate to reset-password on success ──────
-    ref.listen<ForgotPasswordState>(forgotPasswordViewModelProvider, (
-      previous,
-      next,
-    ) {
+    // ── State listener: toast + straight to the dashboard on success ────────
+    ref.listen<RegisterState>(registerViewModelProvider, (previous, next) {
       if (next.toastData != null && next.toastData != previous?.toastData) {
         showAppToast(
           context: context,
@@ -78,16 +89,18 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
         );
       }
 
-      if (next.otpVerified && !(previous?.otpVerified ?? false)) {
-        Navigator.pushNamed(
+      // A 201 already stored the token, so the user is logged in — drop the
+      // whole auth stack so back from the dashboard can't return to signup.
+      if (next.isRegistered && !(previous?.isRegistered ?? false)) {
+        Navigator.pushNamedAndRemoveUntil(
           context,
-          AppRoutesName.resetPasswordView,
-          arguments: {'email': widget.email, 'otp': _otpController.text.trim()},
+          AppRoutesName.homeView,
+          (_) => false,
         );
       }
     });
 
-    final forgotState = ref.watch(forgotPasswordViewModelProvider);
+    final registerState = ref.watch(registerViewModelProvider);
 
     final screenH = mq.size.height;
     final screenW = mq.size.width;
@@ -150,7 +163,7 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
                               SizedBox(height: vGapMd * 1.2),
 
                               Text(
-                                'OTP Verification',
+                                'Verify Your Email',
                                 style: TextStyle(
                                   fontSize: isSmall ? 22 : 26,
                                   fontWeight: FontWeight.w800,
@@ -160,8 +173,19 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
 
                               const SizedBox(height: 4),
 
-                              Text(
-                                'Enter the verification code sent to your email',
+                              Text.rich(
+                                TextSpan(
+                                  text: 'Enter the 6-digit code we sent to ',
+                                  children: [
+                                    TextSpan(
+                                      text: widget.email,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        color: _darkNavy,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                                 style: TextStyle(
                                   fontSize: isSmall ? 12 : 13.5,
                                   color: Colors.grey.shade600,
@@ -216,7 +240,7 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
                                     ),
 
                                     GestureDetector(
-                                      onTap: forgotState.isLoading
+                                      onTap: registerState.isLoading
                                           ? null
                                           : _handleResend,
                                       child: Text(
@@ -236,13 +260,13 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
 
                               // ───────────── VERIFY BUTTON ─────────────
                               CustomButton(
-                                onTap: forgotState.isLoading
+                                onTap: registerState.isLoading
                                     ? null
                                     : _handleVerifyOtp,
-                                label: 'Verify OTP',
+                                label: 'Verify & Create Account',
                                 height: screenH * 0.053,
                                 gradient: AppGradients.primaryButton,
-                                isLoading: forgotState.isLoading,
+                                isLoading: registerState.isLoading,
                               ),
 
                               SizedBox(height: vGapMd),

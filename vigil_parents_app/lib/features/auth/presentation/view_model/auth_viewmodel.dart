@@ -48,11 +48,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
 
   // LOGIN
   Future<void> login(String email, String password) async {
-    state = state.copyWith(
-      isLoading: true,
-      isSuccess: false,
-      clearToast: true,
-    );
+    state = state.copyWith(isLoading: true, isSuccess: false, clearToast: true);
 
     try {
       final message = await _authRepository.login(email, password);
@@ -79,11 +75,7 @@ class AuthViewModel extends StateNotifier<AuthState> {
   }
 
   Future<void> register(String name, String email, String password) async {
-    state = state.copyWith(
-      isLoading: true,
-      isSuccess: false,
-      clearToast: true,
-    );
+    state = state.copyWith(isLoading: true, isSuccess: false, clearToast: true);
 
     try {
       final message = await _authRepository.register(name, email, password);

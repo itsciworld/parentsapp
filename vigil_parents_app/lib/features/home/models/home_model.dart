@@ -79,21 +79,6 @@ class FeatureTile {
   }
 }
 
-/// Live location card data.
-class LiveLocation {
-  final String label;
-  final String address;
-  final String accuracy;
-  final bool isLive;
-
-  const LiveLocation({
-    required this.label,
-    required this.address,
-    required this.accuracy,
-    required this.isLive,
-  });
-}
-
 class ActivitySummary {
   final String screenTime;
   final double screenTimeDeltaPercent;
@@ -147,7 +132,6 @@ class HomeDashboardData {
   final ChildProfile child;
   final List<StatusIndicator> statusIndicators;
   final List<FeatureTile> features;
-  final LiveLocation location;
   final ActivitySummary activity;
   final AiInsight aiInsight;
   final FoundationInfo foundation;
@@ -158,7 +142,6 @@ class HomeDashboardData {
     required this.child,
     required this.statusIndicators,
     required this.features,
-    required this.location,
     required this.activity,
     required this.aiInsight,
     required this.foundation,

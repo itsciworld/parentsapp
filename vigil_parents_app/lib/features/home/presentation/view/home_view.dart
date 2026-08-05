@@ -43,6 +43,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     with WidgetsBindingObserver {
   late final HomeViewModel _vm;
   Timer? _locationTimer;
+  Timer? _badgesTimer;
   LiveStatusViewModel? _liveStatusVm; // Save reference for dispose
 
   @override
@@ -79,6 +80,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _locationTimer = Timer.periodic(const Duration(seconds: 40), (_) {
       ref.read(locationViewModelProvider).refresh();
     });
+
+    // SMS / calls / contacts / events counts arrive from the backend on their
+    // own schedule, so poll them here too. Without this the tile badges only
+    // moved when the user opened the feature itself, which is exactly the
+    // screen where the new items stop being "unseen".
+    _badgesTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      ref.read(featureBadgesProvider).load();
+    });
   }
 
   void _onChildSelected(String childId) {
@@ -101,6 +110,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
       ref.read(locationViewModelProvider).refresh();
       ref.read(appUsageViewModelProvider).refresh();
+      // Coming back from the background is the most likely moment for the
+      // counts to be stale — the polling timers were still running, but the
+      // backend may have collected a lot while we were away.
+      ref.read(featureBadgesProvider).load();
+      ref.read(socialScreenViewModelProvider).refresh();
     } else {
       vm.stopPolling();
     }
@@ -110,6 +124,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _locationTimer?.cancel();
+    _badgesTimer?.cancel();
     // Use saved reference instead of ref.read() during dispose
     _liveStatusVm?.stopPolling();
     _vm.dispose();

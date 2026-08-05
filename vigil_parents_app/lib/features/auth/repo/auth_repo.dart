@@ -95,6 +95,77 @@ class AuthRepository {
     }
   }
 
+  // REGISTER → STEP 1: email the user a one-time code. Nothing is created
+  // server-side yet; the account only exists once step 2 succeeds.
+  Future<String> sendRegisterOtp(String name, String email) async {
+    try {
+      final response = await _apiClient.post(
+        "/api/auth/send-register-otp",
+        data: {"name": name, "email": email},
+      );
+
+      return _readMessage(response, "Verification code sent to your email");
+    } on DioException catch (e) {
+      throw Exception(e.error.toString());
+    } catch (e) {
+      throw Exception(e.toString().replaceAll('Exception: ', ''));
+    }
+  }
+
+  // REGISTER → STEP 2: create the account with the emailed code. A 201 comes
+  // back already authenticated (token + refreshToken), so the caller can go
+  // straight to the dashboard without a separate login round-trip.
+  Future<String> registerWithOtp({
+    required String name,
+    required String email,
+    required String password,
+    required String otp,
+  }) async {
+    try {
+      final response = await _apiClient.post(
+        "/api/auth/register-website",
+        data: {"name": name, "email": email, "password": password, "otp": otp},
+      );
+
+      final data = response.data;
+      final String? token = data is Map ? data['token'] as String? : null;
+
+      if (token == null || token.isEmpty) {
+        throw Exception("Invalid server response");
+      }
+
+      await SecureDeviceService.saveAuthData(
+        token: token,
+        email: email,
+        refreshToken: data['refreshToken'] as String?,
+        parentId: data['userId'] as String?,
+        // The register response carries no userName — fall back to what the
+        // user just typed so the dashboard has a name to greet them with.
+        parentName: (data['userName'] as String?) ?? name,
+        deviceKey: data['deviceKey'] as String?,
+      );
+
+      return _readMessage(response, "Account created successfully");
+    } on DioException catch (e) {
+      // Matched on the message alone, not the status code: this endpoint also
+      // returns 400 for a duplicate email or a rejected password, and those
+      // must keep the server's wording instead of becoming "Invalid OTP".
+      throw Exception(
+        _mapOtpError(
+          e.error?.toString(),
+          fallback: 'Could not create your account. Please try again.',
+        ),
+      );
+    } catch (e) {
+      throw Exception(
+        _mapOtpError(
+          e.toString(),
+          fallback: 'Could not create your account. Please try again.',
+        ),
+      );
+    }
+  }
+
   // مشترك helper to read the "msg" field from a plain status response
   String _readMessage(Response response, String fallback) {
     final data = response.data;
@@ -152,7 +223,11 @@ class AuthRepository {
   /// [statusCode] is only passed on the verify step, where a 4xx can *only*
   /// mean the code was rejected. The reset step matches on the message alone,
   /// because there a 400 may equally be about the new password.
-  String _mapOtpError(String? raw, {int? statusCode, required String fallback}) {
+  String _mapOtpError(
+    String? raw, {
+    int? statusCode,
+    required String fallback,
+  }) {
     final message = (raw ?? '').replaceAll('Exception: ', '').trim();
 
     final isOtpRejection =
@@ -184,9 +259,7 @@ class AuthRepository {
         ),
       );
     } catch (e) {
-      throw Exception(
-        _mapOtpError(e.toString(), fallback: _invalidOtpMessage),
-      );
+      throw Exception(_mapOtpError(e.toString(), fallback: _invalidOtpMessage));
     }
   }
 

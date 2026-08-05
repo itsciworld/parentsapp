@@ -8,7 +8,7 @@ import 'package:vigil_parents_app/core/routing/routes.dart';
 import 'package:vigil_parents_app/core/utils/validators.dart';
 
 import 'package:vigil_parents_app/features/auth/presentation/view/login_view.dart';
-import 'package:vigil_parents_app/features/auth/presentation/view_model/auth_viewmodel.dart';
+import 'package:vigil_parents_app/features/auth/presentation/view_model/register_viewmodel.dart';
 import 'package:vigil_parents_app/globle_components/custom_button/custombutton.dart';
 
 class SignupView extends ConsumerStatefulWidget {
@@ -54,9 +54,13 @@ class _SignupViewState extends ConsumerState<SignupView> {
 
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
-    final password = _passwordController.text;
 
-    ref.read(authViewModelProvider.notifier).register(name, email, password);
+    // Step 1 of two: the account isn't created here, only a code is emailed.
+    // Reset first so a repeat attempt (e.g. after fixing a typo'd email) is
+    // seen as a fresh otpSent transition and navigates again.
+    final notifier = ref.read(registerViewModelProvider.notifier);
+    notifier.reset();
+    notifier.sendRegisterOtp(name, email);
   }
 
   @override
@@ -72,8 +76,13 @@ class _SignupViewState extends ConsumerState<SignupView> {
     final logoBoxH = screenH * 0.28;
     final vGapSm = screenH * 0.015;
     final vGapMd = screenH * 0.022;
-    final authState = ref.watch(authViewModelProvider);
-    ref.listen<AuthState>(authViewModelProvider, (previous, next) async {
+    final registerState = ref.watch(registerViewModelProvider);
+    ref.listen<RegisterState>(registerViewModelProvider, (previous, next) {
+      // This screen stays mounted underneath the OTP screen and keeps
+      // listening, so without this guard a resend/verify would raise a second
+      // toast from here on top of the one the OTP screen already shows.
+      if (!(ModalRoute.of(context)?.isCurrent ?? true)) return;
+
       // Toast
       if (next.toastData != null && next.toastData != previous?.toastData) {
         showAppToast(
@@ -84,17 +93,19 @@ class _SignupViewState extends ConsumerState<SignupView> {
         );
       }
 
-      // Navigate after success
-      if (next.isSuccess && !(previous?.isSuccess ?? false)) {
-        final navigator = Navigator.of(context);
-        // final email = await SecureDeviceService.getEmail();
-        // final token = await SecureDeviceService.getToken();
-        // final parentId = await SecureDeviceService.getParentId();
-        // final parentName = await SecureDeviceService.getParentName();
-
-        if (!mounted) return;
-
-        navigator.pushReplacementNamed(AppRoutesName.homeView);
+      // Code is on its way — hand the credentials to step 2. They are only
+      // held in memory for the length of the flow; the account is created by
+      // the OTP screen, which then routes on to the dashboard itself.
+      if (next.otpSent && !(previous?.otpSent ?? false)) {
+        Navigator.pushNamed(
+          context,
+          AppRoutesName.registerOtpView,
+          arguments: {
+            'name': _nameController.text.trim(),
+            'email': _emailController.text.trim(),
+            'password': _passwordController.text,
+          },
+        );
       }
     });
 
@@ -247,13 +258,13 @@ class _SignupViewState extends ConsumerState<SignupView> {
 
                                 // ───────────── Signup Button ─────────────
                                 CustomButton(
-                                  onTap: authState.isLoading
+                                  onTap: registerState.isLoading
                                       ? null
                                       : _handleSignup,
                                   label: 'Create Account',
                                   height: screenH * 0.053,
                                   gradient: AppGradients.primaryButton,
-                                  isLoading: authState.isLoading,
+                                  isLoading: registerState.isLoading,
                                 ),
 
                                 SizedBox(height: vGapMd),

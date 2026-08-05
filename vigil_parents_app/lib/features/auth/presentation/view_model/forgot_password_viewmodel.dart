@@ -46,8 +46,7 @@ class ForgotPasswordState {
 class ForgotPasswordViewModel extends StateNotifier<ForgotPasswordState> {
   final AuthRepository _authRepository;
 
-  ForgotPasswordViewModel(this._authRepository)
-    : super(ForgotPasswordState());
+  ForgotPasswordViewModel(this._authRepository) : super(ForgotPasswordState());
 
   // STEP 1 → request a reset code for the given email
   Future<void> requestPasswordReset(String email) async {

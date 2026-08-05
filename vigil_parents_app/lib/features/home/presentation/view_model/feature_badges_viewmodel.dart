@@ -7,6 +7,8 @@ import 'package:vigil_parents_app/features/contact/contact_repo.dart';
 import 'package:vigil_parents_app/features/contact/models/contacts_model.dart';
 import 'package:vigil_parents_app/features/events/models/event_model.dart';
 import 'package:vigil_parents_app/features/events/repo/events_repo.dart';
+import 'package:vigil_parents_app/features/gallery/models/media_model.dart';
+import 'package:vigil_parents_app/features/gallery/repo/gallery_repo.dart';
 import 'package:vigil_parents_app/features/notifications/models/social_notification_model.dart';
 import 'package:vigil_parents_app/features/notifications/repo/social_notification_repo.dart';
 import 'package:vigil_parents_app/features/sms/models/sms_model.dart';
@@ -22,6 +24,7 @@ class FeatureBadgesViewModel extends ChangeNotifier {
   final ContactsRepository _contacts = ContactsRepository();
   final CallLogRepository _calls = CallLogRepository();
   final EventsRepository _events = EventsRepository();
+  final GalleryRepository _gallery = GalleryRepository();
   final SocialNotificationRepository _notifications =
       SocialNotificationRepository();
 
@@ -29,6 +32,7 @@ class FeatureBadgesViewModel extends ChangeNotifier {
   int contactsUnseen = 0;
   int callsUnseen = 0;
   int eventsUnseen = 0;
+  int galleryUnseen = 0;
 
   /// Drives the notification bell's dot. Stays at 0 while no child is linked,
   /// so the bell is never marked unread for an account with nothing to show.
@@ -38,6 +42,7 @@ class FeatureBadgesViewModel extends ChangeNotifier {
   int _contactsTotal = 0;
   int _callsTotal = 0;
   int _eventsTotal = 0;
+  int _galleryTotal = 0;
   int _notificationsTotal = 0;
   String _childId = '';
 
@@ -55,6 +60,8 @@ class FeatureBadgesViewModel extends ChangeNotifier {
         return callsUnseen;
       case 'events':
         return eventsUnseen;
+      case 'gallery':
+        return galleryUnseen;
       default:
         return 0;
     }
@@ -66,7 +73,8 @@ class FeatureBadgesViewModel extends ChangeNotifier {
       // No session or no linked child — nothing can be unseen, so every badge
       // (including the notification bell's dot) has to read zero.
       _childId = '';
-      smsUnseen = contactsUnseen = callsUnseen = eventsUnseen = 0;
+      smsUnseen = contactsUnseen = callsUnseen = eventsUnseen = galleryUnseen =
+          0;
       notificationsUnseen = 0;
       notifyListeners();
       return;
@@ -97,12 +105,15 @@ class FeatureBadgesViewModel extends ChangeNotifier {
           page: 1,
           limit: 1,
         ),
-        _events.fetchAllEvents(
+        _events.fetchAllEvents(childId: ctx.childId, parentId: ctx.parentId),
+        _gallery.getFiles(
           childId: ctx.childId,
           parentId: ctx.parentId,
+          page: 1,
+          limit: 1,
         ),
         // Absorbed rather than propagated: a failure here would abandon the
-        // whole batch below and freeze the other four badges. An empty result
+        // whole batch below and freeze the other five badges. An empty result
         // just clears the bell, which is the safe direction to fail in.
         _notifications
             .getNotifications(childId: ctx.childId, parentId: ctx.parentId)
@@ -120,8 +131,9 @@ class FeatureBadgesViewModel extends ChangeNotifier {
       _contactsTotal = (results[1] as ContactsResponse).total;
       _callsTotal = (results[2] as CallLogsResponse).total;
       _eventsTotal = EventModel.dedupe(results[3] as List<EventModel>).length;
+      _galleryTotal = (results[4] as MediaResponse).total;
       _notificationsTotal =
-          (results[4] as SocialNotificationsResponse).totalMessages;
+          (results[5] as SocialNotificationsResponse).totalMessages;
     } catch (_) {
       return; // keep previous values on a transient failure
     }
@@ -130,6 +142,7 @@ class FeatureBadgesViewModel extends ChangeNotifier {
     contactsUnseen = await _computeUnseen('contacts', _contactsTotal);
     callsUnseen = await _computeUnseen('calls', _callsTotal);
     eventsUnseen = await _computeUnseen('events', _eventsTotal);
+    galleryUnseen = await _computeUnseen('gallery', _galleryTotal);
     notificationsUnseen = await _computeUnseen(
       'notifications',
       _notificationsTotal,
@@ -161,6 +174,7 @@ class FeatureBadgesViewModel extends ChangeNotifier {
       'Contacts' => 'contacts',
       'calls' => 'calls',
       'events' => 'events',
+      'gallery' => 'gallery',
       _ => null,
     };
     if (feature == null || _childId.isEmpty) return;
@@ -170,6 +184,7 @@ class FeatureBadgesViewModel extends ChangeNotifier {
       'contacts' => _contactsTotal,
       'calls' => _callsTotal,
       'events' => _eventsTotal,
+      'gallery' => _galleryTotal,
       _ => 0,
     };
     await _prefs.setInt(_seenKey(feature, _childId), total);
@@ -183,6 +198,8 @@ class FeatureBadgesViewModel extends ChangeNotifier {
         callsUnseen = 0;
       case 'events':
         eventsUnseen = 0;
+      case 'gallery':
+        galleryUnseen = 0;
     }
     notifyListeners();
   }

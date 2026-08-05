@@ -32,12 +32,31 @@ class SelectedChildViewModel extends ChangeNotifier {
     return null;
   }
 
+  /// The load currently in flight, so concurrent callers share it instead of
+  /// each starting their own fetch.
+  Future<void>? _inFlight;
+
   /// Fetches the children list and resolves the selected child from storage
   /// (falling back to the first child). Safe to call multiple times.
-  Future<void> load({bool force = false}) async {
-    if (loading) return;
-    if (!force && children.isNotEmpty && selectedId != null) return;
+  ///
+  /// Awaiting this always means "the selection is resolved". Callers rely on
+  /// that — nearly every screen does `await load(); final id = selectedId;`.
+  /// Returning early while a load was still running handed those callers a
+  /// null id and silently skipped their fetch, which is what left the home
+  /// screen's location card empty until the detail screen was opened.
+  Future<void> load({bool force = false}) {
+    final pending = _inFlight;
+    if (pending != null) return pending;
+    if (!force && children.isNotEmpty && selectedId != null) {
+      return Future.value();
+    }
 
+    final run = _load().whenComplete(() => _inFlight = null);
+    _inFlight = run;
+    return run;
+  }
+
+  Future<void> _load() async {
     loading = true;
     error = null;
     notifyListeners();

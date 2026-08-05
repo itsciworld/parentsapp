@@ -212,7 +212,10 @@ class _ChildMenuOverlay extends ConsumerWidget {
     // Anchor the menu under the trigger, aligned to its right edge, clamped
     // to stay on screen.
     double left = anchorTopLeft.dx + anchorSize.width - _menuWidth;
-    left = left.clamp(8.0, (overlaySize.width - _menuWidth - 8).clamp(8.0, double.infinity));
+    left = left.clamp(
+      8.0,
+      (overlaySize.width - _menuWidth - 8).clamp(8.0, double.infinity),
+    );
     final double top = anchorTopLeft.dy + anchorSize.height + 6;
 
     final Color fg = dark ? AppColors.textOnDark : AppColors.textPrimary;
@@ -353,7 +356,11 @@ class _ChildRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
-            const Icon(Icons.person_rounded, size: 18, color: AppColors.primary),
+            const Icon(
+              Icons.person_rounded,
+              size: 18,
+              color: AppColors.primary,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

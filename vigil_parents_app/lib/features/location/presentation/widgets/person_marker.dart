@@ -59,7 +59,11 @@ class PersonMarker {
     );
 
     // White ring + coloured head.
-    canvas.drawCircle(const Offset(cx, headCy), headR, Paint()..color = Colors.white);
+    canvas.drawCircle(
+      const Offset(cx, headCy),
+      headR,
+      Paint()..color = Colors.white,
+    );
     canvas.drawCircle(const Offset(cx, headCy), headR - 2.5, fill);
 
     // White person glyph centred in the head.

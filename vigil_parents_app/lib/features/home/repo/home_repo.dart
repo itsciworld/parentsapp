@@ -149,12 +149,6 @@ class DummyHomeRepository implements HomeRepository {
         //   isLocked: true,
         // ),
       ],
-      location: LiveLocation(
-        label: 'Live Location',
-        address: 'Connaught Place,\nNew Delhi, India',
-        accuracy: 'Accuracy: 15m',
-        isLive: true,
-      ),
       activity: ActivitySummary(
         screenTime: '3h 45m',
         screenTimeDeltaPercent: 12,

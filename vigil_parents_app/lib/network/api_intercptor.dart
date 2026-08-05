@@ -35,7 +35,9 @@ class ApiInterceptor extends Interceptor {
   /// authenticated auth path like `/api/auth/me` must still log out.
   bool _isPreAuthPath(String path) =>
       path.contains('/api/auth/login') ||
+      // Also covers `/api/auth/register-website`.
       path.contains('/api/auth/register') ||
+      path.contains('/api/auth/send-register-otp') ||
       path.contains('/api/auth/request-password-reset') ||
       path.contains('/api/auth/verify-otp') ||
       path.contains('/api/auth/reset-password') ||
@@ -124,8 +126,7 @@ class ApiInterceptor extends Interceptor {
       // register, password reset) are exempt, where the same message just means
       // "unknown credentials"; `/api/auth/me` and every data endpoint log out.
       final isUserNotFound =
-          statusCode == 404 &&
-          message.toLowerCase().contains('user not found');
+          statusCode == 404 && message.toLowerCase().contains('user not found');
       if (isUserNotFound && !_isPreAuthPath(path)) {
         await _forceLogout();
         return handler.reject(
@@ -159,13 +160,17 @@ class ApiInterceptor extends Interceptor {
       // Network / timeout
       if (err.type == DioExceptionType.connectionTimeout) {
         message = "Connection timeout. Please check your internet connection.";
-      } else if (err.type == DioExceptionType.receiveTimeout || err.type == DioExceptionType.sendTimeout) {
+      } else if (err.type == DioExceptionType.receiveTimeout ||
+          err.type == DioExceptionType.sendTimeout) {
         message = "Server not responding. Please try again later.";
       } else if (err.type == DioExceptionType.connectionError) {
-        message = "No internet connection. Please check your network and try again.";
+        message =
+            "No internet connection. Please check your network and try again.";
       } else if (err.type == DioExceptionType.unknown) {
-        if (err.error != null && err.error.toString().contains('Failed host lookup')) {
-          message = "No internet connection. Please check your network and try again.";
+        if (err.error != null &&
+            err.error.toString().contains('Failed host lookup')) {
+          message =
+              "No internet connection. Please check your network and try again.";
         } else {
           message = "Something went wrong with the network connection.";
         }

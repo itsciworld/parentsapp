@@ -18,6 +18,17 @@ val googleMapsApiKey: String = run {
     (props.getProperty("GOOGLE_MAPS_API_KEY") ?: "").trim()
 }
 
+// Release signing credentials live in android/key.properties, which is gitignored.
+// Absent (fresh clone, CI without secrets) we fall back to debug signing below so
+// `flutter build` still works — it just produces a non-publishable APK.
+val keystoreProperties: Properties? = run {
+    val propsFile = rootProject.file("key.properties")
+    if (!propsFile.exists()) return@run null
+    val props = Properties()
+    propsFile.inputStream().use { props.load(it) }
+    props
+}
+
 android {
     namespace = "com.app.parent.app"
     compileSdk = flutter.compileSdkVersion
@@ -48,11 +59,25 @@ android {
         manifestPlaceholders["MAPS_API_KEY"] = googleMapsApiKey
     }
 
+    signingConfigs {
+        if (keystoreProperties != null) {
+            create("release") {
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+                // Resolved relative to this module (android/app/).
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (keystoreProperties != null) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }

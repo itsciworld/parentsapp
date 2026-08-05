@@ -49,6 +49,7 @@ class SecureDeviceService {
   static const _emailKey = "email";
   static const _parentIdKey = "parentId";
   static const _parentNameKey = "parent_name";
+  static const _deviceKeyKey = "device_key";
   static const _childIdKey = "selected_child_id";
   static const _childDeviceKeyKey = "selected_child_device_key";
 
@@ -60,6 +61,7 @@ class SecureDeviceService {
     String? refreshToken,
     String? parentId,
     String? parentName,
+    String? deviceKey,
   }) async {
     await _write(_tokenKey, token);
     await _write(_emailKey, email);
@@ -68,6 +70,9 @@ class SecureDeviceService {
     }
     if (parentId != null) await _write(_parentIdKey, parentId);
     if (parentName != null) await _write(_parentNameKey, parentName);
+    if (deviceKey != null && deviceKey.isNotEmpty) {
+      await _write(_deviceKeyKey, deviceKey);
+    }
   }
 
   /// Replaces just the access (and optionally refresh) token after a silent
@@ -88,6 +93,11 @@ class SecureDeviceService {
   static Future<String?> getParentId() async => _read(_parentIdKey);
   static Future<String?> getParentName() async => _read(_parentNameKey);
 
+  /// The parent account's own device key, returned by `/api/auth/register-website`.
+  /// Kept separate from [getSelectedChildDeviceKey] — that one is the currently
+  /// monitored child's key and is what the interceptor sends as `x-device-key`.
+  static Future<String?> getDeviceKey() async => _read(_deviceKeyKey);
+
   // The child currently being monitored — used by SMS and the background
   // polling service so it can run without any UI present.
   static Future<void> saveSelectedChildId(String childId) async =>
@@ -107,6 +117,7 @@ class SecureDeviceService {
     await _delete(_emailKey);
     await _delete(_parentIdKey);
     await _delete(_parentNameKey);
+    await _delete(_deviceKeyKey);
     await _delete(_childIdKey);
     await _delete(_childDeviceKeyKey);
   }
@@ -121,6 +132,7 @@ class SecureDeviceService {
       _emailKey,
       _parentIdKey,
       _parentNameKey,
+      _deviceKeyKey,
       _childIdKey,
       _childDeviceKeyKey,
     ];

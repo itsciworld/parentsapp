@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/forgot_pass.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/login_view.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/otp_verification.dart';
+import 'package:vigil_parents_app/features/auth/presentation/view/register_otp_view.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/reset_password_view.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/signup.dart';
 import 'package:vigil_parents_app/features/auth/presentation/view/splash_view.dart';
@@ -25,6 +26,7 @@ class AppRoutesName {
   static const String forgotPasswordView = '/forgotPasswordView';
   static const String splashView = '/splashView';
   static const String otpVerificationView = '/otpVerificationView';
+  static const String registerOtpView = '/registerOtpView';
   static const String resetPasswordView = '/resetPasswordView';
   static const String homeView = '/homeView';
   static const String smsView = '/smsView';
@@ -59,6 +61,15 @@ class AppRouteGenerator {
         return MaterialPageRoute(
           builder: (_) =>
               OtpVerificationView(email: otpArgs?['email'] as String? ?? ''),
+        );
+      case AppRoutesName.registerOtpView:
+        final registerArgs = settings.arguments as Map<String, dynamic>?;
+        return MaterialPageRoute(
+          builder: (_) => RegisterOtpView(
+            name: registerArgs?['name'] as String? ?? '',
+            email: registerArgs?['email'] as String? ?? '',
+            password: registerArgs?['password'] as String? ?? '',
+          ),
         );
       case AppRoutesName.resetPasswordView:
         final resetArgs = settings.arguments as Map<String, dynamic>?;

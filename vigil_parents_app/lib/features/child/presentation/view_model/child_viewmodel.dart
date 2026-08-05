@@ -62,7 +62,8 @@ class ChildViewModel extends ChangeNotifier {
     try {
       final updated = await _repository.updateChildName(childId, name);
       _children = [
-        for (final c in _children) if (c.id == childId) updated else c,
+        for (final c in _children)
+          if (c.id == childId) updated else c,
       ];
     } finally {
       _updatingIds.remove(childId);

@@ -135,11 +135,7 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen> {
                       onMapCreated: (controller) {
                         _mapController = controller;
                         if (latest != null) {
-                          _animatedMove(
-                            latest.latitude,
-                            latest.longitude,
-                            16,
-                          );
+                          _animatedMove(latest.latitude, latest.longitude, 16);
                         }
                       },
                     ),

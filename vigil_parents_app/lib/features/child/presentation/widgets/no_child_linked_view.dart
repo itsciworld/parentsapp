@@ -19,7 +19,9 @@ class NoChildLinkedView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Color titleColor = dark ? AppColors.textOnDark : AppColors.textPrimary;
+    final Color titleColor = dark
+        ? AppColors.textOnDark
+        : AppColors.textPrimary;
     final Color bodyColor = dark
         ? AppColors.textOnDarkMuted
         : AppColors.textSecondary;
@@ -78,7 +80,10 @@ class NoChildLinkedView extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primary,
                 side: const BorderSide(color: AppColors.primary),
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 11),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 11,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

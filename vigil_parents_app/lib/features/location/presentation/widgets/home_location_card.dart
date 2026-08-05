@@ -108,11 +108,7 @@ class HomeLocationCard extends ConsumerWidget {
             onTap: () => _openDetail(context),
             child: Padding(
               padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-              child: _Footer(
-                vm: vm,
-                latest: latest,
-                childName: childName,
-              ),
+              child: _Footer(vm: vm, latest: latest, childName: childName),
             ),
           ),
         ],
@@ -134,6 +130,7 @@ class _MapBody extends StatefulWidget {
 
 class _MapBodyState extends State<_MapBody> {
   BitmapDescriptor? _personIcon;
+  GoogleMapController? _controller;
 
   @override
   void didChangeDependencies() {
@@ -143,6 +140,35 @@ class _MapBodyState extends State<_MapBody> {
         if (mounted) setState(() => _personIcon = b);
       });
     }
+  }
+
+  @override
+  void didUpdateWidget(covariant _MapBody oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    final now = widget.latest;
+    if (now == null) return;
+
+    final before = oldWidget.latest;
+    final moved =
+        before == null ||
+        before.latitude != now.latitude ||
+        before.longitude != now.longitude;
+    if (!moved) return;
+
+    // `initialCameraPosition` is only honoured when the map is first created,
+    // so a fix arriving while the card is on screen would move the marker but
+    // leave the camera behind — eventually off-frame. Follow it instead.
+    // moveCamera, not animateCamera: lite mode doesn't run camera animations.
+    _controller?.moveCamera(
+      CameraUpdate.newLatLng(LatLng(now.latitude, now.longitude)),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller?.dispose();
+    super.dispose();
   }
 
   @override
@@ -186,6 +212,7 @@ class _MapBodyState extends State<_MapBody> {
     final point = LatLng(latest.latitude, latest.longitude);
     return GoogleMap(
       initialCameraPosition: CameraPosition(target: point, zoom: 15),
+      onMapCreated: (c) => _controller = c,
       markers: {
         Marker(
           markerId: const MarkerId('latest'),
@@ -303,10 +330,7 @@ class _LiveChip extends StatelessWidget {
         color: Colors.white.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.12),
-            blurRadius: 8,
-          ),
+          BoxShadow(color: Colors.black.withValues(alpha: 0.12), blurRadius: 8),
         ],
       ),
       child: Row(
