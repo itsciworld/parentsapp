@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
-import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/widgets/app_icon_avatar.dart';
 import 'package:vigil_parents_app/features/social_apps/presentation/view/social_screen_view.dart';
 import 'package:vigil_parents_app/features/social_apps/presentation/view_model/social_screen_viewmodel.dart';
@@ -12,10 +11,6 @@ import 'package:vigil_parents_app/features/social_apps/presentation/view_model/s
 class SocialAppsCard extends ConsumerWidget {
   const SocialAppsCard({super.key});
 
-  /// Locked until the paid version — tapping surfaces a toast instead of
-  /// opening the full social screen.
-  static const bool _locked = true;
-
   /// The social apps the card always previews, so every brand logo is shown
   /// regardless of which apps currently have captured data. (appName, package)
   static const List<(String, String)> _socialApps = [
@@ -24,20 +19,6 @@ class SocialAppsCard extends ConsumerWidget {
     ('Snapchat', 'com.snapchat.android'),
     ('Facebook', 'com.facebook.katana'),
   ];
-
-  void _onTap(BuildContext context) {
-    if (_locked) {
-      showAppToast(
-        context: context,
-        title: 'Premium Feature',
-        subtitle: 'Social Apps is coming in the paid version.',
-        type: ToastType.info,
-        icon: Icons.lock_rounded,
-      );
-      return;
-    }
-    _open(context);
-  }
 
   void _open(BuildContext context) {
     Navigator.of(context).push(
@@ -78,7 +59,7 @@ class SocialAppsCard extends ConsumerWidget {
       color: AppColors.surface,
       borderRadius: BorderRadius.circular(20),
       child: InkWell(
-        onTap: () => _onTap(context),
+        onTap: () => _open(context),
         borderRadius: BorderRadius.circular(20),
         child: Container(
           padding: const EdgeInsets.all(16),
@@ -160,19 +141,13 @@ class SocialAppsCard extends ConsumerWidget {
                     height: 26,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
-                      color: _locked
-                          ? Colors.grey.shade200
-                          : AppColors.purpleIcon.withValues(alpha: 0.1),
+                      color: AppColors.purpleIcon.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(
-                      _locked
-                          ? Icons.lock_rounded
-                          : Icons.chevron_right_rounded,
-                      color: _locked
-                          ? Colors.grey.shade500
-                          : AppColors.purpleIcon,
-                      size: _locked ? 15 : 20,
+                    child: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.purpleIcon,
+                      size: 20,
                     ),
                   ),
                 ],

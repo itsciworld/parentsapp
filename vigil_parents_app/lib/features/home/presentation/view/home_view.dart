@@ -5,7 +5,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
-import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 // App Usage section is commented out on home for now.
 // import 'package:vigil_parents_app/features/app_usage/presentation/widgets/activity_overview_card.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
@@ -365,17 +364,13 @@ class _LoadedView extends ConsumerWidget {
                         showNotifications: hasChild,
                         notificationCount: badges.notificationsUnseen,
                         onParentTap: onParentTap,
-                        // Notifications are locked until the paid version —
-                        // tapping shows a toast instead of opening them.
+                        // Opening the bell is what "seen" means here, so the
+                        // dot clears as the screen is pushed.
                         onNotificationsTap: () {
-                          showAppToast(
-                            context: context,
-                            title: 'Premium Feature',
-                            subtitle:
-                                'Notifications are coming in the paid version.',
-                            type: ToastType.info,
-                            icon: Icons.lock_rounded,
-                          );
+                          ref
+                              .read(featureBadgesProvider)
+                              .markNotificationsSeen();
+                          vm.onNotificationsTapped(context);
                         },
                       ),
                     ),
@@ -713,10 +708,6 @@ class _TopBar extends StatelessWidget {
   }
 }
 
-/// Notifications are locked until the paid version — the bell shows a lock
-/// badge and tapping surfaces a toast instead of opening notifications.
-const bool _notificationsLocked = true;
-
 class _NotifBell extends StatelessWidget {
   final int count;
   final VoidCallback onTap;
@@ -744,27 +735,8 @@ class _NotifBell extends StatelessWidget {
               color: AppColors.textPrimary,
               size: 24,
             ),
-            // Lock badge while notifications are gated.
-            if (_notificationsLocked)
-              Positioned(
-                top: -4,
-                right: -4,
-                child: Container(
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.surface, width: 1.5),
-                  ),
-                  child: Icon(
-                    Icons.lock_rounded,
-                    size: 11,
-                    color: Colors.grey.shade600,
-                  ),
-                ),
-              )
-            // Unread dot (only when not locked).
-            else if (count > 0)
+            // Unread dot.
+            if (count > 0)
               Positioned(
                 top: 10,
                 right: 12,

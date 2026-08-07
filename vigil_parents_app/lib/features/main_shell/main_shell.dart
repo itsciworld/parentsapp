@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/components/bottom_bar.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
-import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/features/ai_insights/presentation/view/ai_insights_view.dart';
 import 'package:vigil_parents_app/features/ai_insights/presentation/view_model/ai_insights_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view/child_view.dart';
@@ -30,13 +29,7 @@ class _MainShellState extends ConsumerState<MainShell> {
   static const _navItems = <CustomNavItem>[
     CustomNavItem(icon: Icons.home_rounded, label: 'Home'),
     CustomNavItem(icon: Icons.child_care_rounded, label: 'Child'),
-    // AI Insights is gated until the paid version — tapping it shows a toast
-    // instead of switching to the tab.
-    CustomNavItem(
-      icon: Icons.auto_awesome_rounded,
-      label: 'AI Insights',
-      locked: true,
-    ),
+    CustomNavItem(icon: Icons.auto_awesome_rounded, label: 'AI Insights'),
     CustomNavItem(icon: Icons.person_rounded, label: 'Profile'),
   ];
 
@@ -63,18 +56,6 @@ class _MainShellState extends ConsumerState<MainShell> {
   }
 
   void _onTabSelected(int index) {
-    // AI Insights is locked until the paid version — show a toast and stay put
-    // instead of opening the tab.
-    if (index == _aiTabIndex) {
-      showAppToast(
-        context: context,
-        title: 'Premium Feature',
-        subtitle: 'AI Insights is coming in the paid version.',
-        type: ToastType.info,
-        icon: Icons.lock_rounded,
-      );
-      return;
-    }
     if (index == _currentIndex) return;
     _openTab(index);
   }
@@ -85,6 +66,9 @@ class _MainShellState extends ConsumerState<MainShell> {
     _visitedTabs.add(index);
     setState(() => _currentIndex = index);
     ref.read(visibleTabProvider.notifier).state = index;
+    // AI Insights has no background job and the view doesn't fetch on its own,
+    // so the shell kicks off the analysis whenever the tab is opened.
+    if (index == _aiTabIndex) _loadAiInsights();
   }
 
   /// Resolves the selected child and runs today's AI analysis. The shimmer
