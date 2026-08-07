@@ -24,6 +24,8 @@ class ChildPermissions {
   final bool callLog;
   final bool calendar;
   final bool location;
+  final bool appUsage;
+  final bool networkWifi;
   final bool readNotification;
   final bool readChat;
 
@@ -43,6 +45,8 @@ class ChildPermissions {
     required this.callLog,
     required this.calendar,
     required this.location,
+    required this.appUsage,
+    required this.networkWifi,
     required this.readNotification,
     required this.readChat,
   });
@@ -71,9 +75,37 @@ class ChildPermissions {
       callLog: data['call_log'] == true,
       calendar: data['calendar'] == true,
       location: data['location'] == true,
+      appUsage: data['app_usage'] == true,
+      networkWifi: data['network_wifi'] == true,
       readNotification: data['read_notification'] == true,
       readChat: data['read_chat'] == true,
     );
+  }
+
+  /// Whether the child's device is sharing the data behind [feature].
+  ///
+  /// A screen with a `false` here has nothing to show and never will until the
+  /// child turns the permission back on — so it says that instead of rendering
+  /// an "empty" list that looks like a bug.
+  bool allows(ChildFeature feature) {
+    switch (feature) {
+      case ChildFeature.messages:
+        return messages;
+      case ChildFeature.calls:
+        return callLog;
+      case ChildFeature.contacts:
+        return contacts;
+      case ChildFeature.calendar:
+        return calendar;
+      case ChildFeature.location:
+        return location;
+      case ChildFeature.appUsage:
+        return appUsage;
+      case ChildFeature.notifications:
+        return readNotification;
+      case ChildFeature.chats:
+        return readChat;
+    }
   }
 
   /// All permissions in display order with labels + icons.
@@ -84,6 +116,8 @@ class ChildPermissions {
     PermissionItem('Call Logs', Icons.call_outlined, callLog),
     PermissionItem('Calendar', Icons.calendar_today_outlined, calendar),
     PermissionItem('Location', Icons.location_on_outlined, location),
+    PermissionItem('App Usage', Icons.apps_rounded, appUsage),
+    PermissionItem('Network & Wi-Fi', Icons.wifi_rounded, networkWifi),
     PermissionItem(
       'Read Notifications',
       Icons.notifications_outlined,
@@ -138,6 +172,51 @@ class ChildPermissions {
   /// Only the permissions the child has granted (true).
   List<PermissionItem> get grantedItems =>
       _all.where((p) => p.granted).toList();
+}
+
+/// A monitoring screen, paired with the child permission that feeds it.
+///
+/// [what] completes the sentence "… so `what` can't be shown here".
+enum ChildFeature {
+  messages(label: 'Messages', icon: Icons.sms_outlined, what: 'messages'),
+  calls(label: 'Call Logs', icon: Icons.call_outlined, what: 'call history'),
+  contacts(label: 'Contacts', icon: Icons.contacts_outlined, what: 'contacts'),
+  calendar(
+    label: 'Calendar',
+    icon: Icons.calendar_today_outlined,
+    what: 'calendar events',
+  ),
+  location(
+    label: 'Location',
+    icon: Icons.location_on_outlined,
+    what: 'location history',
+  ),
+  appUsage(
+    label: 'App Usage',
+    icon: Icons.apps_rounded,
+    what: 'app usage stats',
+  ),
+  notifications(
+    label: 'Read Notifications',
+    icon: Icons.notifications_outlined,
+    what: 'notifications',
+  ),
+  chats(
+    label: 'Read Chats',
+    icon: Icons.chat_bubble_outline_rounded,
+    what: 'chat messages',
+  );
+
+  const ChildFeature({
+    required this.label,
+    required this.icon,
+    required this.what,
+  });
+
+  /// The permission's name as the child sees it in the Vigil Child app.
+  final String label;
+  final IconData icon;
+  final String what;
 }
 
 /// A single permission for the UI.

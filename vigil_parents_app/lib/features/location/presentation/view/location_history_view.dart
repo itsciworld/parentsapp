@@ -7,8 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/permission_denied_view.dart';
 import 'package:vigil_parents_app/features/location/models/location_model.dart';
 import 'package:vigil_parents_app/features/location/presentation/view_model/location_history_viewmodel.dart';
 
@@ -46,8 +49,10 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen> {
     super.initState();
     Future.microtask(() async {
       await ref.read(selectedChildProvider).load();
+      if (!mounted) return;
       final id = ref.read(selectedChildProvider).selectedId;
       if (id == null) return;
+      ref.read(childPermissionsProvider).ensureLoadedFor(id);
       ref.read(locationHistoryViewModelProvider).load(id);
     });
   }
@@ -66,6 +71,7 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen> {
       _markerCache.clear(); // Clear cache when switching children
     });
     ref.read(locationHistoryViewModelProvider).load(childId);
+    ref.read(childPermissionsProvider).load(childId);
   }
 
   /// A stable signature for a fetched trail — changes when the points change.
@@ -271,6 +277,53 @@ class _LocationHistoryScreenState extends ConsumerState<LocationHistoryScreen> {
   Widget build(BuildContext context) {
     final vm = ref.watch(locationHistoryViewModelProvider);
     final points = vm.locations;
+
+    // Location sharing is off on the child's device — the map would only ever
+    // sit empty, so the screen explains why instead.
+    final selectedChild = ref.watch(selectedChildProvider);
+    final permsVm = ref.watch(childPermissionsProvider);
+    final denied = permsVm.isDenied(
+      selectedChild.selectedId,
+      ChildFeature.location,
+    );
+    if (denied) {
+      // Taking this branch removes the GoogleMap while this State stays alive,
+      // which disposes the controller under us. Drop the reference so a camera
+      // callback queued from an earlier frame can't drive a dead map, and
+      // reset the framing state so the trail is re-fitted if access returns.
+      _mapController = null;
+      _fittedKey = null;
+      _markersSig = null;
+
+      return Scaffold(
+        backgroundColor: AppColors.scaffold,
+        bottomNavigationBar: const AppBottomNav(),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              const AppHeader(),
+              _TitleBar(
+                onChildSelected: _onChildSelected,
+                count: 0,
+                hours: vm.hours,
+                loading: false,
+              ),
+              Expanded(
+                child: PermissionDeniedBody(
+                  feature: ChildFeature.location,
+                  childName: selectedChild.selected?.name,
+                  refreshing: permsVm.loading,
+                  onRefresh: () => ref
+                      .read(childPermissionsProvider)
+                      .load(selectedChild.selectedId!),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     // Frame the trail once per new dataset.
     final key = _keyFor(points);

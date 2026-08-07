@@ -9,9 +9,12 @@ import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/components/app_search_field.dart';
 import 'package:vigil_parents_app/components/app_shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/permission_denied_view.dart';
 import 'package:vigil_parents_app/features/contact/models/contacts_model.dart';
 import 'package:vigil_parents_app/features/contact/presentation/view_model/contacts_viewmodel.dart';
 
@@ -41,7 +44,10 @@ class _ContactsPageState extends ConsumerState<ContactsPage>
 
     Future.microtask(() async {
       await ref.read(selectedChildProvider).load();
+      if (!mounted) return;
       ref.read(contactsViewModelProvider).loadContacts();
+      final id = ref.read(selectedChildProvider).selectedId;
+      if (id != null) ref.read(childPermissionsProvider).ensureLoadedFor(id);
     });
 
     startPolling();
@@ -56,6 +62,7 @@ class _ContactsPageState extends ConsumerState<ContactsPage>
 
   void _onChildSelected(String childId) {
     ref.read(contactsViewModelProvider).reload();
+    ref.read(childPermissionsProvider).load(childId);
   }
 
   void _openDetail(ContactModel contact) {
@@ -141,6 +148,13 @@ class _ContactsPageState extends ConsumerState<ContactsPage>
 
     final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
 
+    // Contacts sharing is switched off on the child's device.
+    final permsVm = ref.watch(childPermissionsProvider);
+    final denied = permsVm.isDenied(
+      selectedChild.selectedId,
+      ChildFeature.contacts,
+    );
+
     return Scaffold(
       backgroundColor: Colors.white,
       bottomNavigationBar: const AppBottomNav(),
@@ -189,35 +203,53 @@ class _ContactsPageState extends ConsumerState<ContactsPage>
 
                 const SizedBox(height: 14),
 
-                /// SEARCH
-                AppSearchField(
-                  controller: _searchController,
-                  hint: 'Search name or number...',
-                  value: vm.query,
-                  onChanged: (value) =>
-                      ref.read(contactsViewModelProvider).setQuery(value),
-                  onClear: () {
-                    _searchController.clear();
-                    ref.read(contactsViewModelProvider).setQuery('');
-                  },
-                ),
-
-                const SizedBox(height: 14),
-
-                _ContactsSummary(
-                  shown: vm.contacts.length,
-                  total: vm.total,
-                  filtered: vm.query.isNotEmpty,
-                ),
-
-                const SizedBox(height: 12),
-
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: vm.refresh,
-                    child: _buildList(vm, size),
+                if (denied)
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () => ref
+                          .read(childPermissionsProvider)
+                          .load(selectedChild.selectedId!),
+                      child: PermissionDeniedBody(
+                        feature: ChildFeature.contacts,
+                        childName: selectedChild.selected?.name,
+                        refreshing: permsVm.loading,
+                        onRefresh: () => ref
+                            .read(childPermissionsProvider)
+                            .load(selectedChild.selectedId!),
+                      ),
+                    ),
+                  )
+                else ...[
+                  /// SEARCH
+                  AppSearchField(
+                    controller: _searchController,
+                    hint: 'Search name or number...',
+                    value: vm.query,
+                    onChanged: (value) =>
+                        ref.read(contactsViewModelProvider).setQuery(value),
+                    onClear: () {
+                      _searchController.clear();
+                      ref.read(contactsViewModelProvider).setQuery('');
+                    },
                   ),
-                ),
+
+                  const SizedBox(height: 14),
+
+                  _ContactsSummary(
+                    shown: vm.contacts.length,
+                    total: vm.total,
+                    filtered: vm.query.isNotEmpty,
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: vm.refresh,
+                      child: _buildList(vm, size),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),

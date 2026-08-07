@@ -100,8 +100,9 @@ class AppIconAvatar extends StatelessWidget {
         ? appName.trim()[0].toUpperCase()
         : '?';
     // Yellow brand (Snapchat) needs dark text for contrast.
-    final onColor =
-        color.computeLuminance() > 0.6 ? Colors.black87 : Colors.white;
+    final onColor = color.computeLuminance() > 0.6
+        ? Colors.black87
+        : Colors.white;
 
     return Container(
       width: size,

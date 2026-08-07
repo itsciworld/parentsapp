@@ -95,7 +95,8 @@ class SmsThread {
       address: (json['address'] ?? '').toString(),
       messages: messages,
       count: _toInt(json['count'], fallback: messages.length),
-      lastMessageAt: _toDate(json['last_message_at']) ??
+      lastMessageAt:
+          _toDate(json['last_message_at']) ??
           (messages.isEmpty ? null : messages.last.date),
     );
   }

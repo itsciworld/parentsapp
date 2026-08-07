@@ -76,7 +76,8 @@ final aiInsightsRepositoryProvider = Provider<AiInsightsRepository>((ref) {
   return AiInsightsRepository();
 });
 
-final aiInsightsViewModelProvider =
-    ChangeNotifierProvider<AiInsightsViewModel>((ref) {
-      return AiInsightsViewModel(ref.read(aiInsightsRepositoryProvider));
-    });
+final aiInsightsViewModelProvider = ChangeNotifierProvider<AiInsightsViewModel>(
+  (ref) {
+    return AiInsightsViewModel(ref.read(aiInsightsRepositoryProvider));
+  },
+);

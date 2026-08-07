@@ -9,6 +9,7 @@ import 'package:vigil_parents_app/features/ai_insights/presentation/view_model/a
 import 'package:vigil_parents_app/features/child/presentation/view/child_view.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/presentation/view/home_view.dart';
+import 'package:vigil_parents_app/features/main_shell/shell_tabs.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view/profile_view.dart';
 
 class MainShell extends ConsumerStatefulWidget {
@@ -23,8 +24,8 @@ class MainShell extends ConsumerStatefulWidget {
 class _MainShellState extends ConsumerState<MainShell> {
   late int _currentIndex = widget.initialIndex;
 
-  static const int _aiTabIndex = 2;
-  static const int _profileTabIndex = 3;
+  static const int _aiTabIndex = ShellTabs.aiInsights;
+  static const int _profileTabIndex = ShellTabs.profile;
 
   static const _navItems = <CustomNavItem>[
     CustomNavItem(icon: Icons.home_rounded, label: 'Home'),
@@ -41,9 +42,21 @@ class _MainShellState extends ConsumerState<MainShell> {
 
   DateTime? _lastBackPressed;
 
+  /// Tabs are built lazily: a page is only created the first time it is
+  /// opened, so its `initState` (and first API call) runs when the user
+  /// actually lands on the tab instead of at app start.
+  late final Set<int> _visitedTabs = <int>{widget.initialIndex};
+
   @override
   void initState() {
     super.initState();
+    if (widget.initialIndex != ShellTabs.home) {
+      // Publish the starting tab without touching a provider inside build.
+      Future.microtask(() {
+        if (!mounted) return;
+        ref.read(visibleTabProvider.notifier).state = widget.initialIndex;
+      });
+    }
     if (_currentIndex == _aiTabIndex) {
       Future.microtask(_loadAiInsights);
     }
@@ -63,7 +76,15 @@ class _MainShellState extends ConsumerState<MainShell> {
       return;
     }
     if (index == _currentIndex) return;
+    _openTab(index);
+  }
+
+  /// Switches to [index], building the page on its first visit and announcing
+  /// the change so the page can refresh itself (see [visibleTabProvider]).
+  void _openTab(int index) {
+    _visitedTabs.add(index);
     setState(() => _currentIndex = index);
+    ref.read(visibleTabProvider.notifier).state = index;
   }
 
   /// Resolves the selected child and runs today's AI analysis. The shimmer
@@ -82,8 +103,8 @@ class _MainShellState extends ConsumerState<MainShell> {
   /// - On a non-Home tab → jump back to the Home tab.
   /// - On the Home tab → require two presses within 2s to exit the app.
   void _handleBack() {
-    if (_currentIndex != 0) {
-      setState(() => _currentIndex = 0);
+    if (_currentIndex != ShellTabs.home) {
+      _openTab(ShellTabs.home);
       return;
     }
 
@@ -106,13 +127,24 @@ class _MainShellState extends ConsumerState<MainShell> {
     SystemNavigator.pop();
   }
 
+  Widget _pageFor(int index) {
+    switch (index) {
+      case ShellTabs.home:
+        return HomeScreen(onProfileTap: () => _onTabSelected(_profileTabIndex));
+      case ShellTabs.child:
+        return const ChildView();
+      case _aiTabIndex:
+        return const AiInsightsView();
+      default:
+        return const ProfileView();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      HomeScreen(onProfileTap: () => _onTabSelected(_profileTabIndex)),
-      const ChildView(),
-      const AiInsightsView(),
-      const ProfileView(),
+      for (var i = 0; i < _navItems.length; i++)
+        if (_visitedTabs.contains(i)) _pageFor(i) else const SizedBox.shrink(),
     ];
 
     return PopScope(

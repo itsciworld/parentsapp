@@ -5,8 +5,11 @@ import 'package:vigil_parents_app/components/app_shimmer.dart';
 import 'package:vigil_parents_app/components/day_window_selector.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/widgets/app_icon_avatar.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/permission_denied_view.dart';
 import 'package:vigil_parents_app/features/notifications/models/social_notification_model.dart';
 import 'package:vigil_parents_app/features/notifications/presentation/view_model/social_notification_viewmodel.dart';
 
@@ -34,6 +37,7 @@ class _SocialNotificationsScreenState
       if (!mounted) return;
       final id = ref.read(selectedChildProvider).selectedId;
       if (id != null) {
+        ref.read(childPermissionsProvider).ensureLoadedFor(id);
         await ref.read(socialNotificationViewModelProvider).load(id);
       }
     });
@@ -41,6 +45,7 @@ class _SocialNotificationsScreenState
 
   void _onChildSelected(String childId) {
     ref.read(socialNotificationViewModelProvider).load(childId);
+    ref.read(childPermissionsProvider).load(childId);
   }
 
   void _onWindowChanged(DayWindow w) {
@@ -89,8 +94,9 @@ class _SocialNotificationsScreenState
               _AppFilterBar(
                 apps: vm.apps,
                 selected: vm.filterPackage,
-                onSelected: (pkg) =>
-                    ref.read(socialNotificationViewModelProvider).setFilter(pkg),
+                onSelected: (pkg) => ref
+                    .read(socialNotificationViewModelProvider)
+                    .setFilter(pkg),
               ),
             Expanded(
               child: RefreshIndicator(
@@ -107,6 +113,22 @@ class _SocialNotificationsScreenState
   }
 
   Widget _buildContent(SocialNotificationViewModel vm) {
+    // Notification access is off on the child's device, so nothing is captured.
+    final selectedChild = ref.watch(selectedChildProvider);
+    final permsVm = ref.watch(childPermissionsProvider);
+    if (permsVm.isDenied(
+      selectedChild.selectedId,
+      ChildFeature.notifications,
+    )) {
+      return PermissionDeniedBody(
+        feature: ChildFeature.notifications,
+        childName: selectedChild.selected?.name,
+        refreshing: permsVm.loading,
+        onRefresh: () =>
+            ref.read(childPermissionsProvider).load(selectedChild.selectedId!),
+      );
+    }
+
     // Show the skeleton while (re)loading — first load or a day-window switch —
     // so the screen never looks frozen.
     if (vm.loading) {
@@ -131,9 +153,7 @@ class _SocialNotificationsScreenState
       itemBuilder: (context, i) => _ThreadRow(
         item: threads[i],
         onTap: () => Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => _ThreadChatView(item: threads[i]),
-          ),
+          MaterialPageRoute(builder: (_) => _ThreadChatView(item: threads[i])),
         ),
       ),
     );
@@ -291,10 +311,7 @@ class _FilterChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (leading != null) ...[
-              leading!,
-              const SizedBox(width: 7),
-            ],
+            if (leading != null) ...[leading!, const SizedBox(width: 7)],
             Text(
               label,
               style: TextStyle(
@@ -342,7 +359,9 @@ class _ThreadRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final thread = item.thread;
     final color = AppIconAvatar.colorFor(item.app, item.package);
-    final who = thread.conversation.isNotEmpty ? thread.conversation : 'Unknown';
+    final who = thread.conversation.isNotEmpty
+        ? thread.conversation
+        : 'Unknown';
     final preview = thread.lastPreview.isNotEmpty ? thread.lastPreview : '—';
     final isGroup = thread.messages.any((m) => m.isGroup);
 
@@ -470,16 +489,19 @@ class _ThreadChatView extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = AppIconAvatar.colorFor(item.app, item.package);
     final thread = item.thread;
-    final who = thread.conversation.isNotEmpty ? thread.conversation : 'Unknown';
+    final who = thread.conversation.isNotEmpty
+        ? thread.conversation
+        : 'Unknown';
 
-    final messages = [...thread.messages]..sort((a, b) {
-      final at = a.timestamp;
-      final bt = b.timestamp;
-      if (at == null && bt == null) return 0;
-      if (at == null) return 1;
-      if (bt == null) return -1;
-      return bt.compareTo(at);
-    });
+    final messages = [...thread.messages]
+      ..sort((a, b) {
+        final at = a.timestamp;
+        final bt = b.timestamp;
+        if (at == null && bt == null) return 0;
+        if (at == null) return 1;
+        if (bt == null) return -1;
+        return bt.compareTo(at);
+      });
 
     return Scaffold(
       backgroundColor: AppColors.scaffold,
@@ -530,11 +552,7 @@ class _ChatTitleBar extends StatelessWidget {
             color: AppColors.textPrimary,
             onPressed: () => Navigator.of(context).pop(),
           ),
-          AppIconAvatar(
-            appName: item.app,
-            packageName: item.package,
-            size: 38,
-          ),
+          AppIconAvatar(appName: item.app, packageName: item.package, size: 38),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -648,8 +666,18 @@ String _relativeTime(DateTime? time) {
   if (diff.inHours < 24) return '${diff.inHours}h';
   if (diff.inDays < 7) return '${diff.inDays}d';
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return '${months[time.month - 1]} ${time.day}';
 }

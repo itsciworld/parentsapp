@@ -46,8 +46,10 @@ class SocialAppsCard extends ConsumerWidget {
         reverseTransitionDuration: const Duration(milliseconds: 320),
         pageBuilder: (_, _, _) => const SocialScreenView(),
         transitionsBuilder: (_, animation, _, child) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return FadeTransition(
             opacity: curved,
             child: ScaleTransition(

@@ -279,8 +279,7 @@ class MediaTile extends StatelessWidget {
                     ),
 
                     // Play button for videos.
-                    if (item.isVideo)
-                      const Center(child: _PlayBadge()),
+                    if (item.isVideo) const Center(child: _PlayBadge()),
 
                     // Favorite indicator.
                     if (item.isFavorite)
@@ -332,7 +331,9 @@ class MediaTile extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            item.formattedTime.isNotEmpty ? item.formattedTime : item.displayName,
+            item.formattedTime.isNotEmpty
+                ? item.formattedTime
+                : item.displayName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
@@ -402,7 +403,11 @@ class _PlayBadge extends StatelessWidget {
         shape: BoxShape.circle,
         border: Border.all(color: Colors.white70, width: 1.5),
       ),
-      child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 28),
+      child: const Icon(
+        Icons.play_arrow_rounded,
+        color: Colors.white,
+        size: 28,
+      ),
     );
   }
 }

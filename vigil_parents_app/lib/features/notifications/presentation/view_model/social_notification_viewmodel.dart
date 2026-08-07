@@ -49,11 +49,7 @@ class SocialNotificationViewModel extends ChangeNotifier {
       if (_filterPackage != null && app.package != _filterPackage) continue;
       for (final t in app.threads) {
         result.add(
-          NotificationThreadItem(
-            app: app.app,
-            package: app.package,
-            thread: t,
-          ),
+          NotificationThreadItem(app: app.app, package: app.package, thread: t),
         );
       }
     }

@@ -60,9 +60,9 @@ class _AiInsightsViewState extends ConsumerState<AiInsightsView> {
   }
 
   void _openReport() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const AiReportView()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const AiReportView()));
   }
 
   Widget _buildContent(
@@ -77,8 +77,7 @@ class _AiInsightsViewState extends ConsumerState<AiInsightsView> {
         children: [
           NoChildLinkedView(
             refreshing: selectedChild.loading,
-            onRefresh: () =>
-                ref.read(selectedChildProvider).load(force: true),
+            onRefresh: () => ref.read(selectedChildProvider).load(force: true),
           ),
         ],
       );
@@ -193,8 +192,18 @@ String _friendlyDate(String yyyyMmDd) {
   final parts = yyyyMmDd.split('-');
   if (parts.length != 3) return yyyyMmDd;
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   final month = int.tryParse(parts[1]);
   final day = int.tryParse(parts[2]);
@@ -331,9 +340,7 @@ class _WellnessCard extends StatelessWidget {
       case 'moderate':
         return AppColors.warning;
       default:
-        return intel.wellnessScore >= 70
-            ? AppColors.primary
-            : AppColors.alert;
+        return intel.wellnessScore >= 70 ? AppColors.primary : AppColors.alert;
     }
   }
 
@@ -808,7 +815,13 @@ class _EmotionChartCard extends StatelessWidget {
   const _EmotionChartCard({required this.emotions});
 
   static const _order = [
-    'joy', 'neutral', 'surprise', 'sadness', 'fear', 'anger', 'disgust',
+    'joy',
+    'neutral',
+    'surprise',
+    'sadness',
+    'fear',
+    'anger',
+    'disgust',
   ];
   static const _labels = {
     'joy': 'Joy',
@@ -975,8 +988,7 @@ class _BulletCard extends StatelessWidget {
           const SizedBox(height: 10),
           for (var i = 0; i < items.length; i++)
             Padding(
-              padding:
-                  EdgeInsets.only(bottom: i == items.length - 1 ? 0 : 8),
+              padding: EdgeInsets.only(bottom: i == items.length - 1 ? 0 : 8),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1538,8 +1550,7 @@ class _MessageView extends StatelessWidget {
           child: FilledButton.icon(
             style: FilledButton.styleFrom(
               backgroundColor: AppColors.primary,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
             ),
             onPressed: onAction,
             icon: const Icon(Icons.refresh_rounded, size: 18),

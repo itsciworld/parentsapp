@@ -48,7 +48,8 @@ final deviceInfoRepositoryProvider = Provider<DeviceInfoRepository>((ref) {
   return DeviceInfoRepository();
 });
 
-final deviceInfoViewModelProvider =
-    ChangeNotifierProvider<DeviceInfoViewModel>((ref) {
-      return DeviceInfoViewModel(ref.read(deviceInfoRepositoryProvider));
-    });
+final deviceInfoViewModelProvider = ChangeNotifierProvider<DeviceInfoViewModel>(
+  (ref) {
+    return DeviceInfoViewModel(ref.read(deviceInfoRepositoryProvider));
+  },
+);

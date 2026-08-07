@@ -17,11 +17,7 @@ class CheckoutWebView extends StatefulWidget {
   final String url;
   final String planName;
 
-  const CheckoutWebView({
-    super.key,
-    required this.url,
-    required this.planName,
-  });
+  const CheckoutWebView({super.key, required this.url, required this.planName});
 
   @override
   State<CheckoutWebView> createState() => _CheckoutWebViewState();
@@ -99,10 +95,7 @@ class _CheckoutWebViewState extends State<CheckoutWebView> {
   Future<void> _openExternally() async {
     debugPrint('🌐 Checkout: opening EXTERNAL browser → ${widget.url}');
     final uri = Uri.parse(widget.url);
-    final launched = await launchUrl(
-      uri,
-      mode: LaunchMode.externalApplication,
-    );
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
     debugPrint('🌐 Checkout: external browser launched → $launched');
     if (launched) _finish(CheckoutResult.returned);
   }

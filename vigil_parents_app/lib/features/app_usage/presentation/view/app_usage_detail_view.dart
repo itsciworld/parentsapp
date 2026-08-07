@@ -11,7 +11,10 @@ import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/app_usage/models/app_usage_model.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/view_model/app_usage_viewmodel.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/widgets/app_icon_avatar.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/permission_denied_view.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 
 /// Full-screen app-usage breakdown: total screen time, an animated bar chart of
@@ -45,9 +48,11 @@ class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen>
     // Always fetch fresh stats on open - default to today's history.
     Future.microtask(() async {
       await ref.read(selectedChildProvider).load();
+      if (!mounted) return;
       final vm = ref.read(appUsageViewModelProvider);
       final id = ref.read(selectedChildProvider).selectedId;
       if (id == null) return;
+      ref.read(childPermissionsProvider).ensureLoadedFor(id);
       // Load today's history by default
       await vm.loadHistory(id, AppUsageDateRange.today);
     });
@@ -66,6 +71,7 @@ class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen>
     final vm = ref.read(appUsageViewModelProvider);
     // Load history with current date range
     vm.loadHistory(childId, vm.dateRange);
+    ref.read(childPermissionsProvider).load(childId);
   }
 
   @override
@@ -112,6 +118,19 @@ class _AppUsageDetailScreenState extends ConsumerState<AppUsageDetailScreen>
     List<AppUsage> visible,
     String? childName,
   ) {
+    // Usage tracking is off on the child's device — no stats will ever arrive.
+    final selectedChild = ref.watch(selectedChildProvider);
+    final permsVm = ref.watch(childPermissionsProvider);
+    if (permsVm.isDenied(selectedChild.selectedId, ChildFeature.appUsage)) {
+      return PermissionDeniedBody(
+        feature: ChildFeature.appUsage,
+        childName: childName,
+        refreshing: permsVm.loading,
+        onRefresh: () =>
+            ref.read(childPermissionsProvider).load(selectedChild.selectedId!),
+      );
+    }
+
     if (vm.loading && apps.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }

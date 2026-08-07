@@ -55,10 +55,7 @@ class _UpgradePlanCardState extends ConsumerState<UpgradePlanCard> {
     final currentFeatures =
         vm.mySubscription.currentFeatures ??
         vm.plans
-            .firstWhere(
-              (p) => p.isFree,
-              orElse: () => vm.plans.first,
-            )
+            .firstWhere((p) => p.isFree, orElse: () => vm.plans.first)
             .features;
 
     final items = PlanFeatures.catalogue(enabledIn: currentFeatures);
@@ -263,7 +260,6 @@ class _FeatureChip extends StatelessWidget {
     );
   }
 }
-
 
 class _LoadingCard extends StatelessWidget {
   const _LoadingCard();

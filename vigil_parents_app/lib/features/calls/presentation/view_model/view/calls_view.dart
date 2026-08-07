@@ -12,9 +12,12 @@ import 'package:vigil_parents_app/components/day_window_selector.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/calls/models/calls_model.dart';
 import 'package:vigil_parents_app/features/calls/presentation/view_model/calls_viewmodel.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/permission_denied_view.dart';
 
 // Call-type colors.
 const _incomingColor = Color(0xFF2E7D32);
@@ -64,7 +67,10 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen>
     super.initState();
     Future.microtask(() async {
       await ref.read(selectedChildProvider).load();
+      if (!mounted) return;
       ref.read(callLogViewModelProvider).loadCallLogs();
+      final id = ref.read(selectedChildProvider).selectedId;
+      if (id != null) ref.read(childPermissionsProvider).ensureLoadedFor(id);
     });
     startPolling();
   }
@@ -78,6 +84,7 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen>
 
   void _onChildSelected(String childId) {
     ref.read(callLogViewModelProvider).reload();
+    ref.read(childPermissionsProvider).load(childId);
   }
 
   void _openDetail(CallLogModel log) {
@@ -96,6 +103,14 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen>
     final size = MediaQuery.of(context).size;
 
     final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
+
+    // Call-log sharing is off on the child's device — nothing will ever arrive
+    // for this screen, so explain that instead of showing an empty list.
+    final permsVm = ref.watch(childPermissionsProvider);
+    final denied = permsVm.isDenied(
+      selectedChild.selectedId,
+      ChildFeature.calls,
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -141,39 +156,58 @@ class _AccessCallsScreenState extends ConsumerState<AccessCallsScreen>
                   ],
                 ),
                 const SizedBox(height: 12),
-                AppSearchField(
-                  controller: _searchController,
-                  hint: 'Search number or contact name...',
-                  value: vm.query,
-                  onChanged: (v) =>
-                      ref.read(callLogViewModelProvider).setQuery(v),
-                  onClear: () {
-                    _searchController.clear();
-                    ref.read(callLogViewModelProvider).setQuery('');
-                  },
-                ),
-                const SizedBox(height: 12),
-                _FilterTabs(
-                  active: vm.activeFilter,
-                  summary: vm.windowedSummary,
-                  onSelect: (f) =>
-                      ref.read(callLogViewModelProvider).setFilter(f),
-                ),
-                const SizedBox(height: 10),
-                DayWindowSelector(
-                  selected: vm.activeWindow,
-                  enabled: !vm.loading,
-                  onSelected: (w) =>
-                      ref.read(callLogViewModelProvider).setWindow(w),
-                ),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: RefreshIndicator(
-                    color: AppColors.primary,
-                    onRefresh: vm.refresh,
-                    child: _buildList(vm, size),
+                if (denied)
+                  Expanded(
+                    child: RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: () => ref
+                          .read(childPermissionsProvider)
+                          .load(selectedChild.selectedId!),
+                      child: PermissionDeniedBody(
+                        feature: ChildFeature.calls,
+                        childName: selectedChild.selected?.name,
+                        refreshing: permsVm.loading,
+                        onRefresh: () => ref
+                            .read(childPermissionsProvider)
+                            .load(selectedChild.selectedId!),
+                      ),
+                    ),
+                  )
+                else ...[
+                  AppSearchField(
+                    controller: _searchController,
+                    hint: 'Search number or contact name...',
+                    value: vm.query,
+                    onChanged: (v) =>
+                        ref.read(callLogViewModelProvider).setQuery(v),
+                    onClear: () {
+                      _searchController.clear();
+                      ref.read(callLogViewModelProvider).setQuery('');
+                    },
                   ),
-                ),
+                  const SizedBox(height: 12),
+                  _FilterTabs(
+                    active: vm.activeFilter,
+                    summary: vm.windowedSummary,
+                    onSelect: (f) =>
+                        ref.read(callLogViewModelProvider).setFilter(f),
+                  ),
+                  const SizedBox(height: 10),
+                  DayWindowSelector(
+                    selected: vm.activeWindow,
+                    enabled: !vm.loading,
+                    onSelected: (w) =>
+                        ref.read(callLogViewModelProvider).setWindow(w),
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: vm.refresh,
+                      child: _buildList(vm, size),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),
@@ -324,9 +358,7 @@ class _FilterTabs extends StatelessWidget {
           decoration: BoxDecoration(
             color: isActive ? accent : AppColors.scaffold,
             borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color: isActive ? accent : AppColors.cardBorder,
-            ),
+            border: Border.all(color: isActive ? accent : AppColors.cardBorder),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,

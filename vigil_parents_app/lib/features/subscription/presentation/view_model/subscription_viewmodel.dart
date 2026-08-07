@@ -59,9 +59,7 @@ class SubscriptionViewModel extends ChangeNotifier {
     try {
       final results = await Future.wait([
         _repository.getPlans(),
-        _repository.getMySubscription().catchError(
-          (_) => MySubscription.none,
-        ),
+        _repository.getMySubscription().catchError((_) => MySubscription.none),
       ]);
       _plans = results[0] as List<SubscriptionPlan>;
       _mySubscription = results[1] as MySubscription;

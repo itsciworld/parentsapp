@@ -32,7 +32,8 @@ class CallLogModel {
   }
 
   /// Display label — name when known, otherwise the number.
-  String get label => hasName ? name.trim() : (number.isEmpty ? 'Unknown' : number);
+  String get label =>
+      hasName ? name.trim() : (number.isEmpty ? 'Unknown' : number);
 
   bool get isUnknown => !hasName;
 

@@ -7,7 +7,10 @@ import 'package:vigil_parents_app/core/utils/polling_screen.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/permission_denied_view.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/location/models/location_model.dart';
 import 'package:vigil_parents_app/features/location/presentation/view_model/location_viewmodel.dart';
@@ -37,7 +40,6 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
   // a new latest location arrives rather than on every rebuild.
   String? _centeredId;
 
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -61,9 +63,11 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
     // up even if the home card primed an older cache.
     Future.microtask(() async {
       await ref.read(selectedChildProvider).load();
+      if (!mounted) return;
       final vm = ref.read(locationViewModelProvider);
       final id = ref.read(selectedChildProvider).selectedId;
       if (id == null) return;
+      ref.read(childPermissionsProvider).ensureLoadedFor(id);
       if (vm.childId == id && vm.latest != null) {
         vm.refresh(); // keep the current pin visible while updating
       } else {
@@ -84,6 +88,7 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
   void _onChildSelected(String childId) {
     setState(() => _centeredId = null);
     ref.read(locationViewModelProvider).load(childId);
+    ref.read(childPermissionsProvider).load(childId);
   }
 
   /// Smoothly animates the camera (center + zoom) to [lat]/[lng]. Google Maps
@@ -102,6 +107,44 @@ class _LocationDetailScreenState extends ConsumerState<LocationDetailScreen>
     final vm = ref.watch(locationViewModelProvider);
     final selectedChild = ref.watch(selectedChildProvider);
     final latest = vm.latest;
+
+    // Location sharing is off on the child's device — no fix will ever arrive.
+    final permsVm = ref.watch(childPermissionsProvider);
+    if (permsVm.isDenied(selectedChild.selectedId, ChildFeature.location)) {
+      // The GoogleMap is gone from this branch and disposes its controller,
+      // while this State survives — release it so a camera callback queued
+      // from an earlier frame can't use a dead map.
+      _mapController = null;
+      _centeredId = null;
+
+      return Scaffold(
+        backgroundColor: AppColors.scaffold,
+        bottomNavigationBar: const AppBottomNav(),
+        body: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              const AppHeader(),
+              _TitleBar(
+                onChildSelected: _onChildSelected,
+                hasFix: false,
+                loading: false,
+              ),
+              Expanded(
+                child: PermissionDeniedBody(
+                  feature: ChildFeature.location,
+                  childName: selectedChild.selected?.name,
+                  refreshing: permsVm.loading,
+                  onRefresh: () => ref
+                      .read(childPermissionsProvider)
+                      .load(selectedChild.selectedId!),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     // Recenter whenever a new latest fix arrives (or the child changes).
     if (latest != null && latest.id != _centeredId) {

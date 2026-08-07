@@ -61,9 +61,7 @@ class ThreadCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            thread.address.isEmpty
-                                ? 'Unknown'
-                                : thread.address,
+                            thread.address.isEmpty ? 'Unknown' : thread.address,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(

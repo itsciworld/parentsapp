@@ -58,7 +58,10 @@ class _SocialScreenViewState extends ConsumerState<SocialScreenView> {
         child: Column(
           children: [
             const AppHeader(),
-            _TitleBar(total: vm.totalMessages, onChildSelected: _onChildSelected),
+            _TitleBar(
+              total: vm.totalMessages,
+              onChildSelected: _onChildSelected,
+            ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
               child: Row(
@@ -246,7 +249,9 @@ class _AppSelector extends StatelessWidget {
               padding: const EdgeInsets.only(left: 6, right: 12),
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: active ? color.withValues(alpha: 0.12) : AppColors.surface,
+                color: active
+                    ? color.withValues(alpha: 0.12)
+                    : AppColors.surface,
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: active ? color : AppColors.cardBorder,
@@ -272,8 +277,10 @@ class _AppSelector extends StatelessWidget {
                   ),
                   const SizedBox(width: 6),
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
                       color: active
                           ? color.withValues(alpha: 0.18)
@@ -315,7 +322,9 @@ class _ThreadRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final who = thread.conversation.isNotEmpty ? thread.conversation : 'Unknown';
+    final who = thread.conversation.isNotEmpty
+        ? thread.conversation
+        : 'Unknown';
     final preview = thread.lastPreview.isNotEmpty ? thread.lastPreview : '—';
 
     return Material(
@@ -468,16 +477,19 @@ class _ThreadChatView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = AppIconAvatar.colorFor(appName, package);
-    final who = thread.conversation.isNotEmpty ? thread.conversation : 'Unknown';
+    final who = thread.conversation.isNotEmpty
+        ? thread.conversation
+        : 'Unknown';
 
-    final messages = [...thread.messages]..sort((a, b) {
-      final at = a.timestamp;
-      final bt = b.timestamp;
-      if (at == null && bt == null) return 0;
-      if (at == null) return 1;
-      if (bt == null) return -1;
-      return bt.compareTo(at);
-    });
+    final messages = [...thread.messages]
+      ..sort((a, b) {
+        final at = a.timestamp;
+        final bt = b.timestamp;
+        if (at == null && bt == null) return 0;
+        if (at == null) return 1;
+        if (bt == null) return -1;
+        return bt.compareTo(at);
+      });
 
     return Scaffold(
       backgroundColor: AppColors.scaffold,
@@ -627,8 +639,18 @@ String _relativeTime(DateTime? time) {
   if (diff.inHours < 24) return '${diff.inHours}h';
   if (diff.inDays < 7) return '${diff.inDays}d';
   const months = [
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-    'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return '${months[time.month - 1]} ${time.day}';
 }
@@ -640,7 +662,8 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = error ??
+    final label =
+        error ??
         (appName != null
             ? 'No messages captured from $appName yet'
             : 'No social messages captured yet');

@@ -44,8 +44,7 @@ class _AiReportViewState extends ConsumerState<AiReportView> {
     });
 
     try {
-      final bytes =
-          await ref.read(aiInsightsViewModelProvider).fetchReport();
+      final bytes = await ref.read(aiInsightsViewModelProvider).fetchReport();
       if (!mounted) return;
       setState(() {
         _bytes = bytes;

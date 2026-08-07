@@ -112,9 +112,7 @@ class _MessageBubble extends StatelessWidget {
             decoration: BoxDecoration(
               color: bubbleColor,
               borderRadius: radius,
-              border: isSent
-                  ? null
-                  : Border.all(color: AppColors.cardBorder),
+              border: isSent ? null : Border.all(color: AppColors.cardBorder),
               boxShadow: const [
                 BoxShadow(
                   color: AppColors.shadow,
@@ -144,11 +142,7 @@ class _MessageBubble extends StatelessWidget {
                     ),
                     if (isSent) ...[
                       const SizedBox(width: 4),
-                      Icon(
-                        Icons.done_all_rounded,
-                        size: 13,
-                        color: timeColor,
-                      ),
+                      Icon(Icons.done_all_rounded, size: 13, color: timeColor),
                     ],
                   ],
                 ),

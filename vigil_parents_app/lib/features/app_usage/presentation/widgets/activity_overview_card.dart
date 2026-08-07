@@ -39,8 +39,10 @@ class ActivityOverviewCard extends ConsumerWidget {
         reverseTransitionDuration: const Duration(milliseconds: 320),
         pageBuilder: (_, _, _) => const AppUsageDetailScreen(),
         transitionsBuilder: (_, animation, _, child) {
-          final curved =
-              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+          final curved = CurvedAnimation(
+            parent: animation,
+            curve: Curves.easeOutCubic,
+          );
           return FadeTransition(
             opacity: curved,
             child: ScaleTransition(
@@ -68,7 +70,11 @@ class ActivityOverviewCard extends ConsumerWidget {
         ),
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
-          BoxShadow(color: AppColors.shadow, blurRadius: 18, offset: Offset(0, 8)),
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
         ],
       ),
       child: Column(
@@ -357,9 +363,7 @@ class _ExpandButton extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Icon(
-            _appUsageLocked
-                ? Icons.lock_rounded
-                : Icons.open_in_full_rounded,
+            _appUsageLocked ? Icons.lock_rounded : Icons.open_in_full_rounded,
             size: 17,
             color: AppColors.textOnDark,
           ),

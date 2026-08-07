@@ -8,6 +8,7 @@ import 'package:vigil_parents_app/features/auth/repo/auth_repo.dart';
 import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
+import 'package:vigil_parents_app/features/main_shell/shell_tabs.dart';
 import 'package:vigil_parents_app/features/profile/models/profile_model.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view_model/profile_viewmodel.dart';
 import 'package:vigil_parents_app/features/subscription/models/subscription_model.dart';
@@ -41,6 +42,19 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
     });
   }
 
+  /// Profile stays alive in the shell's [IndexedStack], so `initState` only
+  /// runs on the first visit. Re-fetch the profile and the child's permissions
+  /// every time the tab is opened, so what is on screen is never stale.
+  Future<void> _refreshOnVisible() async {
+    ref.read(profileViewModelProvider).loadProfile();
+    await ref.read(selectedChildProvider).load();
+    if (!mounted) return;
+    final childId = ref.read(selectedChildProvider).selectedId;
+    if (childId != null) {
+      await ref.read(childPermissionsProvider).load(childId);
+    }
+  }
+
   /// Pull-to-refresh: reloads the profile and the child's permissions.
   Future<void> _refreshAll() async {
     await ref.read(profileViewModelProvider).refresh();
@@ -64,6 +78,11 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
       }
     });
 
+    // Re-entering the Profile tab reloads the screen — see [_refreshOnVisible].
+    ref.listen<int>(visibleTabProvider, (previous, next) {
+      if (next == ShellTabs.profile && previous != next) _refreshOnVisible();
+    });
+
     final vm = ref.watch(profileViewModelProvider);
     final selectedChild = ref.watch(selectedChildProvider);
     final permsVm = ref.watch(childPermissionsProvider);
@@ -74,6 +93,8 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
     if (selectedChild.selectedId != null &&
         permsVm.permissions == null &&
         !permsVm.loading) {
+      // Deferred out of build — load() calls notifyListeners synchronously,
+      // and modifying a provider during build throws in Riverpod.
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final id = ref.read(selectedChildProvider).selectedId;
@@ -82,10 +103,6 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
           perms.load(id);
         }
       });
-      // Defer out of build — load() calls notifyListeners synchronously, and
-      // modifying a provider during build throws in Riverpod.
-      final id = selectedChild.selectedId!;
-      Future.microtask(() => ref.read(childPermissionsProvider).load(id));
     }
 
     return Scaffold(

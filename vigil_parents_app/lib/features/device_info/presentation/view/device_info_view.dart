@@ -30,7 +30,6 @@ class DeviceInfoScreen extends ConsumerStatefulWidget {
 
 class _DeviceInfoScreenState extends ConsumerState<DeviceInfoScreen>
     with WidgetsBindingObserver, PollingScreen<DeviceInfoScreen> {
-
   @override
   Duration get pollInterval => const Duration(seconds: 15);
 

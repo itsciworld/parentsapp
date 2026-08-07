@@ -49,6 +49,8 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
   return ProfileRepository();
 });
 
-final profileViewModelProvider = ChangeNotifierProvider<ProfileViewModel>((ref) {
+final profileViewModelProvider = ChangeNotifierProvider<ProfileViewModel>((
+  ref,
+) {
   return ProfileViewModel(ref.read(profileRepositoryProvider));
 });

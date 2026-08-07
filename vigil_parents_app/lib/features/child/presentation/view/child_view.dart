@@ -4,6 +4,7 @@ import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/features/child/models/child_model.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/child_viewmodel.dart';
+import 'package:vigil_parents_app/features/main_shell/shell_tabs.dart';
 
 class ChildView extends ConsumerStatefulWidget {
   const ChildView({super.key});
@@ -23,6 +24,15 @@ class _ChildViewState extends ConsumerState<ChildView> {
 
   @override
   Widget build(BuildContext context) {
+    // The shell keeps this page alive in an IndexedStack, so initState only
+    // runs on the very first visit. Re-fetch whenever the tab is re-opened so
+    // the list is current without a pull-to-refresh.
+    ref.listen<int>(visibleTabProvider, (previous, next) {
+      if (next != ShellTabs.child || previous == next) return;
+      final vm = ref.read(childViewModelProvider);
+      vm.loadChildren(showLoader: vm.children.isEmpty);
+    });
+
     final vm = ref.watch(childViewModelProvider);
 
     return Scaffold(

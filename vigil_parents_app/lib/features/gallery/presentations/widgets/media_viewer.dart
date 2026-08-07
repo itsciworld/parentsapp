@@ -159,12 +159,13 @@ class _ZoomableImageState extends State<_ZoomableImage>
   @override
   void initState() {
     super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 220),
-    )..addListener(() {
-      if (_animation != null) _controller.value = _animation!.value;
-    });
+    _animController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 220),
+        )..addListener(() {
+          if (_animation != null) _controller.value = _animation!.value;
+        });
   }
 
   @override

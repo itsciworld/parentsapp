@@ -8,6 +8,7 @@ import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 // App Usage section is commented out on home for now.
 // import 'package:vigil_parents_app/features/app_usage/presentation/widgets/activity_overview_card.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
@@ -19,6 +20,7 @@ import 'package:vigil_parents_app/features/home/presentation/view_model/feature_
 import 'package:vigil_parents_app/features/home/presentation/view_model/home_viewmodel.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/view_model/app_usage_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
+import 'package:vigil_parents_app/features/main_shell/shell_tabs.dart';
 // Plan/subscription UI is disabled for now — no upgrade section is shown.
 // import 'package:vigil_parents_app/features/subscription/presentation/view_model/subscription_viewmodel.dart';
 // import 'package:vigil_parents_app/features/subscription/presentation/widgets/upgrade_plan_card.dart';
@@ -99,6 +101,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     ref.read(appUsageViewModelProvider).load(childId);
     ref.read(socialScreenViewModelProvider).load(childId);
     ref.read(featureBadgesProvider).load();
+    ref.read(childPermissionsProvider).load(childId);
+  }
+
+  /// Home never leaves the shell's [IndexedStack], so coming back to the tab
+  /// rebuilds nothing and re-runs no `initState`. This is the hook for that:
+  /// every time Home becomes visible it re-fetches what it shows — including
+  /// the child's permissions — so the screen is current without the user
+  /// having to pull to refresh.
+  Future<void> _refreshOnVisible() async {
+    ref.read(profileViewModelProvider).loadProfile();
+    await ref.read(selectedChildProvider).load();
+    if (!mounted) return;
+
+    final id = ref.read(selectedChildProvider).selectedId;
+    if (id == null) return;
+
+    // No-ops when this child's data was already requested; fetches it when a
+    // cold-start attempt failed and left the screen empty.
+    _loadForChild(id);
+
+    await Future.wait([
+      _vm.refresh(),
+      ref.read(childPermissionsProvider).load(id),
+      ref.read(liveStatusViewModelProvider).refresh(),
+      ref.read(locationViewModelProvider).refresh(fallbackChildId: id),
+      ref.read(appUsageViewModelProvider).refresh(),
+      ref.read(socialScreenViewModelProvider).refresh(),
+      ref.read(featureBadgesProvider).load(),
+    ]);
   }
 
   /// Home sits in the shell's [IndexedStack], so it stays mounted for the whole
@@ -114,9 +145,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _locationTimer = Timer.periodic(const Duration(seconds: 40), (_) {
       ref
           .read(locationViewModelProvider)
-          .refresh(
-            fallbackChildId: ref.read(selectedChildProvider).selectedId,
-          );
+          .refresh(fallbackChildId: ref.read(selectedChildProvider).selectedId);
     });
 
     // SMS / calls / contacts / gallery counts arrive from the backend on their
@@ -200,6 +229,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       next,
     ) {
       if (next != null) _loadForChild(next);
+    });
+
+    // Re-entering the Home tab refreshes the screen — see [_refreshOnVisible].
+    ref.listen<int>(visibleTabProvider, (previous, next) {
+      if (next == ShellTabs.home && previous != next) _refreshOnVisible();
     });
 
     return Scaffold(

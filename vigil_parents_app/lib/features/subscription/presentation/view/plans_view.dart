@@ -119,7 +119,8 @@ class _PlansViewState extends ConsumerState<PlansView> {
     await vm.refreshMySubscription();
     if (!mounted) return;
 
-    final nowActive = vm.mySubscription.isPaid ||
+    final nowActive =
+        vm.mySubscription.isPaid ||
         vm.isCurrentPlan(plan) && !vm.mySubscription.inTrial;
 
     if (nowActive) {
@@ -153,11 +154,11 @@ class _PlansViewState extends ConsumerState<PlansView> {
         content: Text(
           inTrial
               ? 'This turns off auto-renew for your trial. You '
-                  'keep access until the trial ends, after which it will not '
-                  'convert to a paid plan.'
+                    'keep access until the trial ends, after which it will not '
+                    'convert to a paid plan.'
               : 'This turns off auto-renew for ${plan.name}. You keep access '
-                  'until the end of your current billing period, after which '
-                  'the plan will not renew.',
+                    'until the end of your current billing period, after which '
+                    'the plan will not renew.',
         ),
         actions: [
           TextButton(
@@ -256,7 +257,8 @@ class _PlansViewState extends ConsumerState<PlansView> {
             anyCheckoutInFlight: vm.isCheckingOut,
             // Deactivate is offered on the active paid plan (enterprise) if there
             // is any active subscription (including the trial subscription).
-            canCancel: !plan.isTrial &&
+            canCancel:
+                !plan.isTrial &&
                 vm.mySubscription.hasSubscription &&
                 (vm.isCurrentPlan(plan) || vm.mySubscription.inTrial),
             canceling: vm.isCanceling,
@@ -631,9 +633,7 @@ class _PlanCard extends StatelessWidget {
         disabledForegroundColor: blocked ? AppColors.textSecondary : null,
         elevation: 0,
         padding: const EdgeInsets.symmetric(vertical: 14),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       child: checkingOut
           ? const SizedBox(
@@ -646,20 +646,14 @@ class _PlanCard extends StatelessWidget {
             )
           : Text(
               blocked ? "You're on the top plan" : 'Upgrade Now',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
             ),
     );
 
     if (canCancel) {
       return Column(
         children: [
-          SizedBox(
-            width: double.infinity,
-            child: ctaButton,
-          ),
+          SizedBox(width: double.infinity, child: ctaButton),
           const SizedBox(height: 10),
           SizedBox(
             width: double.infinity,
@@ -668,9 +662,7 @@ class _PlanCard extends StatelessWidget {
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.alert,
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                side: BorderSide(
-                  color: AppColors.alert.withValues(alpha: 0.4),
-                ),
+                side: BorderSide(color: AppColors.alert.withValues(alpha: 0.4)),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -700,10 +692,7 @@ class _PlanCard extends StatelessWidget {
       );
     }
 
-    return SizedBox(
-      width: double.infinity,
-      child: ctaButton,
-    );
+    return SizedBox(width: double.infinity, child: ctaButton);
   }
 
   String _priceLabel(SubscriptionPlan plan) {

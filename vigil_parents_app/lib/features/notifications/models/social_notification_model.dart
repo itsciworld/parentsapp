@@ -144,8 +144,7 @@ class AppNotifications {
         lastPreview: latest.body,
         messages: msgs,
       );
-    }).toList()
-      ..sort((a, b) => _cmpDesc(a.lastTime, b.lastTime));
+    }).toList()..sort((a, b) => _cmpDesc(a.lastTime, b.lastTime));
     return threads;
   }
 }

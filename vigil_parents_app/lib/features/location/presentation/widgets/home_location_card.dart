@@ -3,6 +3,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/location/models/location_model.dart';
 import 'package:vigil_parents_app/features/location/presentation/view/location_detail_view.dart';
@@ -87,8 +89,15 @@ class _HomeLocationCardState extends ConsumerState<HomeLocationCard> {
     ref.listen(selectedChildProvider, (_, _) => _ensureLoaded());
 
     final vm = ref.watch(locationViewModelProvider);
-    final childName = ref.watch(selectedChildProvider).selected?.name;
+    final selectedChild = ref.watch(selectedChildProvider);
+    final childName = selectedChild.selected?.name;
     final latest = vm.latest;
+
+    // The child is not sharing location, so the map has nothing to plot —
+    // say so rather than leaving a permanently empty "No location yet".
+    final permissionDenied = ref
+        .watch(childPermissionsProvider)
+        .isDenied(selectedChild.selectedId, ChildFeature.location);
 
     return Container(
       decoration: BoxDecoration(
@@ -113,7 +122,11 @@ class _HomeLocationCardState extends ConsumerState<HomeLocationCard> {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                _MapBody(vm: vm, latest: latest),
+                _MapBody(
+                  vm: vm,
+                  latest: latest,
+                  permissionDenied: permissionDenied,
+                ),
 
                 // Top gradient scrim so the chips stay legible over the map.
                 IgnorePointer(
@@ -167,8 +180,13 @@ class _HomeLocationCardState extends ConsumerState<HomeLocationCard> {
 class _MapBody extends StatefulWidget {
   final LocationViewModel vm;
   final ChildLocation? latest;
+  final bool permissionDenied;
 
-  const _MapBody({required this.vm, required this.latest});
+  const _MapBody({
+    required this.vm,
+    required this.latest,
+    this.permissionDenied = false,
+  });
 
   @override
   State<_MapBody> createState() => _MapBodyState();
@@ -188,13 +206,25 @@ class _MapBodyState extends State<_MapBody> {
     }
   }
 
+  /// Whether [build] renders an actual [GoogleMap] for that widget, as opposed
+  /// to one of the placeholders (loading, no fix yet, permission denied).
+  bool _showsMap(_MapBody w) => !w.permissionDenied && w.latest != null;
+
   @override
   void didUpdateWidget(covariant _MapBody oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    final now = widget.latest;
-    if (now == null) return;
+    // This State outlives the map: swapping in a placeholder — which is what
+    // the denied permission state does — disposes the GoogleMap while keeping
+    // us alive, and the controller it handed us dies with it. Driving that
+    // controller afterwards throws a use-after-disposed StateError, so drop it
+    // and wait for the next onMapCreated.
+    if (!_showsMap(widget) || !_showsMap(oldWidget)) {
+      _controller = null;
+      return;
+    }
 
+    final now = widget.latest!;
     final before = oldWidget.latest;
     final moved =
         before == null ||
@@ -213,7 +243,10 @@ class _MapBodyState extends State<_MapBody> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    // The GoogleMap disposes its own controller when it leaves the tree, so
+    // only release one we are still holding for a live map.
+    if (_showsMap(widget)) _controller?.dispose();
+    _controller = null;
     super.dispose();
   }
 
@@ -221,6 +254,44 @@ class _MapBodyState extends State<_MapBody> {
   Widget build(BuildContext context) {
     final vm = widget.vm;
     final latest = widget.latest;
+
+    if (widget.permissionDenied) {
+      return Container(
+        color: const Color(0xFFEAF1F4),
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.location_off_rounded,
+              color: AppColors.alert,
+              size: 30,
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Location permission not granted',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Ask your child to allow Location in the Vigil Child app.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11.5,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     if (latest == null) {
       if (vm.loading) {
         return Shimmer.fromColors(

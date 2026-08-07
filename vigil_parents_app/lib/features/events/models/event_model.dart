@@ -34,7 +34,8 @@ class EventModel {
     return e.difference(start).inHours >= 20;
   }
 
-  String get displayTitle => title.trim().isEmpty ? 'Untitled event' : title.trim();
+  String get displayTitle =>
+      title.trim().isEmpty ? 'Untitled event' : title.trim();
 
   bool get hasLocation => (location ?? '').trim().isNotEmpty;
 
@@ -44,8 +45,7 @@ class EventModel {
   // "-::~:~::-" separators, observance footers). We surface a clean description
   // and pull the Meet link out as a first-class "Join" action.
 
-  static final RegExp _meetLinkRe =
-      RegExp(r'https://meet\.google\.com/[^\s]+');
+  static final RegExp _meetLinkRe = RegExp(r'https://meet\.google\.com/[^\s]+');
 
   /// The Google Meet URL embedded in the description, if any.
   String? get meetLink {
@@ -104,8 +104,18 @@ class EventModel {
   /// e.g. "Mon, 02 Oct 2025".
   String get formattedDate {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     final d = start;

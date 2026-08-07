@@ -98,9 +98,7 @@ class SmsModel {
 
     final typeRaw = pick(['type', 'direction', 'message_type']).toLowerCase();
     final isSent =
-        typeRaw.contains('sent') ||
-        typeRaw.contains('out') ||
-        typeRaw == '2';
+        typeRaw.contains('sent') || typeRaw.contains('out') || typeRaw == '2';
 
     return SmsModel(
       id: pick(['_id', 'id']),

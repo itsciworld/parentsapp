@@ -11,9 +11,12 @@ import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/components/app_shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/permission_denied_view.dart';
 import 'package:vigil_parents_app/features/events/models/event_model.dart';
 import 'package:vigil_parents_app/features/events/view_model/events_viewmodel.dart';
 
@@ -26,7 +29,6 @@ class EventsScreen extends ConsumerStatefulWidget {
 
 class _EventsScreenState extends ConsumerState<EventsScreen>
     with WidgetsBindingObserver, PollingScreen<EventsScreen> {
-
   /// The calendar date the user tapped. Null until they pick one (then we fall
   /// back to the focus date for the initial highlight).
   DateTime? _selectedDay;
@@ -45,7 +47,10 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
     super.initState();
     Future.microtask(() async {
       await ref.read(selectedChildProvider).load();
+      if (!mounted) return;
       ref.read(eventsViewModelProvider).loadEvents();
+      final id = ref.read(selectedChildProvider).selectedId;
+      if (id != null) ref.read(childPermissionsProvider).ensureLoadedFor(id);
     });
 
     startPolling();
@@ -60,6 +65,7 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
   void _onChildSelected(String childId) {
     setState(() => _selectedDay = null);
     ref.read(eventsViewModelProvider).reload();
+    ref.read(childPermissionsProvider).load(childId);
   }
 
   void _openDetail(EventModel event) {
@@ -78,6 +84,13 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
     final size = MediaQuery.of(context).size;
 
     final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
+
+    // Calendar sharing is switched off on the child's device.
+    final permsVm = ref.watch(childPermissionsProvider);
+    final denied = permsVm.isDenied(
+      selectedChild.selectedId,
+      ChildFeature.calendar,
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -125,13 +138,31 @@ class _EventsScreenState extends ConsumerState<EventsScreen>
                 ),
                 const SizedBox(height: 12),
 
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: vm.refresh,
-                    color: AppColors.primary,
-                    child: _buildBody(vm, size),
+                if (denied)
+                  Expanded(
+                    child: RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: () => ref
+                          .read(childPermissionsProvider)
+                          .load(selectedChild.selectedId!),
+                      child: PermissionDeniedBody(
+                        feature: ChildFeature.calendar,
+                        childName: selectedChild.selected?.name,
+                        refreshing: permsVm.loading,
+                        onRefresh: () => ref
+                            .read(childPermissionsProvider)
+                            .load(selectedChild.selectedId!),
+                      ),
+                    ),
+                  )
+                else
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: vm.refresh,
+                      color: AppColors.primary,
+                      child: _buildBody(vm, size),
+                    ),
                   ),
-                ),
               ],
             ],
           ),

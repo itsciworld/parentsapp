@@ -35,7 +35,7 @@ final List<BackgroundJob> _jobs = <BackgroundJob>[
 ];
 
 /// Base tick resolution. Each job decides its own cadence via [BackgroundJob.interval].
-const Duration _tick = Duration(seconds: 1);
+const Duration _tick = Duration(seconds: 5);
 
 const String _channelId = 'vigil_monitoring';
 const String _channelName = 'Vigil Monitoring';

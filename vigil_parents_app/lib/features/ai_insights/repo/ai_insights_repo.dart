@@ -3,7 +3,8 @@ import 'package:vigil_parents_app/features/ai_insights/models/ai_insights_model.
 import 'package:vigil_parents_app/network/api_intercptor.dart';
 
 class AiInsightsRepository {
-  AiInsightsRepository({ApiClient? client}) : _apiClient = client ?? ApiClient();
+  AiInsightsRepository({ApiClient? client})
+    : _apiClient = client ?? ApiClient();
 
   final ApiClient _apiClient;
 
@@ -59,7 +60,9 @@ class AiInsightsRepository {
     required String date,
   }) async {
     if (kDebugMode) {
-      print('➡️  [AiInsights] GET /api/ai/children/$childId/daily/$date/report');
+      print(
+        '➡️  [AiInsights] GET /api/ai/children/$childId/daily/$date/report',
+      );
     }
 
     try {

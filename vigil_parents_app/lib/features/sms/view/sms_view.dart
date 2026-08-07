@@ -9,9 +9,12 @@ import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/components/app_search_field.dart';
 import 'package:vigil_parents_app/components/app_shimmer.dart';
 import 'package:vigil_parents_app/components/day_window_selector.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/permission_denied_view.dart';
 import 'package:vigil_parents_app/features/sms/models/sms_thread_model.dart';
 import 'package:vigil_parents_app/features/sms/view/conversation_view.dart';
 import 'package:vigil_parents_app/features/sms/view_model/sms_viewmodel.dart';
@@ -46,7 +49,12 @@ class _SmsScreenState extends ConsumerState<SmsScreen>
       // Load the children list for the picker, then the threads for the
       // currently selected child.
       await ref.read(selectedChildProvider).load();
+      if (!mounted) return;
       ref.read(smsViewModelProvider).loadThreads();
+      final id = ref.read(selectedChildProvider).selectedId;
+      // Tells us whether the child shares messages at all — an empty list means
+      // very different things with and without that permission.
+      if (id != null) ref.read(childPermissionsProvider).ensureLoadedFor(id);
     });
 
     startPolling();
@@ -186,6 +194,7 @@ class _SmsScreenState extends ConsumerState<SmsScreen>
   /// persists the selection.
   void _onChildSelected(String childId) {
     ref.read(smsViewModelProvider).reload();
+    ref.read(childPermissionsProvider).load(childId);
   }
 
   @override
@@ -197,6 +206,14 @@ class _SmsScreenState extends ConsumerState<SmsScreen>
     // No child registered/linked to this account yet (only after the first
     // fetch completes, so we don't flash this state before loading).
     final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
+
+    // The child has messages sharing switched off, so there is nothing to
+    // show — say so rather than rendering an empty conversation list.
+    final permsVm = ref.watch(childPermissionsProvider);
+    final denied = permsVm.isDenied(
+      selectedChild.selectedId,
+      ChildFeature.messages,
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -235,43 +252,61 @@ class _SmsScreenState extends ConsumerState<SmsScreen>
 
                 const SizedBox(height: 12),
 
-                /// SEARCH
-                AppSearchField(
-                  controller: _searchController,
-                  hint: 'Search conversations or numbers...',
-                  value: vm.query,
-                  onChanged: (value) =>
-                      ref.read(smsViewModelProvider).setQuery(value),
-                  onClear: () {
-                    _searchController.clear();
-                    ref.read(smsViewModelProvider).setQuery('');
-                  },
-                ),
-
-                const SizedBox(height: 12),
-
-                SmsStateCard(
-                  threads: vm.totalThreads,
-                  messages: vm.totalMessages,
-                ),
-
-                const SizedBox(height: 12),
-
-                DayWindowSelector(
-                  selected: vm.activeWindow,
-                  enabled: !vm.loading,
-                  onSelected: (w) =>
-                      ref.read(smsViewModelProvider).setWindow(w),
-                ),
-
-                const SizedBox(height: 12),
-
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: vm.refresh,
-                    child: _buildList(vm, size),
+                if (denied)
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () => ref
+                          .read(childPermissionsProvider)
+                          .load(selectedChild.selectedId!),
+                      child: PermissionDeniedBody(
+                        feature: ChildFeature.messages,
+                        childName: selectedChild.selected?.name,
+                        refreshing: permsVm.loading,
+                        onRefresh: () => ref
+                            .read(childPermissionsProvider)
+                            .load(selectedChild.selectedId!),
+                      ),
+                    ),
+                  )
+                else ...[
+                  /// SEARCH
+                  AppSearchField(
+                    controller: _searchController,
+                    hint: 'Search conversations or numbers...',
+                    value: vm.query,
+                    onChanged: (value) =>
+                        ref.read(smsViewModelProvider).setQuery(value),
+                    onClear: () {
+                      _searchController.clear();
+                      ref.read(smsViewModelProvider).setQuery('');
+                    },
                   ),
-                ),
+
+                  const SizedBox(height: 12),
+
+                  SmsStateCard(
+                    threads: vm.totalThreads,
+                    messages: vm.totalMessages,
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  DayWindowSelector(
+                    selected: vm.activeWindow,
+                    enabled: !vm.loading,
+                    onSelected: (w) =>
+                        ref.read(smsViewModelProvider).setWindow(w),
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: vm.refresh,
+                      child: _buildList(vm, size),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),

@@ -107,10 +107,7 @@ class DailyIntelligence {
     }
 
     List<AiFinding> findings(dynamic v) => v is List
-        ? v
-              .whereType<Map<String, dynamic>>()
-              .map(AiFinding.fromJson)
-              .toList()
+        ? v.whereType<Map<String, dynamic>>().map(AiFinding.fromJson).toList()
         : const [];
 
     final longitudinal = json['longitudinal'];

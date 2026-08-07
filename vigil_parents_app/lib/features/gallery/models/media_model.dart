@@ -141,8 +141,9 @@ class MediaItem {
   bool get hasLocation => latitude != null && longitude != null;
 
   /// Best display name for the item.
-  String get displayName =>
-      title.isNotEmpty ? title : (originalFilename.isNotEmpty ? originalFilename : mediaId);
+  String get displayName => title.isNotEmpty
+      ? title
+      : (originalFilename.isNotEmpty ? originalFilename : mediaId);
 
   /// Human-readable file size, e.g. "3.7 MB".
   String get formattedSize {
@@ -190,8 +191,18 @@ class MediaItem {
     if (diff == 0) return 'Today';
     if (diff == 1) return 'Yesterday';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
   }
@@ -217,16 +228,23 @@ class MediaItem {
       id: pick(['_id', 'id']),
       mediaId: pick(['media_id', 'mediaId']),
       url: pick(['url', 'secure_url', 'download_url']),
-      originalFilename: pick(['original_filename', 'originalFilename', 'filename']),
+      originalFilename: pick([
+        'original_filename',
+        'originalFilename',
+        'filename',
+      ]),
       title: pick(['title', 'name']),
       fileType: pick(['file_type', 'fileType']),
       type: type,
       mimeType: pick(['mime_type', 'mimeType', 'file_type']),
       width: _toInt(json['width']),
       height: _toInt(json['height']),
-      sizeBytes: _toInt(json['size_bytes'] ?? json['sizeBytes'] ?? json['size']),
-      durationSeconds:
-          _toInt(json['duration_seconds'] ?? json['durationSeconds']),
+      sizeBytes: _toInt(
+        json['size_bytes'] ?? json['sizeBytes'] ?? json['size'],
+      ),
+      durationSeconds: _toInt(
+        json['duration_seconds'] ?? json['durationSeconds'],
+      ),
       isFavorite: json['is_favorite'] == true || json['isFavorite'] == true,
       albumName: pick(['album_name', 'albumName']),
       capturedAt: _toDate(
