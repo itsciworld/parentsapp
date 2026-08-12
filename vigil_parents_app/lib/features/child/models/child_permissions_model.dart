@@ -28,6 +28,7 @@ class ChildPermissions {
   final bool networkWifi;
   final bool readNotification;
   final bool readChat;
+  final bool photo;
 
   const ChildPermissions({
     required this.scanDeviceForSecurity,
@@ -49,6 +50,7 @@ class ChildPermissions {
     required this.networkWifi,
     required this.readNotification,
     required this.readChat,
+    required this.photo,
   });
 
   factory ChildPermissions.fromJson(Map<String, dynamic> json) {
@@ -79,6 +81,7 @@ class ChildPermissions {
       networkWifi: data['network_wifi'] == true,
       readNotification: data['read_notification'] == true,
       readChat: data['read_chat'] == true,
+      photo: data['photo'] == true,
     );
   }
 
@@ -105,6 +108,8 @@ class ChildPermissions {
         return readNotification;
       case ChildFeature.chats:
         return readChat;
+      case ChildFeature.photos:
+        return photo;
     }
   }
 
@@ -124,6 +129,7 @@ class ChildPermissions {
       readNotification,
     ),
     PermissionItem('Read Chats', Icons.chat_bubble_outline_rounded, readChat),
+    PermissionItem('Photos', Icons.photo_library_outlined, photo),
     // Notification access
     // PermissionItem('SOS Alerts', Icons.sos_rounded, sosNotification),
     // PermissionItem('Secure Folder', Icons.folder_outlined, secureFolder),
@@ -205,6 +211,12 @@ enum ChildFeature {
     label: 'Read Chats',
     icon: Icons.chat_bubble_outline_rounded,
     what: 'chat messages',
+  ),
+  photos(
+    label: 'Photos',
+    icon: Icons.photo_library_outlined,
+    // The gallery screen carries videos too, so the sentence names both.
+    what: 'photos and videos',
   );
 
   const ChildFeature({

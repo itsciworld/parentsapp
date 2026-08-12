@@ -113,15 +113,30 @@ class _PlansViewState extends ConsumerState<PlansView> {
 
   /// Re-reads the subscription after the parent leaves checkout and tells them
   /// whether the plan went live. The webhook is the real source of truth, so
-  /// activation can lag a moment behind a completed payment.
+  /// activation can lag a moment behind a completed payment — a single read
+  /// taken the instant the WebView closes usually lands before Stripe has
+  /// called us back, which is why a paid plan looked like it never updated.
+  /// Poll for a few seconds and settle for the first read that shows it live.
   Future<void> _reconcileAfterCheckout(SubscriptionPlan plan) async {
     final vm = ref.read(subscriptionViewModelProvider);
-    await vm.refreshMySubscription();
-    if (!mounted) return;
 
-    final nowActive =
+    bool isActive() =>
         vm.mySubscription.isPaid ||
         vm.isCurrentPlan(plan) && !vm.mySubscription.inTrial;
+
+    var nowActive = false;
+    for (var attempt = 0; attempt < 5; attempt++) {
+      if (attempt > 0) {
+        await Future.delayed(const Duration(seconds: 2));
+        if (!mounted) return;
+      }
+      await vm.refreshMySubscription();
+      if (!mounted) return;
+      if (isActive()) {
+        nowActive = true;
+        break;
+      }
+    }
 
     if (nowActive) {
       showAppToast(

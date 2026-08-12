@@ -7,9 +7,12 @@ import 'package:vigil_parents_app/core/utils/polling_screen.dart';
 import 'package:vigil_parents_app/components/app_bottom_nav.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
+import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
+import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/no_child_linked_view.dart';
+import 'package:vigil_parents_app/features/child/presentation/widgets/permission_denied_view.dart';
 import 'package:vigil_parents_app/features/gallery/models/media_model.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/view_model/gallery_viewmodel.dart';
 import 'package:vigil_parents_app/features/gallery/presentations/widgets/gallery_photo_grid.dart';
@@ -42,7 +45,10 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen>
       // Load the children list for the picker, then the media for the
       // currently selected child.
       await ref.read(selectedChildProvider).load();
+      if (!mounted) return;
       ref.read(galleryViewModelProvider).load();
+      final id = ref.read(selectedChildProvider).selectedId;
+      if (id != null) ref.read(childPermissionsProvider).ensureLoadedFor(id);
     });
 
     startPolling();
@@ -72,6 +78,7 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen>
   /// selection itself.
   void _onChildSelected(String childId) {
     ref.read(galleryViewModelProvider).reload();
+    ref.read(childPermissionsProvider).load(childId);
   }
 
   @override
@@ -81,6 +88,15 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen>
     final size = MediaQuery.of(context).size;
 
     final noChild = selectedChild.initialized && selectedChild.children.isEmpty;
+
+    // Photo sharing is off on the child's device — no media will ever arrive
+    // for this screen, so say that instead of showing an empty grid that reads
+    // as "nothing captured yet".
+    final permsVm = ref.watch(childPermissionsProvider);
+    final denied = permsVm.isDenied(
+      selectedChild.selectedId,
+      ChildFeature.photos,
+    );
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -129,31 +145,50 @@ class _GalleryScreenState extends ConsumerState<GalleryScreen>
 
                 const SizedBox(height: 14),
 
-                /// FILTER TABS
-                GalleryFilterTabs(
-                  selected: vm.filter,
-                  onChanged: (f) =>
-                      ref.read(galleryViewModelProvider).setFilter(f),
-                ),
-
-                const SizedBox(height: 14),
-
-                /// STATS
-                GalleryStatsCard(
-                  total: vm.total,
-                  photos: vm.imageCount,
-                  videos: vm.videoCount,
-                ),
-
-                const SizedBox(height: 14),
-
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: vm.refresh,
-                    color: AppColors.primary,
-                    child: _buildBody(vm, size),
+                if (denied)
+                  Expanded(
+                    child: RefreshIndicator(
+                      color: AppColors.primary,
+                      onRefresh: () => ref
+                          .read(childPermissionsProvider)
+                          .load(selectedChild.selectedId!),
+                      child: PermissionDeniedBody(
+                        feature: ChildFeature.photos,
+                        childName: selectedChild.selected?.name,
+                        refreshing: permsVm.loading,
+                        onRefresh: () => ref
+                            .read(childPermissionsProvider)
+                            .load(selectedChild.selectedId!),
+                      ),
+                    ),
+                  )
+                else ...[
+                  /// FILTER TABS
+                  GalleryFilterTabs(
+                    selected: vm.filter,
+                    onChanged: (f) =>
+                        ref.read(galleryViewModelProvider).setFilter(f),
                   ),
-                ),
+
+                  const SizedBox(height: 14),
+
+                  /// STATS
+                  GalleryStatsCard(
+                    total: vm.total,
+                    photos: vm.imageCount,
+                    videos: vm.videoCount,
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: vm.refresh,
+                      color: AppColors.primary,
+                      child: _buildBody(vm, size),
+                    ),
+                  ),
+                ],
               ],
             ],
           ),

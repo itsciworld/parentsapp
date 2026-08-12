@@ -36,15 +36,51 @@ class SocialScreenRepository {
       final response = await _apiClient.get('/api/social/screen', query: query);
 
       final data = response.data;
-      if (data is Map<String, dynamic>) {
-        final parsed = SocialScreenResponse.fromJson(data);
+      if (data is Map) {
+        final parsed = SocialScreenResponse.fromJson(
+          Map<String, dynamic>.from(data),
+        );
         if (kDebugMode) {
           print(
             '✅  [SocialScreen] ${parsed.apps.length} apps, '
             '${parsed.totalMessages} messages',
           );
+          for (final a in parsed.apps) {
+            print(
+              '    • ${a.app} (${a.package}) — '
+              '${a.threads.length} threads, ${a.count} messages',
+            );
+          }
+          // Parsing to nothing is the failure that used to be invisible: the
+          // screen showed "no messages" whether the server sent an empty body
+          // or a shape we failed to read. Print what actually came back so the
+          // two can be told apart at a glance.
+          if (parsed.apps.isEmpty) {
+            print(
+              '⚠️  [SocialScreen] parsed 0 apps — top-level keys: '
+              '${data.keys.toList()}',
+            );
+            print('    raw body: $data');
+          } else if (parsed.apps.every((a) => a.threads.isEmpty)) {
+            // Apps came through but carried no conversations. That means the
+            // per-app object nests its messages under a key this parser
+            // doesn't read, so dump one app's shape rather than leaving the
+            // screen on a bare "no messages".
+            final rawApps = data['apps'];
+            final first = rawApps is List && rawApps.isNotEmpty
+                ? rawApps.first
+                : null;
+            print(
+              '⚠️  [SocialScreen] apps parsed but every one has 0 threads — '
+              'first app keys: ${first is Map ? first.keys.toList() : first}',
+            );
+            print('    raw first app: $first');
+          }
         }
         return parsed;
+      }
+      if (kDebugMode) {
+        print('⚠️  [SocialScreen] unexpected body type: ${data.runtimeType}');
       }
       return const SocialScreenResponse(
         total: 0,

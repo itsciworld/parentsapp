@@ -5,8 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
-// App Usage section is commented out on home for now.
-// import 'package:vigil_parents_app/features/app_usage/presentation/widgets/activity_overview_card.dart';
+import 'package:vigil_parents_app/features/app_usage/presentation/widgets/activity_overview_card.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
 import 'package:vigil_parents_app/features/child/presentation/widgets/child_selector_dropdown.dart';
@@ -20,9 +19,8 @@ import 'package:vigil_parents_app/features/home/presentation/view_model/home_vie
 import 'package:vigil_parents_app/features/app_usage/presentation/view_model/app_usage_viewmodel.dart';
 import 'package:vigil_parents_app/features/home/widgets/feature_grid.dart';
 import 'package:vigil_parents_app/features/main_shell/shell_tabs.dart';
-// Plan/subscription UI is disabled for now — no upgrade section is shown.
-// import 'package:vigil_parents_app/features/subscription/presentation/view_model/subscription_viewmodel.dart';
-// import 'package:vigil_parents_app/features/subscription/presentation/widgets/upgrade_plan_card.dart';
+import 'package:vigil_parents_app/features/subscription/presentation/view_model/subscription_viewmodel.dart';
+import 'package:vigil_parents_app/features/subscription/presentation/widgets/upgrade_plan_card.dart';
 import 'package:vigil_parents_app/features/live_status/models/live_status_model.dart';
 import 'package:vigil_parents_app/features/live_status/presentation/view_model/live_status_viewmodel.dart';
 import 'package:vigil_parents_app/features/location/presentation/view_model/location_viewmodel.dart';
@@ -62,11 +60,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       if (!mounted) return;
       final id = ref.read(selectedChildProvider).selectedId;
       if (id != null) _loadForChild(id);
-      // Plan/subscription loading disabled for now — no upgrade section shown.
-      // final subVm = ref.read(subscriptionViewModelProvider);
-      // if (subVm.plans.isEmpty && !subVm.isLoading) {
-      //   subVm.load(showLoader: false);
-      // }
+      final subVm = ref.read(subscriptionViewModelProvider);
+      if (subVm.plans.isEmpty && !subVm.isLoading) {
+        subVm.load(showLoader: false);
+      }
     });
 
     _startTimers();
@@ -297,10 +294,9 @@ class _LoadedView extends ConsumerWidget {
     final liveStatusVm = ref.watch(liveStatusViewModelProvider);
     final badges = ref.watch(featureBadgesProvider);
 
-    // Plan section disabled for now — no upgrade/plan UI is shown on home.
-    // final subVm = ref.watch(subscriptionViewModelProvider);
-    // final showPlanSection =
-    //     !subVm.isOnTopPlan && (subVm.plans.isNotEmpty || subVm.isLoading);
+    final subVm = ref.watch(subscriptionViewModelProvider);
+    final showPlanSection =
+        !subVm.isOnTopPlan && (subVm.plans.isNotEmpty || subVm.isLoading);
 
     final features = [
       for (final t in data.features)
@@ -471,40 +467,39 @@ class _LoadedView extends ConsumerWidget {
                       const SizedBox(height: 26),
 
                       // ---- App usage --------------------------------------
-                      // _Reveal(
-                      //   delayMs: 205,
-                      //   child: Column(
-                      //     crossAxisAlignment: CrossAxisAlignment.start,
-                      //     children: const [
-                      //       _SectionTitle(
-                      //         title: 'App Usage',
-                      //         subtitle: 'Tap to see screen-time details',
-                      //       ),
-                      //       SizedBox(height: 14),
-                      //       ActivityOverviewCard(),
-                      //     ],
-                      //   ),
-                      // ),
+                      _Reveal(
+                        delayMs: 205,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            _SectionTitle(
+                              title: 'App Usage',
+                              subtitle: 'Tap to see screen-time details',
+                            ),
+                            SizedBox(height: 14),
+                            ActivityOverviewCard(),
+                          ],
+                        ),
+                      ),
                     ],
                     // ---- Upgrade / plans ----------------------------------
-                    // Disabled for now — no plan/upgrade section is shown.
-                    // if (hasChild && showPlanSection) ...[
-                    //   const SizedBox(height: 26),
-                    //   _Reveal(
-                    //     delayMs: 310,
-                    //     child: Column(
-                    //       crossAxisAlignment: CrossAxisAlignment.start,
-                    //       children: const [
-                    //         _SectionTitle(
-                    //           title: 'Your Plan',
-                    //           subtitle: 'Unlock more monitoring tools',
-                    //         ),
-                    //         SizedBox(height: 14),
-                    //         UpgradePlanCard(),
-                    //       ],
-                    //     ),
-                    //   ),
-                    // ],
+                    if (hasChild && showPlanSection) ...[
+                      const SizedBox(height: 26),
+                      _Reveal(
+                        delayMs: 310,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            _SectionTitle(
+                              title: 'Your Plan',
+                              subtitle: 'Unlock more monitoring tools',
+                            ),
+                            SizedBox(height: 14),
+                            UpgradePlanCard(),
+                          ],
+                        ),
+                      ),
+                    ],
                     SizedBox(height: bottomPadding + 24),
                   ],
                 ),

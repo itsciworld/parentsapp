@@ -42,12 +42,16 @@ class SocialScreenViewModel extends ChangeNotifier with RefreshGuard {
   }
 
   /// The app currently selected for viewing, if any.
+  ///
+  /// Falls back to the first app when the selection doesn't resolve. A stale or
+  /// unmatched key is not a reason to show "no messages" over a payload that
+  /// has them — the screen should always render *something* it was given.
   SocialAppMessages? get selectedApp {
-    if (_selectedPackage == null) return null;
+    if (apps.isEmpty) return null;
     for (final a in apps) {
-      if (a.package == _selectedPackage) return a;
+      if (a.id == _selectedPackage) return a;
     }
-    return null;
+    return apps.first;
   }
 
   /// The selected app's conversation threads, most-recently-active first.
@@ -56,16 +60,6 @@ class SocialScreenViewModel extends ChangeNotifier with RefreshGuard {
     if (app == null) return const [];
     final list = [...app.threads];
     list.sort((a, b) => _cmpDesc(a.lastTime, b.lastTime));
-    return list;
-  }
-
-  /// The selected app's messages (flat), newest-first. Kept for callers that
-  /// still want an ungrouped feed.
-  List<ScreenMessage> get messages {
-    final app = selectedApp;
-    if (app == null) return const [];
-    final list = [...app.messages];
-    list.sort((a, b) => _cmpDesc(a.timestamp, b.timestamp));
     return list;
   }
 
@@ -101,8 +95,8 @@ class SocialScreenViewModel extends ChangeNotifier with RefreshGuard {
       totalMessages = res.totalMessages;
       // Keep the current selection if still present, else default to the first.
       if (_selectedPackage == null ||
-          !apps.any((a) => a.package == _selectedPackage)) {
-        _selectedPackage = apps.isNotEmpty ? apps.first.package : null;
+          !apps.any((a) => a.id == _selectedPackage)) {
+        _selectedPackage = apps.isNotEmpty ? apps.first.id : null;
       }
       error = null;
     } catch (e) {

@@ -76,9 +76,18 @@ class _CheckoutWebViewState extends State<CheckoutWebView> {
             }
           },
           onNavigationRequest: (request) {
+            // Sub-frames are never the parent leaving checkout. Stripe
+            // Checkout boots several frames on hosts that are not
+            // `stripe.com` — `m.stripe.network` (Radar's fraud signals),
+            // `link.com` (Link), the wallet buttons — and on iOS the
+            // navigation delegate is called for those too (Android filters
+            // them out, which is why this only ever bit one platform).
+            // Reading one as "left Stripe" is what closed checkout by itself
+            // a second after it opened, before any card details were typed.
+            if (!request.isMainFrame) return NavigationDecision.navigate;
             final result = _classify(request.url);
             if (result != null) {
-              _finish(result);
+              _finish(result, url: request.url);
               return NavigationDecision.prevent;
             }
             return NavigationDecision.navigate;
@@ -100,38 +109,66 @@ class _CheckoutWebViewState extends State<CheckoutWebView> {
     if (launched) _finish(CheckoutResult.returned);
   }
 
+  /// Hosts that belong to the checkout flow itself, so landing on one never
+  /// means the parent left it. Stripe's own pages are only part of the list:
+  /// Checkout also hands off to Link, Google Pay and Apple Pay, and its fraud
+  /// signals load from `stripe.network` — a domain the old `stripe.com` test
+  /// missed entirely.
+  static const _checkoutHosts = <String>[
+    'stripe.com',
+    'stripe.network',
+    'link.com',
+    'pay.google.com',
+    'apple.com',
+  ];
+
+  static bool _isCheckoutHost(String host) =>
+      _checkoutHosts.any((h) => host == h || host.endsWith('.$h'));
+
   /// Maps a URL to a checkout outcome, or null if it's a normal in-flow page.
   ///
   /// Stripe's own pages live on `checkout.stripe.com`; the success/cancel
   /// redirects point back at our own return URLs. We key off the standard
   /// `success` / `cancel` markers the backend puts in those URLs, and treat any
-  /// other departure from Stripe as an ambiguous [returned].
+  /// other departure from the flow as an ambiguous [returned].
   CheckoutResult? _classify(String url) {
-    final lower = url.toLowerCase();
     final uri = Uri.tryParse(url);
-    final host = uri?.host.toLowerCase() ?? '';
+    if (uri == null) return null;
 
-    final onStripe = host.contains('stripe.com');
-    if (onStripe) return null; // still inside the checkout flow
+    // Only a real page load can be a return URL. `about:blank` (Stripe opens
+    // one for its wallet popups), `data:`, `intent:` and bank app-scheme
+    // links are all part of paying, not the end of it.
+    final scheme = uri.scheme.toLowerCase();
+    if (scheme != 'http' && scheme != 'https') return null;
 
-    if (lower.contains('cancel')) return CheckoutResult.canceled;
+    final host = uri.host.toLowerCase();
+    if (_isCheckoutHost(host)) return null; // still inside the checkout flow
+
+    final lower = url.toLowerCase();
+    // Success is tested first: a success return URL routinely carries the
+    // cancel URL along as a query parameter, and matching 'cancel' there
+    // would report a completed payment as abandoned.
     if (lower.contains('success') ||
         lower.contains('paid') ||
         lower.contains('complete')) {
       return CheckoutResult.success;
     }
-    // Left Stripe for somewhere we didn't tag — let the caller reconcile.
+    if (lower.contains('cancel')) return CheckoutResult.canceled;
+    // Left the flow for somewhere we didn't tag — let the caller reconcile.
     return CheckoutResult.returned;
   }
 
   void _maybeFinish(String url) {
     final result = _classify(url);
-    if (result != null) _finish(result);
+    if (result != null) _finish(result, url: url);
   }
 
-  void _finish(CheckoutResult result) {
+  void _finish(CheckoutResult result, {String? url}) {
     if (_finished || !mounted) return;
     _finished = true;
+    debugPrint(
+      '🧾 Checkout: finishing as $result${url == null ? '' : ' ← $url'}',
+    );
     Navigator.of(context).pop(result);
   }
 

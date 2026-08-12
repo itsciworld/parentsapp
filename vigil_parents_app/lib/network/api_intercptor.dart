@@ -22,6 +22,15 @@ class ApiInterceptor extends Interceptor {
   /// one refresh call; they all await the same result.
   static Future<bool>? _refreshing;
 
+  /// Same idea for the device key: the screens poll every few seconds, so a
+  /// rejected key produces a burst of failures that must share one re-resolve
+  /// instead of each firing its own `/api/children` fetch.
+  static Future<bool>? _rekeying;
+
+  /// Marks a request that has already been replayed with a fresh device key,
+  /// so a key the server keeps rejecting fails instead of looping forever.
+  static const _deviceKeyRetriedFlag = 'x-device-key-retried';
+
   /// Guards against multiple stacked redirects to the login screen.
   static bool _loggingOut = false;
 
@@ -136,6 +145,27 @@ class ApiInterceptor extends Interceptor {
       // expired session — it must never log the user out.
       final isDeviceKeyError = message.toLowerCase().contains('device key');
 
+      // Detecting the error was never enough on its own. The stored key is
+      // only rewritten when the child context happens to be re-resolved, so a
+      // key the server has rotated (the child app re-registering is enough to
+      // do that) stayed attached to every subsequent request — and the polling
+      // screens just repeated the same rejected call every few seconds, which
+      // is exactly how a working social feed turned into a permanently empty
+      // one. Re-resolve the child from `/api/children`, which re-persists the
+      // current key, then replay the request once.
+      if (isDeviceKeyError &&
+          err.requestOptions.extra[_deviceKeyRetriedFlag] != true) {
+        final rekeyed = await _refreshDeviceKey();
+        if (rekeyed) {
+          try {
+            final replay = await _retryWithDeviceKey(err.requestOptions);
+            return handler.resolve(replay);
+          } catch (_) {
+            // Fresh key still rejected — fall through and surface the error.
+          }
+        }
+      }
+
       // "User not found" means the account was deleted/disabled server-side, so
       // the token is pointing at nothing. Refreshing can't fix that — wipe the
       // session and bounce to login immediately. Only pre-auth paths (login,
@@ -244,6 +274,54 @@ class ApiInterceptor extends Interceptor {
   Future<Response> _retry(RequestOptions options) async {
     final token = await SecureDeviceService.getToken();
     options.headers['Authorization'] = 'Bearer $token';
+    return _tokenDio.fetch(options);
+  }
+
+  /// Re-resolves the selected child so the stored `x-device-key` is replaced
+  /// with whatever `/api/children` reports now. Concurrent callers share one
+  /// resolution. Returns true when a usable key is in storage afterwards.
+  Future<bool> _refreshDeviceKey() {
+    return _rekeying ??= _doRefreshDeviceKey().whenComplete(
+      () => _rekeying = null,
+    );
+  }
+
+  Future<bool> _doRefreshDeviceKey() async {
+    try {
+      if (kDebugMode) debugPrint("🔑 Re-resolving child device key…");
+      // The cached context is what kept handing back the dead key, so it has
+      // to be dropped before asking for a fresh one.
+      ChildContextResolver.invalidate();
+      final ctx = await ChildContextResolver.resolve(forceRefresh: true);
+      if (!ctx.isValid) return false;
+
+      final key = await SecureDeviceService.getSelectedChildDeviceKey() ?? '';
+      if (kDebugMode) {
+        debugPrint(
+          key.isEmpty
+              ? "❌ Device key re-resolve produced no key"
+              : "✅ Device key re-resolved for child ${ctx.childId}",
+        );
+      }
+      return key.isNotEmpty;
+    } catch (e) {
+      if (kDebugMode) debugPrint("❌ Device key re-resolve failed => $e");
+      return false;
+    }
+  }
+
+  /// Replays the original request with the newly resolved device key, flagged
+  /// so it can only happen once per request.
+  Future<Response> _retryWithDeviceKey(RequestOptions options) async {
+    final token = await SecureDeviceService.getToken();
+    if (token != null && token.isNotEmpty) {
+      options.headers['Authorization'] = 'Bearer $token';
+    }
+    final key = await SecureDeviceService.getSelectedChildDeviceKey();
+    if (key != null && key.isNotEmpty) {
+      options.headers['x-device-key'] = key;
+    }
+    options.extra[_deviceKeyRetriedFlag] = true;
     return _tokenDio.fetch(options);
   }
 

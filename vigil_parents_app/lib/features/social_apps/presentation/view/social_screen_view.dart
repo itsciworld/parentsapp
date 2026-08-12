@@ -128,7 +128,7 @@ class _SocialScreenViewState extends ConsumerState<SocialScreenView> {
 
     return ListView.separated(
       // Reset scroll position whenever the selected app changes.
-      key: ValueKey(app.package),
+      key: ValueKey(app.id),
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
       itemCount: threads.length,
@@ -239,10 +239,10 @@ class _AppSelector extends StatelessWidget {
         separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, i) {
           final app = apps[i];
-          final active = app.package == selected;
+          final active = app.id == selected;
           final color = AppIconAvatar.colorFor(app.app, app.package);
           return GestureDetector(
-            onTap: () => onSelected(app.package),
+            onTap: () => onSelected(app.id),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 180),
               curve: Curves.easeOut,
@@ -481,15 +481,17 @@ class _ThreadChatView extends StatelessWidget {
         ? thread.conversation
         : 'Unknown';
 
-    final messages = [...thread.messages]
-      ..sort((a, b) {
-        final at = a.timestamp;
-        final bt = b.timestamp;
-        if (at == null && bt == null) return 0;
-        if (at == null) return 1;
-        if (bt == null) return -1;
-        return bt.compareTo(at);
-      });
+    // Already oldest → newest off the model, so the conversation reads top to
+    // bottom the way the SMS one does.
+    final messages = thread.messages;
+
+    // More than one named writer on the incoming side means this is a group,
+    // and the bubbles need to say who said what.
+    final incomingSenders = messages
+        .where((m) => !m.isOutgoing && m.sender.trim().isNotEmpty)
+        .map((m) => m.sender.trim())
+        .toSet();
+    final isGroup = incomingSenders.length > 1;
 
     return Scaffold(
       backgroundColor: AppColors.scaffold,
@@ -507,8 +509,13 @@ class _ThreadChatView extends StatelessWidget {
                       padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                       itemCount: messages.length,
                       separatorBuilder: (_, _) => const SizedBox(height: 10),
-                      itemBuilder: (context, i) =>
-                          _MessageBubble(message: messages[i], accent: color),
+                      itemBuilder: (context, i) => _MessageBubble(
+                        message: messages[i],
+                        // Only worth naming the writer when more than one
+                        // person appears on the incoming side — a one-to-one
+                        // chat already says who it is in the title bar.
+                        showSender: isGroup,
+                      ),
                     ),
             ),
           ],
@@ -574,60 +581,106 @@ class _ChatTitleBar extends StatelessWidget {
 }
 
 /// ----------------------------------------------------------------------------
-/// A single chat message, rendered as an incoming bubble.
+/// A single chat message: sent by the child on the right, received on the left
+/// — the same bubble language the SMS conversation view uses, so the two chat
+/// screens read as one app.
 /// ----------------------------------------------------------------------------
 class _MessageBubble extends StatelessWidget {
   final ScreenMessage message;
-  final Color accent;
 
-  const _MessageBubble({required this.message, required this.accent});
+  /// Label incoming bubbles with their writer (group threads only).
+  final bool showSender;
+
+  const _MessageBubble({required this.message, this.showSender = false});
 
   @override
   Widget build(BuildContext context) {
+    final isSent = message.isOutgoing;
+    final maxWidth = MediaQuery.of(context).size.width * 0.76;
+
+    final bubbleColor = isSent ? AppColors.primary : AppColors.surface;
+    final textColor = isSent ? AppColors.textOnDark : AppColors.textPrimary;
+    final timeColor = isSent
+        ? Colors.white.withValues(alpha: 0.8)
+        : AppColors.textSecondary;
+
+    final radius = BorderRadius.only(
+      topLeft: const Radius.circular(16),
+      topRight: const Radius.circular(16),
+      bottomLeft: Radius.circular(isSent ? 16 : 4),
+      bottomRight: Radius.circular(isSent ? 4 : 16),
+    );
+
+    final sender = message.sender.trim();
+
     return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisAlignment: isSent
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       children: [
-        Flexible(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(4),
-                topRight: Radius.circular(16),
-                bottomLeft: Radius.circular(16),
-                bottomRight: Radius.circular(16),
-              ),
-              border: Border.all(color: AppColors.cardBorder),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+        Container(
+          constraints: BoxConstraints(maxWidth: maxWidth),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          decoration: BoxDecoration(
+            color: bubbleColor,
+            borderRadius: radius,
+            border: isSent ? null : Border.all(color: AppColors.cardBorder),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (showSender && !isSent && sender.isNotEmpty) ...[
                 Text(
-                  message.text.isNotEmpty ? message.text : '—',
+                  sender,
                   style: const TextStyle(
-                    fontSize: 13.5,
-                    height: 1.32,
-                    color: AppColors.textPrimary,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(height: 3),
-                Text(
-                  _relativeTime(message.timestamp),
-                  style: const TextStyle(
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
               ],
-            ),
+              Text(
+                message.text.isNotEmpty ? message.text : '(empty message)',
+                style: TextStyle(fontSize: 14, height: 1.35, color: textColor),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                _chatTime(message.timestamp),
+                style: TextStyle(fontSize: 10.5, color: timeColor),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 48),
       ],
     );
   }
+}
+
+/// "30 Jun, 2:45 PM" — the same clock format the SMS conversation prints, so a
+/// message reads the same whichever screen it came from. The inbox rows keep
+/// their compact relative time; only the open chat switches to this.
+String _chatTime(DateTime? date) {
+  if (date == null) return '';
+  final hour = date.hour % 12 == 0 ? 12 : date.hour % 12;
+  final minute = date.minute.toString().padLeft(2, '0');
+  final period = date.hour >= 12 ? 'PM' : 'AM';
+  const months = [
+    '',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
+    'May',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
+  ];
+  return '${date.day} ${months[date.month]}, $hour:$minute $period';
 }
 
 /// "now" / "5m" / "3h" / "Jun 30" — a compact relative timestamp.

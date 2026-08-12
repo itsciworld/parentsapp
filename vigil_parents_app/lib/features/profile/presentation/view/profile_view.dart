@@ -12,8 +12,7 @@ import 'package:vigil_parents_app/features/main_shell/shell_tabs.dart';
 import 'package:vigil_parents_app/features/profile/models/profile_model.dart';
 import 'package:vigil_parents_app/features/profile/presentation/view_model/profile_viewmodel.dart';
 import 'package:vigil_parents_app/features/subscription/models/subscription_model.dart';
-// Plan/subscription viewmodel disabled for now — no plan UI is shown.
-// import 'package:vigil_parents_app/features/subscription/presentation/view_model/subscription_viewmodel.dart';
+import 'package:vigil_parents_app/features/subscription/presentation/view_model/subscription_viewmodel.dart';
 
 class ProfileView extends ConsumerStatefulWidget {
   const ProfileView({super.key});
@@ -31,8 +30,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
 
     Future.microtask(() async {
       ref.read(profileViewModelProvider).loadProfile();
-      // Plan/subscription UI disabled for now — no plan card or upgrade shown.
-      // ref.read(subscriptionViewModelProvider).load(showLoader: false);
+      ref.read(subscriptionViewModelProvider).load(showLoader: false);
       // Load the selected child, then permissions for the active child.
       await ref.read(selectedChildProvider).load();
       final childId = ref.read(selectedChildProvider).selectedId;
@@ -58,8 +56,7 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
   /// Pull-to-refresh: reloads the profile and the child's permissions.
   Future<void> _refreshAll() async {
     await ref.read(profileViewModelProvider).refresh();
-    // Plan/subscription refresh disabled for now.
-    // await ref.read(subscriptionViewModelProvider).refresh();
+    await ref.read(subscriptionViewModelProvider).refresh();
     await ref.read(selectedChildProvider).load(force: true);
     final childId = ref.read(selectedChildProvider).selectedId;
     if (childId != null) {
@@ -149,9 +146,8 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
 
     final selectedChild = ref.watch(selectedChildProvider);
     final permsVm = ref.watch(childPermissionsProvider);
-    // Plan/subscription UI disabled for now.
-    // final subVm = ref.watch(subscriptionViewModelProvider);
-    // final hasChild = selectedChild.selected != null;
+    final subVm = ref.watch(subscriptionViewModelProvider);
+    final hasChild = selectedChild.selected != null;
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -159,16 +155,15 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
       children: [
         _ProfileHeader(profile: profile),
         const SizedBox(height: 20),
-        // Plan/subscription card disabled for now.
-        // if (hasChild) ...[
-        //   _CurrentPlanCard(
-        //     sub: subVm.mySubscription,
-        //     loading: subVm.isLoading && subVm.plans.isEmpty,
-        //     onManage: () =>
-        //         Navigator.of(context).pushNamed(AppRoutesName.plansView),
-        //   ),
-        //   const SizedBox(height: 16),
-        // ],
+        if (hasChild) ...[
+          _CurrentPlanCard(
+            sub: subVm.mySubscription,
+            loading: subVm.isLoading && subVm.plans.isEmpty,
+            onManage: () =>
+                Navigator.of(context).pushNamed(AppRoutesName.plansView),
+          ),
+          const SizedBox(height: 16),
+        ],
         _InfoSection(
           title: 'Location',
           icon: Icons.location_on_outlined,
@@ -209,14 +204,13 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
           ),
         ],
         const SizedBox(height: 24),
-        // Upgrade button disabled for now — no plan/upsell shown.
-        // if (hasChild && !subVm.isOnTopPlan) ...[
-        //   _UpgradeButton(
-        //     onTap: () =>
-        //         Navigator.of(context).pushNamed(AppRoutesName.plansView),
-        //   ),
-        //   const SizedBox(height: 12),
-        // ],
+        if (hasChild && !subVm.isOnTopPlan) ...[
+          _UpgradeButton(
+            onTap: () =>
+                Navigator.of(context).pushNamed(AppRoutesName.plansView),
+          ),
+          const SizedBox(height: 12),
+        ],
         _LogoutButton(isLoading: _isLoggingOut, onTap: _confirmAndLogout),
         const SizedBox(height: 16),
         const Center(

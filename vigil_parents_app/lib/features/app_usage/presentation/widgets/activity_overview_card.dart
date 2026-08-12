@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
-import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/features/app_usage/models/app_usage_model.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/view/app_usage_detail_view.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/view_model/app_usage_viewmodel.dart';
@@ -11,26 +10,8 @@ import 'package:vigil_parents_app/features/app_usage/presentation/widgets/app_ic
 
 /// Home "Activity Overview" card — total screen time plus a mini animated bar
 /// chart of the most-used apps, with an expand icon to the full detail view.
-/// Locked until the paid version — tapping the card surfaces a toast instead
-/// of opening the full app-usage detail screen.
-const bool _appUsageLocked = true;
-
 class ActivityOverviewCard extends ConsumerWidget {
   const ActivityOverviewCard({super.key});
-
-  void _onTap(BuildContext context) {
-    if (_appUsageLocked) {
-      showAppToast(
-        context: context,
-        title: 'Premium Feature',
-        subtitle: 'App Usage is coming in the paid version.',
-        type: ToastType.info,
-        icon: Icons.lock_rounded,
-      );
-      return;
-    }
-    _openDetail(context);
-  }
 
   void _openDetail(BuildContext context) {
     Navigator.of(context).push(
@@ -120,11 +101,11 @@ class ActivityOverviewCard extends ConsumerWidget {
                   ],
                 ),
               ),
-              _ExpandButton(onTap: () => _onTap(context)),
+              _ExpandButton(onTap: () => _openDetail(context)),
             ],
           ),
           const SizedBox(height: 16),
-          _Body(vm: vm, top: top, onExpand: () => _onTap(context)),
+          _Body(vm: vm, top: top, onExpand: () => _openDetail(context)),
         ],
       ),
     );
@@ -363,7 +344,7 @@ class _ExpandButton extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(8),
           child: Icon(
-            _appUsageLocked ? Icons.lock_rounded : Icons.open_in_full_rounded,
+            Icons.open_in_full_rounded,
             size: 17,
             color: AppColors.textOnDark,
           ),
