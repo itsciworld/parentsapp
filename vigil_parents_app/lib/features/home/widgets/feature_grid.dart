@@ -141,7 +141,10 @@ class _FeatureTileCard extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
-                    '${tile.badgeCount}',
+                    // A child's message or contact history runs into the
+                    // thousands, and the raw number would grow the pill wider
+                    // than the tile it sits on.
+                    tile.badgeCount! > 99 ? '99+' : '${tile.badgeCount}',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 9,
