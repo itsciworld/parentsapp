@@ -1,6 +1,8 @@
 // Maps GET /api/social/screen — captured on-screen chat messages from the
 // child's social apps, grouped per app.
 
+import 'package:vigil_parents_app/core/utils/api_date.dart';
+
 /// A single captured chat message (one conversation line).
 class ScreenMessage {
   final String id;
@@ -33,8 +35,10 @@ class ScreenMessage {
       id: json['_id']?.toString() ?? '',
       conversation: json['conversation']?.toString() ?? '',
       text: json['text']?.toString() ?? '',
-      capturedAt: DateTime.tryParse(json['captured_at']?.toString() ?? ''),
-      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
+      // parseApiDate, not DateTime.tryParse: the capture sends epoch values as
+      // often as ISO strings, and tryParse reads those as "no date at all".
+      capturedAt: parseApiDate(json['captured_at']),
+      createdAt: parseApiDate(json['createdAt']),
       sender: (json['sender'] ?? json['from'] ?? '').toString(),
       isOutgoing: _outgoingFrom(json),
     );
@@ -121,9 +125,7 @@ class ScreenThread {
       count: (json['count'] as num?)?.toInt() ?? messages.length,
       // Fall back to the thread's own newest message when the server omits
       // these, so the inbox row still shows a time and a preview.
-      lastTime:
-          DateTime.tryParse(json['lastTime']?.toString() ?? '') ??
-          latest?.timestamp,
+      lastTime: parseApiDate(json['lastTime']) ?? latest?.timestamp,
       lastPreview: json['lastPreview']?.toString() ?? latest?.text ?? '',
       messages: messages,
     );
@@ -281,7 +283,7 @@ class SocialScreenResponse {
       totalMessages:
           (body['totalMessages'] as num?)?.toInt() ??
           apps.fold<int>(0, (sum, a) => sum + a.count),
-      windowSince: DateTime.tryParse(body['windowSince']?.toString() ?? ''),
+      windowSince: parseApiDate(body['windowSince']),
       apps: apps,
     );
   }

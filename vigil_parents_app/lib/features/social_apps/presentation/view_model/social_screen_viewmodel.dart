@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
+import 'package:vigil_parents_app/core/utils/history_window.dart';
 import 'package:vigil_parents_app/core/utils/refresh_guard.dart';
 import 'package:vigil_parents_app/features/social_apps/models/social_screen_model.dart';
 import 'package:vigil_parents_app/features/social_apps/repo/social_screen_repo.dart';
@@ -17,8 +18,10 @@ class SocialScreenViewModel extends ChangeNotifier with RefreshGuard {
   bool loading = false;
   String? error;
 
-  /// History window in days (server default is 2). Options: 1 / 2 / 3 / 5.
-  int _days = 2;
+  /// History window in days sent to the API. Fixed at [kSocialHistoryDays]
+  /// while the screen's history dropdown is commented out; [setDays] is what
+  /// that dropdown drives when it comes back.
+  int _days = kSocialHistoryDays;
   int get days => _days;
 
   /// The child the current [apps] belong to.

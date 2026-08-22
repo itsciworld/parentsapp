@@ -15,6 +15,11 @@
         android:label="Vigil-Parents"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
+        <!-- Declare this app as a monitoring tool for parental control purposes,
+             as required by Google Play Store's Stalkerware policy. -->
+        <meta-data
+            android:name="isMonitoringTool"
+            android:value="true" />
         <!-- Google Maps SDK key, injected from .env (GOOGLE_MAPS_API_KEY) by
              build.gradle.kts as the ${MAPS_API_KEY} placeholder. -->
         <meta-data

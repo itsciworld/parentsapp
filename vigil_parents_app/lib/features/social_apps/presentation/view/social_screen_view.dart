@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/components/app_shimmer.dart';
-import 'package:vigil_parents_app/components/day_window_selector.dart';
+// import 'package:vigil_parents_app/components/day_window_selector.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/features/app_usage/presentation/widgets/app_icon_avatar.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/selected_child_viewmodel.dart';
@@ -21,7 +21,11 @@ class SocialScreenView extends ConsumerStatefulWidget {
 }
 
 class _SocialScreenViewState extends ConsumerState<SocialScreenView> {
-  DayWindow _window = DayWindow.twoDays;
+  // History dropdown is off for now — the screen loads a fixed
+  // `kSocialHistoryDays` window. Restore this field, `_onWindowChanged`, the
+  // History row in `build` and the `day_window_selector` import together to
+  // bring it back.
+  // DayWindow _window = DayWindow.all;
 
   @override
   void initState() {
@@ -41,11 +45,12 @@ class _SocialScreenViewState extends ConsumerState<SocialScreenView> {
     ref.read(socialScreenViewModelProvider).load(childId);
   }
 
-  void _onWindowChanged(DayWindow w) {
-    setState(() => _window = w);
-    // "All" has no day cap — send a wide window so the server returns everything.
-    ref.read(socialScreenViewModelProvider).setDays(w.days ?? 3650);
-  }
+  // void _onWindowChanged(DayWindow w) {
+  //   setState(() => _window = w);
+  //   // "All" has no day cap — send a wide window so the server returns
+  //   // everything.
+  //   ref.read(socialScreenViewModelProvider).setDays(w.days ?? 3650);
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -62,27 +67,27 @@ class _SocialScreenViewState extends ConsumerState<SocialScreenView> {
               total: vm.totalMessages,
               onChildSelected: _onChildSelected,
             ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-              child: Row(
-                children: [
-                  const Text(
-                    'History',
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const Spacer(),
-                  DayWindowDropdown(
-                    selected: _window,
-                    enabled: !vm.loading,
-                    onSelected: _onWindowChanged,
-                  ),
-                ],
-              ),
-            ),
+            // Padding(
+            //   padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+            //   child: Row(
+            //     children: [
+            //       const Text(
+            //         'History',
+            //         style: TextStyle(
+            //           fontSize: 12.5,
+            //           fontWeight: FontWeight.w700,
+            //           color: AppColors.textSecondary,
+            //         ),
+            //       ),
+            //       const Spacer(),
+            //       DayWindowDropdown(
+            //         selected: _window,
+            //         enabled: !vm.loading,
+            //         onSelected: _onWindowChanged,
+            //       ),
+            //     ],
+            //   ),
+            // ),
             if (vm.apps.isNotEmpty)
               _AppSelector(
                 apps: vm.apps,

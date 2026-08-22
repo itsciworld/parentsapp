@@ -1,3 +1,4 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -8,6 +9,7 @@ import 'package:vigil_parents_app/core/routing/routes.dart';
 import 'package:vigil_parents_app/core/services/background/background_service.dart';
 import 'package:vigil_parents_app/core/services/background/sync_signals.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
+import 'package:vigil_parents_app/firebase_options.dart';
 
 void main() async {
   final binding = WidgetsFlutterBinding.ensureInitialized();
@@ -17,6 +19,7 @@ void main() async {
   await dotenv.load(fileName: ".env");
   // Ensure existing sessions are mirrored to SharedPreferences so the
   // background isolate can read the auth token.
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await SecureDeviceService.syncMirrorFromSecure();
   await initializeBackgroundService();
   runApp(const ProviderScope(child: MyApp()));

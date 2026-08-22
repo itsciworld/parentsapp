@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
+import 'package:vigil_parents_app/core/utils/history_window.dart';
 import 'package:vigil_parents_app/network/api_intercptor.dart';
 
 import '../models/social_screen_model.dart';
@@ -17,7 +18,7 @@ class SocialScreenRepository {
     required String childId,
     String? parentId,
     int limit = 200,
-    int days = 2,
+    int days = kSocialHistoryDays,
   }) async {
     final pid = parentId ?? await SecureDeviceService.getParentId() ?? '';
     final query = {
