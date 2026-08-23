@@ -8,12 +8,18 @@ import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import io.flutter.embedding.android.FlutterActivity
+import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
 
-class MainActivity : FlutterActivity() {
+/**
+ * Extends FlutterFragmentActivity rather than FlutterActivity because
+ * local_auth shows AndroidX's BiometricPrompt, which is a Fragment and can only
+ * be hosted by a FragmentActivity. On a plain FlutterActivity every biometric
+ * call fails at runtime.
+ */
+class MainActivity : FlutterFragmentActivity() {
     private val downloadsChannel = "vigil/downloads"
     private val storagePermissionRequest = 4901
 

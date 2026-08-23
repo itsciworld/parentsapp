@@ -12,6 +12,10 @@ import 'package:vigil_parents_app/features/auth/repo/auth_repo.dart';
 /// state can safely carry over while navigating between screens.
 class ForgotPasswordState {
   final bool isLoading;
+
+  /// Kept separate from [isLoading] so a resend only spins the "Resend" link
+  /// and leaves the "Verify OTP" button untouched.
+  final bool isResending;
   final bool resetRequested;
   final bool otpVerified;
   final bool passwordReset;
@@ -19,6 +23,7 @@ class ForgotPasswordState {
 
   ForgotPasswordState({
     this.isLoading = false,
+    this.isResending = false,
     this.resetRequested = false,
     this.otpVerified = false,
     this.passwordReset = false,
@@ -27,6 +32,7 @@ class ForgotPasswordState {
 
   ForgotPasswordState copyWith({
     bool? isLoading,
+    bool? isResending,
     bool? resetRequested,
     bool? otpVerified,
     bool? passwordReset,
@@ -35,6 +41,7 @@ class ForgotPasswordState {
   }) {
     return ForgotPasswordState(
       isLoading: isLoading ?? this.isLoading,
+      isResending: isResending ?? this.isResending,
       resetRequested: resetRequested ?? this.resetRequested,
       otpVerified: otpVerified ?? this.otpVerified,
       passwordReset: passwordReset ?? this.passwordReset,
@@ -48,11 +55,18 @@ class ForgotPasswordViewModel extends StateNotifier<ForgotPasswordState> {
 
   ForgotPasswordViewModel(this._authRepository) : super(ForgotPasswordState());
 
-  // STEP 1 → request a reset code for the given email
-  Future<void> requestPasswordReset(String email) async {
+  // STEP 1 → request a reset code for the given email. Also used by the OTP
+  // screen's "Resend", which passes [isResend] so the spinner stays on that
+  // link and [resetRequested] never re-fires the forgot-password screen's
+  // navigation listener.
+  Future<void> requestPasswordReset(
+    String email, {
+    bool isResend = false,
+  }) async {
     state = state.copyWith(
-      isLoading: true,
-      resetRequested: false,
+      isLoading: !isResend,
+      isResending: isResend,
+      resetRequested: isResend ? null : false,
       clearToast: true,
     );
 
@@ -61,6 +75,7 @@ class ForgotPasswordViewModel extends StateNotifier<ForgotPasswordState> {
 
       state = state.copyWith(
         isLoading: false,
+        isResending: false,
         resetRequested: true,
         toastData: AppToastData(
           title: 'Code Sent',
@@ -71,6 +86,7 @@ class ForgotPasswordViewModel extends StateNotifier<ForgotPasswordState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
+        isResending: false,
         toastData: AppToastData(
           title: 'Request Failed',
           subtitle: e.toString().replaceAll('Exception: ', ''),

@@ -4,6 +4,7 @@ import 'package:vigil_parents_app/components/app_header.dart';
 import 'package:vigil_parents_app/core/appColor/app_color.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
+import 'package:vigil_parents_app/core/services/biometric/biometric_auth_service.dart';
 import 'package:vigil_parents_app/features/auth/repo/auth_repo.dart';
 import 'package:vigil_parents_app/features/child/models/child_permissions_model.dart';
 import 'package:vigil_parents_app/features/child/presentation/view_model/child_permissions_viewmodel.dart';
@@ -24,9 +25,25 @@ class ProfileView extends ConsumerStatefulWidget {
 class _ProfileViewState extends ConsumerState<ProfileView> {
   bool _isLoggingOut = false;
 
+  /// Whether the phone itself can run a scan (hardware present *and* something
+  /// enrolled in the OS). The whole security card is hidden when it can't —
+  /// offering a switch that could never work would only confuse.
+  bool _biometricAvailable = false;
+
+  /// Whether biometric login is currently switched on for this account.
+  bool _biometricEnabled = false;
+
+  BiometricKind _biometricKind = BiometricKind.generic;
+
+  /// Guards the toggle while a scan / verification is in flight, so a double
+  /// tap can't start two enrolments.
+  bool _biometricBusy = false;
+
   @override
   void initState() {
     super.initState();
+
+    _loadBiometricState();
 
     Future.microtask(() async {
       ref.read(profileViewModelProvider).loadProfile();
@@ -124,6 +141,188 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
     );
   }
 
+  // ── Biometric login ────────────────────────────────────────────────────────
+
+  Future<void> _loadBiometricState() async {
+    final available = await BiometricAuthService.isAvailable();
+    final enabled = await BiometricAuthService.isEnabled();
+    final kind = available
+        ? await BiometricAuthService.kind()
+        : BiometricKind.generic;
+
+    if (!mounted) return;
+    setState(() {
+      _biometricAvailable = available;
+      _biometricEnabled = enabled;
+      _biometricKind = kind;
+    });
+  }
+
+  Future<void> _onBiometricToggled(bool value, String email) async {
+    if (_biometricBusy) return;
+    setState(() => _biometricBusy = true);
+    try {
+      if (value) {
+        await _enableBiometricLogin(email);
+      } else {
+        await _disableBiometricLogin();
+      }
+    } finally {
+      if (mounted) setState(() => _biometricBusy = false);
+    }
+  }
+
+  Future<void> _disableBiometricLogin() async {
+    await BiometricAuthService.disable();
+    if (!mounted) return;
+    setState(() => _biometricEnabled = false);
+    showAppToast(
+      context: context,
+      title: 'Biometric Login Off',
+      subtitle: 'You will need your password the next time you log in.',
+      type: ToastType.info,
+    );
+  }
+
+  Future<void> _enableBiometricLogin(String email) async {
+    // Scan first: enrolling is a security change, so it must be the account
+    // holder's own finger/face doing it, not whoever happens to be holding an
+    // already-unlocked phone.
+    final scan = await BiometricAuthService.prompt(
+      'Confirm your identity to turn on biometric login',
+    );
+    if (!mounted) return;
+
+    if (!scan.isSuccess) {
+      if (!scan.isCancelled) {
+        showAppToast(
+          context: context,
+          title: 'Could Not Turn On',
+          subtitle: scan.message ?? 'Biometric authentication failed.',
+          type: ToastType.error,
+        );
+      }
+      return;
+    }
+
+    // The password from this session's own login, if there was one. That is
+    // the normal path — the parent enrols without retyping anything.
+    var password = BiometricAuthService.cachedPasswordFor(email);
+    var needsVerification = false;
+
+    if (password == null) {
+      // Cold start: the app is running on a restored session and never saw the
+      // password. It has to be confirmed once, because the vault is what a
+      // future biometric login replays.
+      password = await _askForPassword();
+      if (!mounted || password == null || password.isEmpty) return;
+      needsVerification = true;
+    }
+
+    if (needsVerification) {
+      try {
+        // Verifying through the real login endpoint is the only way to know the
+        // password works; it also refreshes this session's tokens, which is
+        // harmless.
+        await AuthRepository().login(email, password);
+      } on InvalidCredentialsException {
+        if (!mounted) return;
+        showAppToast(
+          context: context,
+          title: 'Incorrect Password',
+          subtitle: 'Please check your password and try again.',
+          type: ToastType.error,
+        );
+        return;
+      } catch (e) {
+        if (!mounted) return;
+        showAppToast(
+          context: context,
+          title: 'Could Not Turn On',
+          subtitle: e.toString().replaceAll('Exception: ', ''),
+          type: ToastType.error,
+        );
+        return;
+      }
+    }
+
+    await BiometricAuthService.enable(email: email, password: password);
+    if (!mounted) return;
+
+    setState(() => _biometricEnabled = true);
+    showAppToast(
+      context: context,
+      title: 'Biometric Login On',
+      subtitle:
+          'Next time, tap the ${_biometricKind.label} icon on the login '
+          'screen to sign in.',
+      type: ToastType.success,
+    );
+  }
+
+  /// One-off password confirmation, shown only when this app run did not
+  /// perform the login itself. Returns null if the parent backs out.
+  Future<String?> _askForPassword() {
+    final controller = TextEditingController();
+    var obscure = true;
+
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: const Text('Confirm your password'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter your password once so biometric login can sign you in '
+                'later.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: controller,
+                obscureText: obscure,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (v) => Navigator.of(ctx).pop(v),
+                decoration: InputDecoration(
+                  hintText: 'Password',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscure
+                          ? Icons.visibility_off_outlined
+                          : Icons.visibility_outlined,
+                    ),
+                    onPressed: () => setDialogState(() => obscure = !obscure),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              onPressed: () => Navigator.of(ctx).pop(controller.text),
+              child: const Text('Confirm'),
+            ),
+          ],
+        ),
+      ),
+    ).whenComplete(controller.dispose);
+  }
+
   Widget _buildBody(ProfileViewModel vm) {
     if (vm.isLoading && vm.profile == null) {
       return const Center(child: CircularProgressIndicator());
@@ -194,6 +393,22 @@ class _ProfileViewState extends ConsumerState<ProfileView> {
             ),
           ],
         ),
+        // Hidden on a device that can't scan — offering a switch that could
+        // never work only confuses. The one exception is an enrolment that is
+        // already on: the phone's fingerprints may have been removed since,
+        // and the card is the only way to clear the stored credentials.
+        if ((_biometricAvailable || _biometricEnabled) &&
+            profile.email.trim().isNotEmpty) ...[
+          const SizedBox(height: 16),
+          _BiometricSection(
+            kind: _biometricKind,
+            enabled: _biometricEnabled,
+            available: _biometricAvailable,
+            busy: _biometricBusy,
+            onChanged: (value) =>
+                _onBiometricToggled(value, profile.email.trim()),
+          ),
+        ],
         if (selectedChild.selected != null) ...[
           const SizedBox(height: 16),
           _PermissionsSection(
@@ -461,6 +676,150 @@ class _InfoRow extends StatelessWidget {
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Biometric login card ─────────────────────────────────────────────────────────
+class _BiometricSection extends StatelessWidget {
+  const _BiometricSection({
+    required this.kind,
+    required this.enabled,
+    required this.available,
+    required this.busy,
+    required this.onChanged,
+  });
+
+  final BiometricKind kind;
+  final bool enabled;
+
+  /// Whether the device can currently run a scan. False with [enabled] true
+  /// means the parent removed their fingerprints/face after enrolling.
+  final bool available;
+
+  final bool busy;
+  final ValueChanged<bool> onChanged;
+
+  String get _subtitle {
+    if (enabled && !available) {
+      return 'No fingerprint or face is set up on this device any more. Add '
+          'one in your device settings, or turn this off.';
+    }
+    return enabled
+        ? 'Log back in with a scan instead of your password.'
+        : 'Skip typing your password the next time you log in.';
+  }
+
+  IconData get _icon {
+    switch (kind) {
+      case BiometricKind.face:
+        return Icons.face_retouching_natural_rounded;
+      case BiometricKind.iris:
+        return Icons.remove_red_eye_outlined;
+      case BiometricKind.fingerprint:
+      case BiometricKind.generic:
+        return Icons.fingerprint_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.cardBorder),
+        boxShadow: const [
+          BoxShadow(
+            color: AppColors.shadow,
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                Icons.lock_outline_rounded,
+                size: 20,
+                color: AppColors.primary,
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                'Security',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryLight,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(_icon, size: 22, color: AppColors.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${kind.label} Login',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      _subtitle,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        height: 1.35,
+                        color: enabled && !available
+                            ? AppColors.warning
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              // The switch is swapped for a spinner while a scan is running, so
+              // its position can't be tapped again mid-enrolment.
+              busy
+                  ? const SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.primary,
+                      ),
+                    )
+                  : Switch.adaptive(
+                      value: enabled,
+                      activeThumbColor: AppColors.primary,
+                      onChanged: onChanged,
+                    ),
+            ],
           ),
         ],
       ),

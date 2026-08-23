@@ -1,8 +1,21 @@
 import 'package:dio/dio.dart';
 
+import 'package:vigil_parents_app/core/services/biometric/biometric_auth_service.dart';
 import 'package:vigil_parents_app/core/services/child_context/child_context_resolver.dart';
 import 'package:vigil_parents_app/core/services/secure_storage/secure_storage.dart';
 import 'package:vigil_parents_app/network/api_intercptor.dart';
+
+/// Thrown when the server rejects the submitted email/password outright, as
+/// opposed to an outage or a timeout. Biometric login relies on the difference:
+/// stale stored credentials must drop the enrolment, a dead network must not.
+class InvalidCredentialsException implements Exception {
+  InvalidCredentialsException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
 
 class AuthRepository {
   final ApiClient _apiClient = ApiClient();
@@ -70,11 +83,22 @@ class AuthRepository {
         data: {"email": email, "password": password},
       );
 
-      return await _handleAuth(response, email);
+      final message = await _handleAuth(response, email);
+      // These credentials are now known-good: hand them to the biometric
+      // service so Profile can enrol without a second password entry, and so
+      // an existing enrolment picks up a changed password.
+      await BiometricAuthService.onPasswordLogin(email, password);
+      return message;
     } on DioException catch (e) {
-      throw Exception(
-        _mapLoginError(e.error?.toString(), e.response?.statusCode),
-      );
+      final statusCode = e.response?.statusCode;
+      final message = _mapLoginError(e.error?.toString(), statusCode);
+      // 400/401 = wrong password, 404 = unknown email. All three mean the
+      // credentials themselves are no good, which is what biometric login
+      // needs to know.
+      if (statusCode == 400 || statusCode == 401 || statusCode == 404) {
+        throw InvalidCredentialsException(message);
+      }
+      throw Exception(message);
     } catch (e) {
       throw Exception(_mapLoginError(e.toString(), null));
     }
@@ -146,6 +170,9 @@ class AuthRepository {
         deviceKey: data['deviceKey'] as String?,
       );
 
+      // Same as login: a fresh account can turn biometrics on straight away.
+      await BiometricAuthService.onPasswordLogin(email, password);
+
       return _readMessage(response, "Account created successfully");
     } on DioException catch (e) {
       // Matched on the message alone, not the status code: this endpoint also
@@ -191,6 +218,10 @@ class AuthRepository {
       // Drop the cached parent/child ids too, so the next sign-in on this
       // device can't inherit the previous account's selected child.
       ChildContextResolver.invalidate();
+      // Only the in-memory copy of the password goes: the biometric vault is
+      // deliberately kept, because unlocking after a logout is the whole point
+      // of the feature.
+      BiometricAuthService.clearSession();
     }
   }
 

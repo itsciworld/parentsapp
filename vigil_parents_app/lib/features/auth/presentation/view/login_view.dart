@@ -5,6 +5,7 @@ import 'package:vigil_parents_app/core/appColor/app_theme/app_gradient.dart';
 import 'package:vigil_parents_app/core/appimages/app_images.dart';
 import 'package:vigil_parents_app/core/apptost/app_tost.dart';
 import 'package:vigil_parents_app/core/routing/routes.dart';
+import 'package:vigil_parents_app/core/services/biometric/biometric_auth_service.dart';
 import 'package:vigil_parents_app/core/utils/validators.dart';
 
 import 'package:vigil_parents_app/features/auth/presentation/view_model/auth_viewmodel.dart';
@@ -23,6 +24,12 @@ class _LoginViewState extends ConsumerState<LoginView> {
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
 
+  /// Whether this device has an active biometric enrolment for a Vigil account.
+  /// Stays false until the async check answers, so the shortcut never flashes
+  /// in and out for parents who have not set it up.
+  bool _biometricReady = false;
+  BiometricKind _biometricKind = BiometricKind.generic;
+
   static const Color _darkNavy = Color(0xFF1A237E);
 
   static const Color _accentGreen = Color(0xFF15BEB5);
@@ -38,10 +45,34 @@ class _LoginViewState extends ConsumerState<LoginView> {
   );
 
   @override
+  void initState() {
+    super.initState();
+    _loadBiometricOption();
+  }
+
+  @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadBiometricOption() async {
+    final ready = await BiometricAuthService.canLogInWithBiometrics();
+    if (!ready || !mounted) return;
+
+    final kind = await BiometricAuthService.kind();
+    if (!mounted) return;
+
+    setState(() {
+      _biometricReady = true;
+      _biometricKind = kind;
+    });
+  }
+
+  void _handleBiometricLogin() {
+    FocusScope.of(context).unfocus();
+    ref.read(authViewModelProvider.notifier).loginWithBiometrics();
   }
 
   void _handleLogin() {
@@ -246,9 +277,10 @@ class _LoginViewState extends ConsumerState<LoginView> {
                                 SizedBox(height: vGapMd * 1.4),
 
                                 CustomButton(
-                                  onTap: authState.isLoading
-                                      ? null
-                                      : _handleLogin,
+                                  // Disabled while a biometric login runs, but
+                                  // it does not spin for it — that spinner sits
+                                  // on the biometric icon.
+                                  onTap: authState.isBusy ? null : _handleLogin,
                                   isLoading: authState.isLoading,
                                   label: 'Login',
                                   height: screenH * 0.053,
@@ -283,6 +315,23 @@ class _LoginViewState extends ConsumerState<LoginView> {
                                     ),
                                   ],
                                 ),
+
+                                if (_biometricReady) ...[
+                                  SizedBox(height: vGapMd),
+                                  Center(
+                                    child: _BiometricLoginButton(
+                                      kind: _biometricKind,
+                                      accentColor: _accentBlue,
+                                      // The spinner belongs to whichever
+                                      // control was tapped, so only the
+                                      // biometric flag drives this one.
+                                      isLoading: authState.isBiometricLoading,
+                                      onTap: authState.isBusy
+                                          ? null
+                                          : _handleBiometricLogin,
+                                    ),
+                                  ),
+                                ],
 
                                 SizedBox(height: vGapMd),
 
@@ -329,6 +378,101 @@ class _LoginViewState extends ConsumerState<LoginView> {
           },
         ),
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Biometric shortcut — only built once an enrolment is confirmed, so it is
+// absent (not disabled) for anyone who has never switched it on.
+// ---------------------------------------------------------------------------
+
+class _BiometricLoginButton extends StatelessWidget {
+  const _BiometricLoginButton({
+    required this.kind,
+    required this.accentColor,
+    required this.isLoading,
+    required this.onTap,
+  });
+
+  final BiometricKind kind;
+  final Color accentColor;
+
+  /// True only for a biometric sign-in — a password login must not spin here.
+  final bool isLoading;
+
+  /// Null while either login flow is in flight.
+  final VoidCallback? onTap;
+
+  IconData get _icon {
+    switch (kind) {
+      case BiometricKind.face:
+        return Icons.face_retouching_natural_rounded;
+      case BiometricKind.iris:
+        return Icons.remove_red_eye_outlined;
+      case BiometricKind.fingerprint:
+      case BiometricKind.generic:
+        return Icons.fingerprint_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Material(
+          color: Colors.transparent,
+          shape: const CircleBorder(),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: onTap,
+            customBorder: const CircleBorder(),
+            child: Opacity(
+              // Dimmed only when disabled by the *other* flow; its own spinner
+              // stays at full strength.
+              opacity: enabled || isLoading ? 1 : 0.5,
+              child: Container(
+                width: 62,
+                height: 62,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: accentColor.withValues(alpha: 0.10),
+                  border: Border.all(
+                    color: accentColor.withValues(alpha: 0.35),
+                    width: 1.5,
+                  ),
+                ),
+                // The spinner replaces the icon rather than sitting beside it,
+                // so the circle keeps its size and nothing below shifts.
+                child: isLoading
+                    ? Center(
+                        child: SizedBox(
+                          width: 26,
+                          height: 26,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2.5,
+                            color: accentColor,
+                          ),
+                        ),
+                      )
+                    : Icon(_icon, size: 32, color: accentColor),
+              ),
+            ),
+          ),
+        ),
+        // const SizedBox(height: 8),
+        // Text(
+        //   'Login with ${kind.label}',
+        //   style: TextStyle(
+        //     fontSize: 13,
+        //     fontWeight: FontWeight.w600,
+        //     color: accentColor,
+        //   ),
+        // ),
+      ],
     );
   }
 }

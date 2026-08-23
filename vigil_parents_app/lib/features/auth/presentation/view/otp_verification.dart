@@ -34,6 +34,9 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
   }
 
   void _handleVerifyOtp() {
+    // Pinput's onCompleted can fire while a resend is still in flight.
+    if (ref.read(forgotPasswordViewModelProvider).isResending) return;
+
     FocusScope.of(context).unfocus();
 
     final otp = _otpController.text.trim();
@@ -55,9 +58,10 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
 
   void _handleResend() {
     FocusScope.of(context).unfocus();
+    _otpController.clear();
     ref
         .read(forgotPasswordViewModelProvider.notifier)
-        .requestPasswordReset(widget.email);
+        .requestPasswordReset(widget.email, isResend: true);
   }
 
   @override
@@ -215,19 +219,34 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
                                       ),
                                     ),
 
-                                    GestureDetector(
-                                      onTap: forgotState.isLoading
-                                          ? null
-                                          : _handleResend,
-                                      child: Text(
-                                        'Resend',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: _accentGreen,
-                                          fontWeight: FontWeight.w700,
+                                    // The resend spinner takes the link's place
+                                    // so the verify button never flickers.
+                                    if (forgotState.isResending)
+                                      const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                _accentGreen,
+                                              ),
+                                        ),
+                                      )
+                                    else
+                                      GestureDetector(
+                                        onTap: forgotState.isLoading
+                                            ? null
+                                            : _handleResend,
+                                        child: Text(
+                                          'Resend',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: _accentGreen,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
                                       ),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -236,7 +255,9 @@ class _OtpVerificationViewState extends ConsumerState<OtpVerificationView> {
 
                               // ───────────── VERIFY BUTTON ─────────────
                               CustomButton(
-                                onTap: forgotState.isLoading
+                                onTap:
+                                    forgotState.isLoading ||
+                                        forgotState.isResending
                                     ? null
                                     : _handleVerifyOtp,
                                 label: 'Verify OTP',

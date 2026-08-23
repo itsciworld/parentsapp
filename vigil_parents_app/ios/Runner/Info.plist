@@ -26,6 +26,10 @@
 		<string>$(FLUTTER_BUILD_NUMBER)</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<!-- Shown by iOS the first time the app asks for Face ID, when the
+		     parent turns biometric login on. -->
+		<key>NSFaceIDUsageDescription</key>
+		<string>Vigil-Parents uses Face ID to let you log in without typing your password.</string>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>

@@ -42,6 +42,9 @@ class _RegisterOtpViewState extends ConsumerState<RegisterOtpView> {
   }
 
   void _handleVerifyOtp() {
+    // Pinput's onCompleted can fire while a resend is still in flight.
+    if (ref.read(registerViewModelProvider).isResending) return;
+
     FocusScope.of(context).unfocus();
 
     final otp = _otpController.text.trim();
@@ -71,7 +74,7 @@ class _RegisterOtpViewState extends ConsumerState<RegisterOtpView> {
     _otpController.clear();
     ref
         .read(registerViewModelProvider.notifier)
-        .sendRegisterOtp(widget.name, widget.email);
+        .sendRegisterOtp(widget.name, widget.email, isResend: true);
   }
 
   @override
@@ -239,19 +242,34 @@ class _RegisterOtpViewState extends ConsumerState<RegisterOtpView> {
                                       ),
                                     ),
 
-                                    GestureDetector(
-                                      onTap: registerState.isLoading
-                                          ? null
-                                          : _handleResend,
-                                      child: Text(
-                                        'Resend',
-                                        style: TextStyle(
-                                          fontSize: 13,
-                                          color: _accentGreen,
-                                          fontWeight: FontWeight.w700,
+                                    // The resend spinner takes the link's place
+                                    // so the verify button never flickers.
+                                    if (registerState.isResending)
+                                      const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor:
+                                              AlwaysStoppedAnimation<Color>(
+                                                _accentGreen,
+                                              ),
+                                        ),
+                                      )
+                                    else
+                                      GestureDetector(
+                                        onTap: registerState.isLoading
+                                            ? null
+                                            : _handleResend,
+                                        child: Text(
+                                          'Resend',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: _accentGreen,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
                                       ),
-                                    ),
                                   ],
                                 ),
                               ),
@@ -260,7 +278,9 @@ class _RegisterOtpViewState extends ConsumerState<RegisterOtpView> {
 
                               // ───────────── VERIFY BUTTON ─────────────
                               CustomButton(
-                                onTap: registerState.isLoading
+                                onTap:
+                                    registerState.isLoading ||
+                                        registerState.isResending
                                     ? null
                                     : _handleVerifyOtp,
                                 label: 'Verify & Create Account',

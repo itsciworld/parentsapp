@@ -13,12 +13,17 @@ import 'package:vigil_parents_app/features/auth/repo/auth_repo.dart';
 /// still mounted underneath, push a second OTP screen.
 class RegisterState {
   final bool isLoading;
+
+  /// Kept separate from [isLoading] so a resend only spins the "Resend" link
+  /// and leaves the "Verify & Create Account" button untouched.
+  final bool isResending;
   final bool otpSent;
   final bool isRegistered;
   final AppToastData? toastData;
 
   RegisterState({
     this.isLoading = false,
+    this.isResending = false,
     this.otpSent = false,
     this.isRegistered = false,
     this.toastData,
@@ -26,6 +31,7 @@ class RegisterState {
 
   RegisterState copyWith({
     bool? isLoading,
+    bool? isResending,
     bool? otpSent,
     bool? isRegistered,
     AppToastData? toastData,
@@ -33,6 +39,7 @@ class RegisterState {
   }) {
     return RegisterState(
       isLoading: isLoading ?? this.isLoading,
+      isResending: isResending ?? this.isResending,
       otpSent: otpSent ?? this.otpSent,
       isRegistered: isRegistered ?? this.isRegistered,
       toastData: clearToast ? null : (toastData ?? this.toastData),
@@ -45,15 +52,25 @@ class RegisterViewModel extends StateNotifier<RegisterState> {
 
   RegisterViewModel(this._authRepository) : super(RegisterState());
 
-  // STEP 1 → email a one-time code. Also used by the OTP screen's "Resend".
-  Future<void> sendRegisterOtp(String name, String email) async {
-    state = state.copyWith(isLoading: true, clearToast: true);
+  // STEP 1 → email a one-time code. Also used by the OTP screen's "Resend",
+  // which passes [isResend] so the spinner stays on that link.
+  Future<void> sendRegisterOtp(
+    String name,
+    String email, {
+    bool isResend = false,
+  }) async {
+    state = state.copyWith(
+      isLoading: !isResend,
+      isResending: isResend,
+      clearToast: true,
+    );
 
     try {
       final message = await _authRepository.sendRegisterOtp(name, email);
 
       state = state.copyWith(
         isLoading: false,
+        isResending: false,
         otpSent: true,
         toastData: AppToastData(
           title: 'Code Sent',
@@ -64,6 +81,7 @@ class RegisterViewModel extends StateNotifier<RegisterState> {
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
+        isResending: false,
         toastData: AppToastData(
           title: 'Could Not Send Code',
           subtitle: e.toString().replaceAll('Exception: ', ''),

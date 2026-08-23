@@ -11,6 +11,10 @@
          so the write permission is only needed up to API 28. -->
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="28"/>
+    <!-- Biometric login (local_auth). USE_FINGERPRINT covers API 27 and below,
+         where USE_BIOMETRIC does not exist yet. -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
+    <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
     <application
         android:label="Vigil-Parents"
         android:name="${applicationName}"
